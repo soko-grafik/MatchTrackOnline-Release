@@ -129,6 +129,22 @@ Alle Detailanleitungen findest du im Ordner [`docs/`](./docs):
 
 ---
 
+## ☕ Support & Spenden
+
+Wenn dir **MatchTrack Online** bei deiner Video- und Trainingsanalyse hilft und du das Projekt unterstützen möchtest, freue ich mich über einen Kaffee!
+
+<p align="center">
+  <a href="https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=hello%40soko-grafik.de&currency_code=EUR&item_name=MatchTrack+Online+Support" target="_blank">
+    <img src="https://img.shields.io/badge/Donate-PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="Donate via PayPal" />
+  </a>
+  &nbsp;&nbsp;
+  <a href="https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=hello%40soko-grafik.de&currency_code=EUR&item_name=MatchTrack+Online+Support" target="_blank">
+    <img src="https://img.shields.io/badge/Buy_Me_A_Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black" alt="Buy Me A Coffee" />
+  </a>
+</p>
+
+---
+
 <p align="center">
   Made with ⚽ for coaches and teams.
 </p>
