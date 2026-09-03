@@ -136,11 +136,11 @@ Alle Detailanleitungen findest du im Ordner [`docs/`](./docs):
 Wenn dir die Plattform bei deiner Videoanalyse, Spielvorbereitung und Trainingsarbeit hilft und du die Weiterentwicklung unterstützen möchtest, freue ich mich riesig über deine Unterstützung und einen Kaffee!
 
 <p align="center">
-  <a href="https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=hello%40soko-grafik.de&currency_code=EUR&item_name=MatchTrack+Online+Support" target="_blank">
-    <img src="https://img.shields.io/badge/Donate-PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="Donate via PayPal" />
+  <a href="https://ppaypal.me/soko21061983" target="_blank">
+    <img src="https://img.shields.io/badge/Donate-PayPal.Me-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="Donate via PayPal.Me" />
   </a>
   &nbsp;&nbsp;
-  <a href="https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=hello%40soko-grafik.de&currency_code=EUR&item_name=MatchTrack+Online+Support" target="_blank">
+  <a href="https://paypal.me/soko21061983" target="_blank">
     <img src="https://img.shields.io/badge/Buy_Me_A_Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black" alt="Buy Me A Coffee" />
   </a>
 </p>
@@ -150,3 +150,4 @@ Wenn dir die Plattform bei deiner Videoanalyse, Spielvorbereitung und Trainingsa
 <p align="center">
   Made with ⚽ for coaches and teams.
 </p>
+
