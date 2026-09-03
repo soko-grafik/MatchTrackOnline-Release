@@ -5,6 +5,7 @@
 /backend/uploads/*
 !/backend/uploads/.gitkeep
 /backend/.env
+!/backend/.env.example
 /web/.env*
 *.db
 *.sqlite
