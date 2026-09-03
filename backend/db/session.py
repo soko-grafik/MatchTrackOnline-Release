@@ -10,8 +10,9 @@ ROOT_DIR = os.path.dirname(BASE_DIR)
 DB_PATH = os.path.join(BASE_DIR, 'matchtracker.db')
 UPLOAD_DIR = os.getenv("UPLOAD_DIR", os.path.join(ROOT_DIR, "uploads"))
 
-# .env laden falls vorhanden
-load_dotenv(os.path.join(BASE_DIR, '.env'))
+# .env laden falls vorhanden (sowohl backend/.env als auch root .env)
+load_dotenv(os.path.join(ROOT_DIR, '.env'))
+load_dotenv(os.path.join(BASE_DIR, '.env'), override=True)
 
 # MySQL Konfiguration aus Umgebungsvariablen lesen
 DB_USER = os.getenv("DB_USER")
@@ -51,6 +52,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def reinit_db_engine():
     global engine, SessionLocal, DATABASE_URL
+    load_dotenv(os.path.join(ROOT_DIR, '.env'))
     load_dotenv(os.path.join(BASE_DIR, '.env'), override=True)
     
     db_type = os.getenv("DB_TYPE", "sqlite" if os.name == 'nt' else "mysql")
