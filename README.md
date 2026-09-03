@@ -129,6 +129,13 @@ Alle Detailanleitungen findest du im Ordner [`docs/`](./docs):
 
 ---
 
+## 🔗 MatchTrack Ökosystem & Verwandte Repositories
+
+* 🖥️ **[MatchTrackStitcher-Win](https://github.com/soko-grafik/MatchTrackStitcher-Win):** Windows-Desktop-Anwendung zum Zusammenfügen (Stitching) und Synchronisieren von Dual-Kamera-Aufnahmen zu nahtlosen Panorama-Videos (inkl. Audio-Synchronisation, SIFT Feature-Matching und Anti-Ghosting).
+* 📷 **[MatchTrackOnline-DualCamRig](https://github.com/soko-grafik/MatchTrackOnline-DualCamRig):** Hardware-Setup und 3D-Druck-Vorlagen für ein stabiles Dual-Kamera-Rig (z. B. DJI Action Cams) zur optimalen Montage am Stativ oder Spielfeldrand für Panoramaaufnahmen.
+
+---
+
 ## ☕ Support & Spenden
 
 **MatchTrack Online** ist ein unabhängiges Projekt, das mit viel Herzblut für Trainer und Vereine entwickelt wird. Der Betrieb von Testservern, die Bereitstellung von Updates und die kontinuierliche Entwicklung neuer Funktionen erfordern jedoch viel Zeit und laufende Ressourcen.
