@@ -1,0 +1,192 @@
+{
+  "id": "/",
+  "name": "MatchTrack",
+  "short_name": "MatchTrack",
+  "description": "MatchTrack - Professionelle Fußball- und Videoanalyse Plattform",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "window-controls-overlay", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#0e141b",
+  "theme_color": "#39b068",
+  "lang": "de",
+  "dir": "ltr",
+  "categories": ["sports", "productivity", "utilities"],
+  "iarc_rating_id": "USK-12",
+  "prefer_related_applications": false,
+  "related_applications": [
+    {
+      "platform": "play",
+      "id": "co.veo.analytics",
+      "url": "https://play.google.com/store/apps/details?id=co.veo.analytics"
+    }
+  ],
+  "widgets": [],
+  "scope_extensions": [],
+  "launch_handler": {
+    "client_mode": ["navigate-existing", "auto"]
+  },
+  "edge_side_panel": {
+    "preferred_width": 480
+  },
+  "note_taking": {
+    "new_note_url": "/matches"
+  },
+  "file_handlers": [
+    {
+      "action": "/admin/upload",
+      "name": "Video Dateien",
+      "icons": [
+        {
+          "src": "/app-icons/icon-96x96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ],
+      "accept": {
+        "video/*": [".mp4", ".mov", ".mkv", ".webm"]
+      }
+    }
+  ],
+  "share_target": {
+    "action": "/admin/upload",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "video_file",
+          "accept": ["video/*"]
+        }
+      ]
+    }
+  },
+  "protocol_handlers": [
+    {
+      "protocol": "web+matchtrack",
+      "url": "/matches?action=%s"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Spiele & Analysen",
+      "short_name": "Spiele",
+      "description": "Zur Spiel- und Videoübersicht",
+      "url": "/matches",
+      "icons": [
+        {
+          "src": "/app-icons/icon-96x96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Organizer",
+      "short_name": "Organizer",
+      "description": "Termine, Aufstellungen und Planung",
+      "url": "/organizer",
+      "icons": [
+        {
+          "src": "/app-icons/icon-96x96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/desktop-1.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "MatchTrack Videoanalyse Dashboard"
+    },
+    {
+      "src": "/screenshots/mobile-1.png",
+      "sizes": "720x1280",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "MatchTrack Mobile Spielansicht"
+    }
+  ],
+  "icons": [
+    {
+      "src": "/app-icons/icon-48x48.png",
+      "sizes": "48x48",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/app-icons/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/app-icons/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/app-icons/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/app-icons/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/app-icons/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/app-icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/app-icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/app-icons/icon-256x256.png",
+      "sizes": "256x256",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/app-icons/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/app-icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/app-icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

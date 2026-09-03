@@ -1,0 +1,31 @@
+DirectoryIndex index.html
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Stelle sicher, dass der Authorization-Header an CGI weitergereicht wird
+  SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
+  CGIPassAuth On
+
+  # REGEL 1: Backend-API ausschließen
+  RewriteRule ^backend/ - [L]
+
+  # WICHTIG: _next Dateien korrekt weitergeben
+  RewriteCond %{REQUEST_URI} ^/_next/ [NC]
+  RewriteRule ^ - [L]
+
+  # REGEL 2: Existierende Dateien direkt ausliefern
+  RewriteCond %{REQUEST_FILENAME} -f
+  RewriteRule ^ - [L]
+
+  # REGEL 3: Existierende Verzeichnisse direkt ausliefern
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # REGEL 4: Alle anderen Anfragen an die Next.js App (Wurzel-index.html) weiterleiten
+  RewriteRule . /index.html [L]
+</IfModule>
+
+# Fallback für Fehler
+ErrorDocument 404 /index.html

@@ -1,0 +1,16 @@
+/web/node_modules/
+/web/.next/
+/web/out/
+/backend/venv/
+/backend/uploads/*
+!/backend/uploads/.gitkeep
+/backend/.env
+/web/.env*
+*.db
+*.sqlite
+*.sqlite3
+*.log
+__pycache__/
+*.tsbuildinfo
+.idea/
+.vscode/

@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  *, ::before, ::after {
+    border-radius: 0.25rem !important;
+  }
+
+  body {
+    @apply bg-zinc-100 text-zinc-900 transition-colors duration-200;
+  }
+
+  html.dark body {
+    @apply bg-zinc-950 text-zinc-100;
+  }
+}
+
+/* Light mode overrides */
+html:not(.dark) {
+  color-scheme: light;
+}
+
+html:not(.dark) .bg-zinc-950,
+html:not(.dark) .bg-zinc-900,
+html:not(.dark) .bg-black {
+  background-color: #ffffff !important;
+  color: #18181b !important;
+}
+
+html:not(.dark) .bg-zinc-900\/40,
+html:not(.dark) .bg-zinc-900\/30,
+html:not(.dark) .bg-zinc-900\/50,
+html:not(.dark) .bg-zinc-900\/60,
+html:not(.dark) .bg-zinc-900\/80,
+html:not(.dark) .bg-zinc-950\/40,
+html:not(.dark) .bg-zinc-950\/60,
+html:not(.dark) .bg-zinc-950\/80 {
+  background-color: #f4f4f5 !important;
+}
+
+html:not(.dark) .bg-zinc-800,
+html:not(.dark) .bg-zinc-800\/50 {
+  background-color: #e4e4e7 !important;
+  color: #18181b !important;
+}
+
+html:not(.dark) .border-zinc-800,
+html:not(.dark) .border-zinc-800\/40,
+html:not(.dark) .border-zinc-800\/60,
+html:not(.dark) .border-zinc-800\/80,
+html:not(.dark) .border-zinc-700 {
+  border-color: #d4d4d8 !important;
+}
+
+html:not(.dark) .text-white,
+html:not(.dark) .text-zinc-100,
+html:not(.dark) .text-zinc-200,
+html:not(.dark) .text-zinc-300 {
+  color: #18181b !important;
+}
+
+html:not(.dark) .text-zinc-400,
+html:not(.dark) .text-zinc-500 {
+  color: #52525b !important;
+}
+
+/* Light mode logo adjustment */
+html:not(.dark) img[src*="logo"],
+html:not(.dark) img[src*="Logo"],
+html:not(.dark) img[alt*="Logo"],
+html:not(.dark) img[alt*="logo"] {
+  filter: brightness(0.15) contrast(1.2);
+}
+

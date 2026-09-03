@@ -1,0 +1,15 @@
+[Unit]
+Description=MatchTrack Online Background KI & Transcoding Queue Worker
+After=network.target matchtrack-backend.service
+
+[Service]
+User=root
+WorkingDirectory=/var/www/matchtrack/backend
+ExecStart=/var/www/matchtrack/backend/venv/bin/python worker.py
+Nice=15
+Restart=always
+RestartSec=10
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
