@@ -131,7 +131,9 @@ Alle Detailanleitungen findest du im Ordner [`docs/`](./docs):
 
 ## ☕ Support & Spenden
 
-Wenn dir **MatchTrack Online** bei deiner Video- und Trainingsanalyse hilft und du das Projekt unterstützen möchtest, freue ich mich über einen Kaffee!
+**MatchTrack Online** ist ein unabhängiges Projekt, das mit viel Herzblut für Trainer und Vereine entwickelt wird. Der Betrieb von Testservern, die Bereitstellung von Updates und die kontinuierliche Entwicklung neuer Funktionen erfordern jedoch viel Zeit und laufende Ressourcen.
+
+Wenn dir die Plattform bei deiner Videoanalyse, Spielvorbereitung und Trainingsarbeit hilft und du die Weiterentwicklung unterstützen möchtest, freue ich mich riesig über deine Unterstützung und einen Kaffee!
 
 <p align="center">
   <a href="https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=hello%40soko-grafik.de&currency_code=EUR&item_name=MatchTrack+Online+Support" target="_blank">
