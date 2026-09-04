@@ -24,6 +24,8 @@ if [ -d ".git" ]; then
     git checkout -- web/public/sw.js web/public/workbox-*.js 2>/dev/null || true
     git fetch origin main || true
     git reset --hard origin/main || git pull origin main || git pull
+    # Sicherstellen, dass alle Shell-Skripte nach dem Pull ausführbar bleiben
+    chmod +x "$PROJECT_DIR"/*.sh "$BACKEND_DIR"/*.sh 2>/dev/null || true
 else
     echo "ℹ️  [1/4] Kein Git-Repository erkannt. Fahre mit vorhandenen Quellcodedateien fort."
 fi
@@ -41,8 +43,25 @@ else
     echo "⚠️  Kein 'venv' Ordner gefunden. Verwende System-Python."
 fi
 
-echo "   -> Installiere/Aktualisiere Python-Pakete (requirements.txt)..."
-pip install -r requirements.txt --quiet
+# Nur Pakete installieren, wenn requirements.txt sich geändert hat
+REQ_HASH_FILE="$BACKEND_DIR/.requirements_hash"
+CURRENT_REQ_HASH=""
+if command -v md5sum >/dev/null 2>&1; then
+    CURRENT_REQ_HASH=$(md5sum requirements.txt 2>/dev/null | awk '{print $1}')
+elif command -v sha256sum >/dev/null 2>&1; then
+    CURRENT_REQ_HASH=$(sha256sum requirements.txt 2>/dev/null | awk '{print $1}')
+fi
+
+if [ ! -f "$REQ_HASH_FILE" ] || [ "$CURRENT_REQ_HASH" != "$(cat "$REQ_HASH_FILE" 2>/dev/null)" ]; then
+    echo "   -> Änderungen an requirements.txt erkannt. Installiere Python-Pakete..."
+    pip install -r requirements.txt --quiet
+    if [ -n "$CURRENT_REQ_HASH" ]; then
+        echo "$CURRENT_REQ_HASH" > "$REQ_HASH_FILE"
+    fi
+    echo "   ✅ Python-Pakete auf dem neuesten Stand."
+else
+    echo "   ⚡ Keine Änderungen an requirements.txt. Überspringe 'pip install'."
+fi
 
 echo "   -> Führe Datenbank-Tabellenerstellung und Mannschafts-Migration aus..."
 python -c "from db.session import engine, SessionLocal; from models import Base; from db.init_teams import seed_and_migrate_teams; from sqlalchemy import text; c = engine.connect(); c.execute(text('SET FOREIGN_KEY_CHECKS=0;')) if 'mysql' in str(engine.url) else None; c.commit(); c.close(); Base.metadata.create_all(bind=engine); c2 = engine.connect(); c2.execute(text('SET FOREIGN_KEY_CHECKS=1;')) if 'mysql' in str(engine.url) else None; c2.commit(); c2.close(); db=SessionLocal(); seed_and_migrate_teams(db); db.close()"
@@ -52,8 +71,25 @@ echo "   ✅ Datenbank & Mannschaften auf neuestem Stand."
 echo "🌐 [3/4] Aktualisiere & Baue Web Frontend (Next.js)..."
 cd "$WEB_DIR"
 
-echo "   -> Installiere Node-Module..."
-npm install --silent
+# Nur npm install ausführen, wenn package.json / package-lock.json sich geändert haben oder node_modules fehlt
+PACKAGE_HASH_FILE="$WEB_DIR/.package_lock_hash"
+CURRENT_PACKAGE_HASH=""
+if command -v md5sum >/dev/null 2>&1; then
+    CURRENT_PACKAGE_HASH=$(md5sum package.json package-lock.json 2>/dev/null | md5sum | awk '{print $1}')
+elif command -v sha256sum >/dev/null 2>&1; then
+    CURRENT_PACKAGE_HASH=$(sha256sum package.json package-lock.json 2>/dev/null | sha256sum | awk '{print $1}')
+fi
+
+if [ ! -d "node_modules" ] || [ ! -f "$PACKAGE_HASH_FILE" ] || [ "$CURRENT_PACKAGE_HASH" != "$(cat "$PACKAGE_HASH_FILE" 2>/dev/null)" ]; then
+    echo "   -> Änderungen an package.json erkannt (oder node_modules fehlt). Installiere Node-Module..."
+    npm install --silent
+    if [ -n "$CURRENT_PACKAGE_HASH" ]; then
+        echo "$CURRENT_PACKAGE_HASH" > "$PACKAGE_HASH_FILE"
+    fi
+    echo "   ✅ Node-Module erfolgreich installiert."
+else
+    echo "   ⚡ Keine Änderungen an dependencies (package.json). Überspringe 'npm install'."
+fi
 
 echo "   -> Kompiliere Next.js Production Build..."
 npm run build

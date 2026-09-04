@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { Cookie, Shield, Scale } from 'lucide-react';
+import { Cookie, Shield, Scale, Download } from 'lucide-react';
 
 interface FooterProps {
   className?: string;
@@ -45,6 +45,16 @@ export default function Footer({ className = '' }: FooterProps) {
           >
             Nutzungsbedingungen
           </Link>
+
+          <a
+            href="/downloads/MatchTrack.apk"
+            download="MatchTrack.apk"
+            className="hover:text-emerald-400 text-zinc-400 flex items-center gap-1.5 transition-colors font-medium"
+            title="MatchTrack Android App (APK) herunterladen"
+          >
+            <Download className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Android App (APK)</span>
+          </a>
 
           <button
             type="button"

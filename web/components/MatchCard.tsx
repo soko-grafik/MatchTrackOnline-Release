@@ -2,8 +2,41 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { Play, Calendar, Bell, Edit2, Trash2, Tag, Star, Loader2, Flame, AlertCircle, Sparkles } from 'lucide-react';
+import { Play, Calendar, Bell, Edit2, Trash2, Tag, Star, Loader2, Flame, AlertCircle, Sparkles, Video } from 'lucide-react';
 import { getMediaUrl } from '@/services/api';
+
+export function getMatchVideoTypeLabel(match: any): string | null {
+  if (!match) return null;
+  if (match.video_type) return match.video_type;
+  if (match.video_type_label) return match.video_type_label;
+  if (Array.isArray(match.video_types) && match.video_types.length > 0) {
+    return match.video_types.join(' | ');
+  }
+  if (match.has_panorama && match.has_standard) return 'Panorama | Standard';
+  if (match.has_panorama) return 'Panorama';
+  if (match.has_standard) return 'Standard';
+  
+  if (Array.isArray(match.available_streams) && match.available_streams.length > 0) {
+    const hasPano = match.available_streams.some((s: any) => s.id === '32x9' || s.aspect_ratio === '32:9' || s.label?.toLowerCase().includes('panorama'));
+    const hasStd = match.available_streams.some((s: any) => s.id === '16x9' || s.aspect_ratio === '16:9' || s.label?.toLowerCase().includes('standard'));
+    if (hasPano && hasStd) return 'Panorama | Standard';
+    if (hasPano) return 'Panorama';
+    if (hasStd) return 'Standard';
+  }
+
+  if (Array.isArray(match.chunks) && match.chunks.length > 0) {
+    const hasPano = match.chunks.some((c: any) => (c.video_path || '').includes('panorama_32x9'));
+    const hasStd = match.chunks.some((c: any) => !(c.video_path || '').includes('panorama_32x9'));
+    if (hasPano && hasStd) return 'Panorama | Standard';
+    if (hasPano) return 'Panorama';
+    if (hasStd) return 'Standard';
+  }
+
+  if (match.aspect_ratio === '32:9' || match.aspect_ratio === 'panorama') return 'Panorama';
+  if (match.aspect_ratio === '16:9') return 'Standard';
+
+  return null;
+}
 
 interface MatchCardProps {
   match: any;
@@ -23,6 +56,7 @@ export default function MatchCard({ match, user, onToggleSubscription, onEditReq
   const isStitchFailed = match.stitch_job?.status === 'FAILED';
   const isGeneratingHeatmap = match.is_generating_heatmap || ['QUEUED', 'PROCESSING'].includes(match.heatmap_status);
   const isDetectingHighlights = match.is_detecting_highlights || match.highlight_job?.status === 'PROCESSING';
+  const videoType = getMatchVideoTypeLabel(match);
 
   return (
     <Link href={`/matches?id=${match.id}`} className="group relative block h-full">
@@ -143,14 +177,21 @@ export default function MatchCard({ match, user, onToggleSubscription, onEditReq
         {/* Card Body */}
         <div className="flex flex-1 flex-col justify-between p-4">
           <div>
-            {/* Category / Card Type Badge directly above Title */}
-            {match.category && (
-              <div className="mb-1.5">
-                <span className="inline-block rounded border border-zinc-800 bg-zinc-950/80 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-zinc-300">
+            {/* Category / Card Type Badge & Video Type Badge directly above Title */}
+            <div className="mb-1.5 flex items-center justify-between gap-1.5 min-h-[20px]">
+              {match.category ? (
+                <span className="inline-block rounded border border-zinc-800 bg-zinc-950/80 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-zinc-300 truncate">
                   {match.category}
                 </span>
-              </div>
-            )}
+              ) : <div />}
+
+              {videoType && (
+                <span className="inline-flex items-center gap-1 rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-400 tracking-wide shrink-0">
+                  <Video className="w-3 h-3 text-emerald-400 shrink-0" />
+                  <span>{videoType}</span>
+                </span>
+              )}
+            </div>
 
             <h3 className="font-bold text-emerald-400 transition-colors group-hover:text-emerald-300 line-clamp-2 text-base">
               {match.name || `Match ${match.id}`}

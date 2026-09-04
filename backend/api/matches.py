@@ -154,9 +154,25 @@ async def get_matches(
                 sub = db.query(Subscription).filter(Subscription.match_id == match.id, Subscription.user_id == current_user.id).first()
                 is_sub = sub is not None
 
-            # Erstes Video für die Dateigröße finden (optional)
-            first_chunk = db.query(VideoChunk).filter(VideoChunk.match_id == match.id).order_by(VideoChunk.created_at.asc()).first()
+            # Alle Video-Chunks des Spiels laden
+            chunks = db.query(VideoChunk).filter(VideoChunk.match_id == match.id).order_by(VideoChunk.created_at.asc()).all()
+            first_chunk = chunks[0] if chunks else None
             file_size_mb = first_chunk.file_size_mb if first_chunk else None
+
+            # Video-Typen (Panorama / Standard) ermitteln
+            match_folder = os.path.join(UPLOAD_DIR, match.id)
+            has_pano_file = os.path.exists(os.path.join(match_folder, "panorama_32x9.mp4"))
+            has_32x9 = has_pano_file or any("panorama_32x9" in (c.video_path or "") for c in chunks)
+            has_16x9 = any("panorama_32x9" not in (c.video_path or "") for c in chunks)
+            if not has_16x9 and not has_32x9 and chunks:
+                has_16x9 = True
+
+            video_types = []
+            if has_32x9:
+                video_types.append("Panorama")
+            if has_16x9:
+                video_types.append("Standard")
+            video_type_label = " | ".join(video_types) if video_types else None
 
             # Anzahl der MatchEvents ermitteln
             events_count = db.query(MatchEvent).filter(MatchEvent.match_id == match.id).count()
@@ -208,6 +224,10 @@ async def get_matches(
                 "recording_date": match.recording_date,
                 "video_quality": match.video_quality,
                 "file_size_mb": file_size_mb,
+                "has_panorama": has_32x9,
+                "has_standard": has_16x9,
+                "video_type": video_type_label,
+                "video_types": video_types,
                 "events_count": events_count,
                 "created_at": match.created_at,
                 "is_subscribed": is_sub,
@@ -344,6 +364,13 @@ async def get_match(match_id: str, request: Request, db: Session = Depends(get_d
 
         aspect_ratio = "16:9" if has_16x9 else ("32:9" if has_32x9 else "16:9")
 
+        video_types = []
+        if has_32x9:
+            video_types.append("Panorama")
+        if has_16x9:
+            video_types.append("Standard")
+        video_type_label = " | ".join(video_types) if video_types else None
+
         match_dict = {
             "id": match.id,
             "name": match.name,
@@ -354,6 +381,10 @@ async def get_match(match_id: str, request: Request, db: Session = Depends(get_d
             "recording_date": match.recording_date.isoformat() if match.recording_date else None,
             "video_quality": match.video_quality,
             "aspect_ratio": aspect_ratio,
+            "has_panorama": has_32x9,
+            "has_standard": has_16x9,
+            "video_type": video_type_label,
+            "video_types": video_types,
             "created_at": match.created_at.isoformat() if match.created_at else None,
             "thumbnail_path": match.thumbnail_path,
             "share_token": match.share_token,

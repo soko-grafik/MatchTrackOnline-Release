@@ -7,6 +7,7 @@ import { loginUser, forgotPassword, getMyProfile, api } from '@/services/api';
 import Image from 'next/image';
 import Link from 'next/link';
 import Footer from '@/components/Footer';
+import { Download, Smartphone } from 'lucide-react';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -175,6 +176,25 @@ export default function LoginPage() {
           
           <div className="mt-6 text-center text-sm text-zinc-400">
              Noch kein Konto? <a href="/register" className="font-medium text-primary hover:underline">Hier registrieren</a>
+          </div>
+
+          {/* Android App APK Download */}
+          <div className="mt-6 pt-5 border-t border-zinc-800/80 text-center">
+            <a
+              href="/downloads/MatchTrack.apk"
+              download="MatchTrack.apk"
+              className="inline-flex items-center justify-center gap-2.5 w-full py-2.5 px-4 rounded-xl bg-zinc-950/80 border border-zinc-800 hover:border-emerald-500/40 text-xs font-semibold text-zinc-300 hover:text-white transition-all shadow-sm group active:scale-95"
+              title="MatchTrack Android App (APK) herunterladen"
+            >
+              <div className="p-1 rounded-lg bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500/20">
+                <Smartphone className="w-4 h-4" />
+              </div>
+              <div className="text-left">
+                <p className="text-xs font-bold text-zinc-200 group-hover:text-emerald-400 leading-tight">Android App herunterladen</p>
+                <p className="text-[10px] text-zinc-500 leading-tight">MatchTrack.apk direkt installieren</p>
+              </div>
+              <Download className="w-4 h-4 ml-auto text-zinc-500 group-hover:text-emerald-400 transition-colors" />
+            </a>
           </div>
         </div>
       </div>

@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { Play, Calendar, Bell, Edit2, Trash2, ChevronRight, Tag, Loader2, Flame, AlertCircle, Sparkles } from 'lucide-react';
+import { Play, Calendar, Bell, Edit2, Trash2, ChevronRight, Tag, Loader2, Flame, AlertCircle, Sparkles, Video } from 'lucide-react';
 import { getMediaUrl } from '@/services/api';
+import { getMatchVideoTypeLabel } from '@/components/MatchCard';
 
 interface MatchListItemProps {
   match: any;
@@ -21,6 +22,7 @@ export default function MatchListItem({ match, user, onToggleSubscription, onEdi
   const isStitchFailed = match.stitch_job?.status === 'FAILED';
   const isGeneratingHeatmap = match.is_generating_heatmap || ['QUEUED', 'PROCESSING'].includes(match.heatmap_status);
   const isDetectingHighlights = match.is_detecting_highlights || match.highlight_job?.status === 'PROCESSING';
+  const videoType = getMatchVideoTypeLabel(match);
 
   return (
     <Link href={`/matches?id=${match.id}`} className="group block w-full">
@@ -128,6 +130,13 @@ export default function MatchListItem({ match, user, onToggleSubscription, onEdi
                 <span className="flex items-center gap-1 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 animate-pulse">
                   <Flame className="w-3 h-3 text-amber-400" />
                   Heatmap aktiv
+                </span>
+              )}
+
+              {videoType && (
+                <span className="inline-flex items-center gap-1 rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-emerald-400">
+                  <Video className="w-3 h-3 text-emerald-400 shrink-0" />
+                  <span>{videoType}</span>
                 </span>
               )}
 
