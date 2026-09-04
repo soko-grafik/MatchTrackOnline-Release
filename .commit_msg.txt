@@ -1,11 +1,11 @@
-release: feat(matches): allow changing/reassigning video stream type between Standard (16:9) and Panorama (32:9) in Match Edit modal (dev: 7fd55837)
+release: fix(scripts): hash only package.json and requirements.txt for robust dependency caching (dev: 9222b462)
 
 Letzte Änderungen:
+* fix(scripts): hash only package.json and requirements.txt for robust dependency caching (9222b462)
 * feat(matches): allow changing/reassigning video stream type between Standard (16:9) and Panorama (32:9) in Match Edit modal (7fd55837)
 * fix(scripts): set executable permissions (chmod +x) in git index and cache npm/pip installs by hash (7bbdd507)
 * feat(matches): show video type badge (Panorama | Standard) on MatchCard and MatchListItem (9f6899c4)
 * feat: add MatchTrack.apk download link to login screen and global footer (69c00276)
 * feat(release): auto-generate detailed changelog and descriptive commit message for release repo (981dede7)
-* fix(git): preserve configured git remote and prevent auth prompts during updates (18432cf3)
 
-Build-Zeitstempel: 2026-09-04 09:53:22
+Build-Zeitstempel: 2026-09-04 10:00:23

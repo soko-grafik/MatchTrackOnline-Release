@@ -44,7 +44,7 @@ else
 fi
 
 # Nur Pakete installieren, wenn requirements.txt sich geändert hat
-REQ_HASH_FILE="$BACKEND_DIR/.requirements_hash"
+REQ_HASH_FILE="$PROJECT_DIR/.backend_requirements_hash"
 CURRENT_REQ_HASH=""
 if command -v md5sum >/dev/null 2>&1; then
     CURRENT_REQ_HASH=$(md5sum requirements.txt 2>/dev/null | awk '{print $1}')
@@ -52,15 +52,15 @@ elif command -v sha256sum >/dev/null 2>&1; then
     CURRENT_REQ_HASH=$(sha256sum requirements.txt 2>/dev/null | awk '{print $1}')
 fi
 
-if [ ! -f "$REQ_HASH_FILE" ] || [ "$CURRENT_REQ_HASH" != "$(cat "$REQ_HASH_FILE" 2>/dev/null)" ]; then
-    echo "   -> Änderungen an requirements.txt erkannt. Installiere Python-Pakete..."
+if [ -f "$REQ_HASH_FILE" ] && [ -n "$CURRENT_REQ_HASH" ] && [ "$CURRENT_REQ_HASH" = "$(cat "$REQ_HASH_FILE" 2>/dev/null)" ]; then
+    echo "   ⚡ Keine Änderungen an requirements.txt. Überspringe 'pip install'."
+else
+    echo "   -> Änderungen an requirements.txt erkannt (oder Erstlauf). Installiere Python-Pakete..."
     pip install -r requirements.txt --quiet
     if [ -n "$CURRENT_REQ_HASH" ]; then
         echo "$CURRENT_REQ_HASH" > "$REQ_HASH_FILE"
     fi
     echo "   ✅ Python-Pakete auf dem neuesten Stand."
-else
-    echo "   ⚡ Keine Änderungen an requirements.txt. Überspringe 'pip install'."
 fi
 
 echo "   -> Führe Datenbank-Tabellenerstellung und Mannschafts-Migration aus..."
@@ -71,24 +71,24 @@ echo "   ✅ Datenbank & Mannschaften auf neuestem Stand."
 echo "🌐 [3/4] Aktualisiere & Baue Web Frontend (Next.js)..."
 cd "$WEB_DIR"
 
-# Nur npm install ausführen, wenn package.json / package-lock.json sich geändert haben oder node_modules fehlt
-PACKAGE_HASH_FILE="$WEB_DIR/.package_lock_hash"
+# Nur npm install ausführen, wenn package.json sich geändert hat oder node_modules fehlt
+PACKAGE_HASH_FILE="$PROJECT_DIR/.web_package_hash"
 CURRENT_PACKAGE_HASH=""
 if command -v md5sum >/dev/null 2>&1; then
-    CURRENT_PACKAGE_HASH=$(md5sum package.json package-lock.json 2>/dev/null | md5sum | awk '{print $1}')
+    CURRENT_PACKAGE_HASH=$(md5sum package.json 2>/dev/null | awk '{print $1}')
 elif command -v sha256sum >/dev/null 2>&1; then
-    CURRENT_PACKAGE_HASH=$(sha256sum package.json package-lock.json 2>/dev/null | sha256sum | awk '{print $1}')
+    CURRENT_PACKAGE_HASH=$(sha256sum package.json 2>/dev/null | awk '{print $1}')
 fi
 
-if [ ! -d "node_modules" ] || [ ! -f "$PACKAGE_HASH_FILE" ] || [ "$CURRENT_PACKAGE_HASH" != "$(cat "$PACKAGE_HASH_FILE" 2>/dev/null)" ]; then
-    echo "   -> Änderungen an package.json erkannt (oder node_modules fehlt). Installiere Node-Module..."
+if [ -d "node_modules" ] && [ -f "$PACKAGE_HASH_FILE" ] && [ -n "$CURRENT_PACKAGE_HASH" ] && [ "$CURRENT_PACKAGE_HASH" = "$(cat "$PACKAGE_HASH_FILE" 2>/dev/null)" ]; then
+    echo "   ⚡ Keine Änderungen an package.json (Node-Module bereits aktuell). Überspringe 'npm install'."
+else
+    echo "   -> Änderungen an package.json erkannt (oder Erstlauf/fehlende node_modules). Installiere Node-Module..."
     npm install --silent
     if [ -n "$CURRENT_PACKAGE_HASH" ]; then
         echo "$CURRENT_PACKAGE_HASH" > "$PACKAGE_HASH_FILE"
     fi
     echo "   ✅ Node-Module erfolgreich installiert."
-else
-    echo "   ⚡ Keine Änderungen an dependencies (package.json). Überspringe 'npm install'."
 fi
 
 echo "   -> Kompiliere Next.js Production Build..."

@@ -42,7 +42,7 @@ elif [ -d "../venv" ]; then
     source ../venv/bin/activate
 fi
 
-REQ_HASH_FILE="$BACKEND_DIR/.requirements_hash"
+REQ_HASH_FILE="$PROJECT_DIR/.backend_requirements_hash"
 CURRENT_REQ_HASH=""
 if command -v md5sum >/dev/null 2>&1; then
     CURRENT_REQ_HASH=$(md5sum requirements.txt 2>/dev/null | awk '{print $1}')
@@ -50,7 +50,9 @@ elif command -v sha256sum >/dev/null 2>&1; then
     CURRENT_REQ_HASH=$(sha256sum requirements.txt 2>/dev/null | awk '{print $1}')
 fi
 
-if [ ! -f "$REQ_HASH_FILE" ] || [ "$CURRENT_REQ_HASH" != "$(cat "$REQ_HASH_FILE" 2>/dev/null)" ]; then
+if [ -f "$REQ_HASH_FILE" ] && [ -n "$CURRENT_REQ_HASH" ] && [ "$CURRENT_REQ_HASH" = "$(cat "$REQ_HASH_FILE" 2>/dev/null)" ]; then
+    echo "Python packages up to date. Skipping pip install."
+else
     echo "Updating Python packages..."
     pip install -r requirements.txt --quiet || true
     if [ -n "$CURRENT_REQ_HASH" ]; then
@@ -65,15 +67,17 @@ echo "Backend & DB updated successfully."
 echo "[3/4] Installing dependencies & building Next.js Frontend..."
 cd "$WEB_DIR"
 
-PACKAGE_HASH_FILE="$WEB_DIR/.package_lock_hash"
+PACKAGE_HASH_FILE="$PROJECT_DIR/.web_package_hash"
 CURRENT_PACKAGE_HASH=""
 if command -v md5sum >/dev/null 2>&1; then
-    CURRENT_PACKAGE_HASH=$(md5sum package.json package-lock.json 2>/dev/null | md5sum | awk '{print $1}')
+    CURRENT_PACKAGE_HASH=$(md5sum package.json 2>/dev/null | awk '{print $1}')
 elif command -v sha256sum >/dev/null 2>&1; then
-    CURRENT_PACKAGE_HASH=$(sha256sum package.json package-lock.json 2>/dev/null | sha256sum | awk '{print $1}')
+    CURRENT_PACKAGE_HASH=$(sha256sum package.json 2>/dev/null | awk '{print $1}')
 fi
 
-if [ ! -d "node_modules" ] || [ ! -f "$PACKAGE_HASH_FILE" ] || [ "$CURRENT_PACKAGE_HASH" != "$(cat "$PACKAGE_HASH_FILE" 2>/dev/null)" ]; then
+if [ -d "node_modules" ] && [ -f "$PACKAGE_HASH_FILE" ] && [ -n "$CURRENT_PACKAGE_HASH" ] && [ "$CURRENT_PACKAGE_HASH" = "$(cat "$PACKAGE_HASH_FILE" 2>/dev/null)" ]; then
+    echo "Node modules up to date. Skipping npm install."
+else
     echo "Installing Node modules..."
     npm install --silent || true
     if [ -n "$CURRENT_PACKAGE_HASH" ]; then
