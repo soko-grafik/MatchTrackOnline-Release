@@ -84,6 +84,7 @@ class AttendanceResponse(BaseModel):
     status: str
     absence_reason: Optional[str]
     notes: Optional[str]
+    event_title: Optional[str] = None
 
     class Config:
         orm_mode = True
@@ -730,7 +731,20 @@ def get_player_attendance(
     current_user: User = Depends(get_current_user)
 ):
     attendances = db.query(PlayerAttendance).filter(PlayerAttendance.player_id == player_id).order_by(PlayerAttendance.event_date.desc()).all()
-    return attendances
+    res = []
+    for att in attendances:
+        res.append(AttendanceResponse(
+            id=att.id,
+            player_id=att.player_id,
+            event_id=att.event_id,
+            event_date=att.event_date,
+            event_type=att.event_type,
+            status=att.status,
+            absence_reason=att.absence_reason,
+            notes=att.notes,
+            event_title=att.event.title if att.event else None
+        ))
+    return res
 
 @router.get("/{player_id}/tagged_events")
 def get_player_tagged_events(player_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):

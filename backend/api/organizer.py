@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from datetime import datetime
 
 from db.session import get_db
-from models import CalendarEvent, PushSubscription, TrainingSession, Team, User, UserRole
+from models import CalendarEvent, PushSubscription, TrainingSession, Team, User, UserRole, Player, PlayerAttendance
 from api.dependencies import get_current_user, require_trainer
 from services.fussball_de_service import fetch_and_parse_fussball_de_team_matches
 
@@ -69,6 +69,38 @@ class PushSubscribeRequest(BaseModel):
 
 class PushUnsubscribeRequest(BaseModel):
     endpoint: str
+
+class EventPlayerAttendanceItem(BaseModel):
+    player_id: str
+    status: str = "PRESENT"  # PRESENT, ABSENT, EXCUSED
+    absence_reason: Optional[str] = None  # KRANKHEIT, PRIVATES, VERLETZUNG, SONSTIGES
+    notes: Optional[str] = None
+
+class EventAttendanceSaveRequest(BaseModel):
+    attendances: List[EventPlayerAttendanceItem]
+
+class EventPlayerAttendanceInfo(BaseModel):
+    player_id: str
+    first_name: str
+    last_name: str
+    jersey_number: Optional[int] = None
+    position: Optional[str] = None
+    team_id: Optional[str] = None
+    status: Optional[str] = None  # PRESENT, ABSENT, EXCUSED or None
+    absence_reason: Optional[str] = None
+    notes: Optional[str] = None
+    updated_at: Optional[datetime] = None
+
+class EventAttendanceOverviewResponse(BaseModel):
+    event_id: int
+    event_title: str
+    event_type: str
+    event_date: datetime
+    total_players: int
+    present_count: int
+    absent_count: int
+    excused_count: int
+    players: List[EventPlayerAttendanceInfo]
 
 
 # Helper to check if current user is admin or assigned trainer with edit permission for team_id
@@ -546,3 +578,119 @@ def send_test_push(
         "sent_count": sent_count,
         "message": f"Test-Push an {sent_count} Gerät(e) gesendet." if sent_count > 0 else "Test-Push ausgelöst."
     }
+
+
+# --- Event Attendance Endpoints ---
+
+@router.get("/events/{event_id}/attendance", response_model=EventAttendanceOverviewResponse)
+def get_event_attendance(
+    event_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    event_obj = db.query(CalendarEvent).filter(CalendarEvent.id == event_id).first()
+    if not event_obj:
+        raise HTTPException(status_code=404, detail="Termin nicht gefunden")
+
+    assigned_team_ids = event_obj.team_ids
+    if not assigned_team_ids and event_obj.team_id:
+        assigned_team_ids = [event_obj.team_id]
+
+    player_query = db.query(Player)
+    if assigned_team_ids:
+        player_query = player_query.filter(Player.team_id.in_(assigned_team_ids))
+    players = player_query.order_by(Player.jersey_number.asc(), Player.last_name.asc(), Player.first_name.asc()).all()
+
+    existing_att_records = db.query(PlayerAttendance).filter(PlayerAttendance.event_id == event_id).all()
+    att_by_player_id = {att.player_id: att for att in existing_att_records}
+
+    player_infos = []
+    present_cnt = 0
+    absent_cnt = 0
+    excused_cnt = 0
+
+    for p in players:
+        att = att_by_player_id.get(p.id)
+        st = att.status if att else None
+        if st == "PRESENT":
+            present_cnt += 1
+        elif st == "ABSENT":
+            absent_cnt += 1
+        elif st == "EXCUSED":
+            excused_cnt += 1
+
+        player_infos.append(EventPlayerAttendanceInfo(
+            player_id=p.id,
+            first_name=p.first_name,
+            last_name=p.last_name,
+            jersey_number=p.jersey_number,
+            position=p.position,
+            team_id=p.team_id,
+            status=st,
+            absence_reason=att.absence_reason if att else None,
+            notes=att.notes if att else None,
+            updated_at=att.created_at if att else None
+        ))
+
+    return EventAttendanceOverviewResponse(
+        event_id=event_obj.id,
+        event_title=event_obj.title,
+        event_type=event_obj.event_type,
+        event_date=event_obj.start_time,
+        total_players=len(players),
+        present_count=present_cnt,
+        absent_count=absent_cnt,
+        excused_count=excused_cnt,
+        players=player_infos
+    )
+
+
+@router.post("/events/{event_id}/attendance")
+def save_event_attendance(
+    event_id: int,
+    payload: EventAttendanceSaveRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_trainer)
+):
+    event_obj = db.query(CalendarEvent).filter(CalendarEvent.id == event_id).first()
+    if not event_obj:
+        raise HTTPException(status_code=404, detail="Termin nicht gefunden")
+
+    assigned_team_ids = event_obj.team_ids
+    if not assigned_team_ids and event_obj.team_id:
+        assigned_team_ids = [event_obj.team_id]
+    if assigned_team_ids:
+        check_team_access_multi(current_user, assigned_team_ids, db)
+
+    existing_att_records = db.query(PlayerAttendance).filter(PlayerAttendance.event_id == event_id).all()
+    existing_by_player_id = {att.player_id: att for att in existing_att_records}
+
+    for item in payload.attendances:
+        status_upper = item.status.upper() if item.status else "PRESENT"
+        if item.player_id in existing_by_player_id:
+            att = existing_by_player_id[item.player_id]
+            att.status = status_upper
+            att.absence_reason = item.absence_reason if status_upper != "PRESENT" else None
+            att.notes = item.notes
+            att.event_date = event_obj.start_time
+            att.event_type = event_obj.event_type
+        else:
+            new_att = PlayerAttendance(
+                player_id=item.player_id,
+                event_id=event_id,
+                event_date=event_obj.start_time,
+                event_type=event_obj.event_type,
+                status=status_upper,
+                absence_reason=item.absence_reason if status_upper != "PRESENT" else None,
+                notes=item.notes
+            )
+            db.add(new_att)
+
+    db.commit()
+
+    return {
+        "status": "success",
+        "message": f"Anwesenheit für {len(payload.attendances)} Spieler erfolgreich aktualisiert.",
+        "event_id": event_id
+    }
+

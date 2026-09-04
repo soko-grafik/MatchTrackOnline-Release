@@ -549,6 +549,24 @@ export const deleteCalendarEvent = async (id: number, deleteFollowing: boolean =
   return safeJsonParse(response.data);
 };
 
+export const getEventAttendance = async (eventId: number) => {
+  const response = await api.get(`/organizer/events/${eventId}/attendance`);
+  return safeJsonParse(response.data);
+};
+
+export const saveEventAttendance = async (
+  eventId: number,
+  attendances: Array<{
+    player_id: string;
+    status: string;
+    absence_reason?: string | null;
+    notes?: string | null;
+  }>
+) => {
+  const response = await api.post(`/organizer/events/${eventId}/attendance`, { attendances });
+  return safeJsonParse(response.data);
+};
+
 export const importFussballDeMatches = async (urlOrTeamId: string, teamId: string) => {
   const response = await api.post('/organizer/import/fussball-de', {
     url_or_team_id: urlOrTeamId,

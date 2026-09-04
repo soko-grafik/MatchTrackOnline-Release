@@ -11,15 +11,14 @@ import {
   Video,
   Sparkles,
   Dumbbell,
-  Users,
   UploadCloud,
-  LayoutGrid,
-  Presentation
+  LayoutGrid
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import PageHeader from '@/components/PageHeader';
 import MatchCard from '@/components/MatchCard';
 import EditMatchModal from '@/components/EditMatchModal';
+import EditCalendarEventModal from '@/components/EditCalendarEventModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMatches } from '@/hooks/useMatches';
 import { getCalendarEvents, getExercises, getMediaUrl } from '@/services/api';
@@ -31,6 +30,15 @@ export default function DashboardLandingPage() {
   const [recentExercises, setRecentExercises] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeMobileTab, setActiveMobileTab] = useState<'EVENTS' | 'MATCHES' | 'EXERCISES'>('EVENTS');
+
+  // Edit Calendar Event Modal State
+  const [eventToEdit, setEventToEdit] = useState<any>(null);
+  const [isEventEditModalOpen, setIsEventEditModalOpen] = useState(false);
+
+  const onEventEditRequest = (ev: any) => {
+    setEventToEdit(ev);
+    setIsEventEditModalOpen(true);
+  };
 
   // Edit Match Modal State
   const [matchToEdit, setMatchToEdit] = useState<any>(null);
@@ -138,65 +146,41 @@ export default function DashboardLandingPage() {
           </div>
         </section>
 
-        {/* Quick Action Navigation Grid (Mobile & Desktop) */}
-        <section className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-4">
+        {/* Quick Action Navigation Grid (Desktop: 3 items side-by-side, hidden on mobile) */}
+        <section className="hidden md:grid grid-cols-3 gap-4">
           {hasModule('ORGANIZER') && (
             <Link
               href="/organizer"
-              className="p-3 sm:p-4 rounded-2xl border border-zinc-800 bg-zinc-900/60 hover:border-zinc-700 hover:bg-zinc-900 text-center space-y-1.5 transition-all group backdrop-blur-md shadow-md"
+              className="p-4 rounded-2xl border border-zinc-800 bg-zinc-900/60 hover:border-zinc-700 hover:bg-zinc-900 text-center space-y-1.5 transition-all group backdrop-blur-md shadow-md"
             >
-              <div className="w-8 h-8 sm:w-10 sm:h-10 mx-auto rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <CalendarIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+              <div className="w-10 h-10 mx-auto rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <CalendarIcon className="w-5 h-5" />
               </div>
-              <span className="text-[11px] sm:text-xs font-bold block text-zinc-300 group-hover:text-white truncate">Organizer</span>
-            </Link>
-          )}
-
-          {hasModule('TACTICS') && (
-            <Link
-              href="/tactics"
-              className="p-3 sm:p-4 rounded-2xl border border-zinc-800 bg-zinc-900/60 hover:border-zinc-700 hover:bg-zinc-900 text-center space-y-1.5 transition-all group backdrop-blur-md shadow-md"
-            >
-              <div className="w-8 h-8 sm:w-10 sm:h-10 mx-auto rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Presentation className="w-4 h-4 sm:w-5 sm:h-5" />
-              </div>
-              <span className="text-[11px] sm:text-xs font-bold block text-zinc-300 group-hover:text-white truncate">Taktiktafel</span>
-            </Link>
-          )}
-
-          {hasModule('PLAYERS') && (
-            <Link
-              href="/players"
-              className="p-3 sm:p-4 rounded-2xl border border-zinc-800 bg-zinc-900/60 hover:border-zinc-700 hover:bg-zinc-900 text-center space-y-1.5 transition-all group backdrop-blur-md shadow-md"
-            >
-              <div className="w-8 h-8 sm:w-10 sm:h-10 mx-auto rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Users className="w-4 h-4 sm:w-5 sm:h-5" />
-              </div>
-              <span className="text-[11px] sm:text-xs font-bold block text-zinc-300 group-hover:text-white truncate">Kader</span>
+              <span className="text-xs font-bold block text-zinc-300 group-hover:text-white truncate">Organizer</span>
             </Link>
           )}
 
           {hasModule('MATCHES') && (
             <Link
               href="/matches"
-              className="p-3 sm:p-4 rounded-2xl border border-zinc-800 bg-zinc-900/60 hover:border-zinc-700 hover:bg-zinc-900 text-center space-y-1.5 transition-all group backdrop-blur-md shadow-md"
+              className="p-4 rounded-2xl border border-zinc-800 bg-zinc-900/60 hover:border-zinc-700 hover:bg-zinc-900 text-center space-y-1.5 transition-all group backdrop-blur-md shadow-md"
             >
-              <div className="w-8 h-8 sm:w-10 sm:h-10 mx-auto rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Video className="w-4 h-4 sm:w-5 sm:h-5" />
+              <div className="w-10 h-10 mx-auto rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Video className="w-5 h-5" />
               </div>
-              <span className="text-[11px] sm:text-xs font-bold block text-zinc-300 group-hover:text-white truncate">Spiele</span>
+              <span className="text-xs font-bold block text-zinc-300 group-hover:text-white truncate">Spiele</span>
             </Link>
           )}
 
           {hasModule('TRAINING') && (
             <Link
               href="/training"
-              className="p-3 sm:p-4 rounded-2xl border border-zinc-800 bg-zinc-900/60 hover:border-zinc-700 hover:bg-zinc-900 text-center space-y-1.5 transition-all group backdrop-blur-md shadow-md col-span-2 sm:col-span-1"
+              className="p-4 rounded-2xl border border-zinc-800 bg-zinc-900/60 hover:border-zinc-700 hover:bg-zinc-900 text-center space-y-1.5 transition-all group backdrop-blur-md shadow-md"
             >
-              <div className="w-8 h-8 sm:w-10 sm:h-10 mx-auto rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Dumbbell className="w-4 h-4 sm:w-5 sm:h-5" />
+              <div className="w-10 h-10 mx-auto rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Dumbbell className="w-5 h-5" />
               </div>
-              <span className="text-[11px] sm:text-xs font-bold block text-zinc-300 group-hover:text-white truncate">Übungen</span>
+              <span className="text-xs font-bold block text-zinc-300 group-hover:text-white truncate">Übungen</span>
             </Link>
           )}
         </section>
@@ -277,10 +261,18 @@ export default function DashboardLandingPage() {
                   : 'bg-blue-500/20 text-blue-400 border-blue-500/30';
 
                 return (
-                  <Link
+                  <div
                     key={ev.id}
-                    href="/organizer"
-                    className="p-3.5 sm:p-4 rounded-2xl border border-zinc-800/80 bg-zinc-900/50 hover:border-zinc-700 hover:bg-zinc-900 transition-all space-y-2.5 block group shadow-lg"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => onEventEditRequest(ev)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onEventEditRequest(ev);
+                      }
+                    }}
+                    className="p-3.5 sm:p-4 rounded-2xl border border-zinc-800/80 bg-zinc-900/50 hover:border-zinc-700 hover:bg-zinc-900 transition-all space-y-2.5 block group shadow-lg cursor-pointer text-left focus:outline-none focus:border-primary select-none"
                   >
                     <div className="flex items-center justify-between">
                       <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase border ${badgeColor}`}>
@@ -314,7 +306,7 @@ export default function DashboardLandingPage() {
                         </div>
                       )}
                     </div>
-                  </Link>
+                  </div>
                 );
               })}
             </div>
@@ -432,6 +424,19 @@ export default function DashboardLandingPage() {
             onClose={() => { setIsEditModalOpen(false); setMatchToEdit(null); }}
             onSave={confirmEdit}
             match={matchToEdit}
+          />
+        )}
+
+        {eventToEdit && (
+          <EditCalendarEventModal
+            isOpen={isEventEditModalOpen}
+            onClose={() => {
+              setIsEventEditModalOpen(false);
+              setEventToEdit(null);
+            }}
+            event={eventToEdit}
+            onSaved={loadOverviewData}
+            onDeleted={loadOverviewData}
           />
         )}
       </main>

@@ -8,9 +8,9 @@ import ConfirmModal from '@/components/ConfirmModal';
 import AlertDialog from '@/components/AlertDialog';
 import { 
   Users, UserPlus, Upload, Search, Filter, MoveRight, 
-  Trash2, Edit3, Shield, Star, Calendar, ArrowUpDown, Check, FileSpreadsheet, Eye, UserCheck, HeartPulse, UserX, Gift, Printer, Download, MoreVertical
+  Trash2, Edit3, Shield, Star, Calendar, ArrowUpDown, Check, FileSpreadsheet, Eye, Gift, Printer, Download, MoreVertical
 } from 'lucide-react';
-import { getPlayers, createPlayer, updatePlayer, deletePlayer, transferPlayerTeam, importDfbCsv, getTeams, getMyTeams, recordAttendance, toggleTodayAttendance, syncBirthdaysToOrganizer } from '@/services/api';
+import { getPlayers, createPlayer, updatePlayer, deletePlayer, transferPlayerTeam, importDfbCsv, getTeams, getMyTeams, syncBirthdaysToOrganizer, getMediaUrl } from '@/services/api';
 import { useToast } from '@/contexts/ToastContext';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -48,7 +48,6 @@ export default function PlayersPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
-  const [isQuickAttModalOpen, setIsQuickAttModalOpen] = useState(false);
   const [isMoreActionsMenuOpen, setIsMoreActionsMenuOpen] = useState(false);
   const moreActionsMenuRef = useRef<HTMLDivElement>(null);
 
@@ -80,9 +79,7 @@ export default function PlayersPage() {
 
   const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
   const [selectedPlayerForTransfer, setSelectedPlayerForTransfer] = useState<any>(null);
-  const [selectedPlayerForAtt, setSelectedPlayerForAtt] = useState<any>(null);
   const [targetTeamId, setTargetTeamId] = useState<string>('');
-  const [attType, setAttType] = useState<string>('TRAINING');
 
   // Delete Confirm Modal
   const [deletePlayerId, setDeletePlayerId] = useState<string | null>(null);
@@ -396,51 +393,6 @@ export default function PlayersPage() {
     }
   };
 
-  const handleQuickAttendance = async (status: string, reason?: string) => {
-    if (!selectedPlayerForAtt) return;
-
-    try {
-      await recordAttendance({
-        player_id: selectedPlayerForAtt.id,
-        event_type: attType,
-        status: status,
-        absence_reason: status === 'PRESENT' ? null : reason,
-        notes: null
-      });
-
-      setAlertConfig({
-        isOpen: true,
-        message: `Anwesenheit für ${selectedPlayerForAtt.first_name} ${selectedPlayerForAtt.last_name} eingetragen!`,
-        type: 'success'
-      });
-      setIsQuickAttModalOpen(false);
-      setSelectedPlayerForAtt(null);
-      fetchPlayers();
-    } catch (err) {
-      console.error("Failed to record quick attendance:", err);
-      setAlertConfig({ isOpen: true, message: "Fehler beim Eintragen der Anwesenheit.", type: 'error' });
-    }
-  };
-
-  const handleToggleTodayAttendance = async (playerId: string, eventType: string = 'TRAINING') => {
-    try {
-      const res = await toggleTodayAttendance(playerId, eventType);
-      setPlayers(prev => prev.map(p => {
-        if (p.id === playerId) {
-          return {
-            ...p,
-            is_present_last_training: eventType === 'TRAINING' ? res.is_present : p.is_present_last_training,
-            is_present_last_match: eventType === 'MATCH' ? res.is_present : p.is_present_last_match,
-            attendance_rate: res.attendance_rate
-          };
-        }
-        return p;
-      }));
-    } catch (err) {
-      console.error("Failed to toggle attendance:", err);
-    }
-  };
-
   const handleSyncBirthdays = async () => {
     try {
       const res = await syncBirthdaysToOrganizer();
@@ -659,145 +611,80 @@ export default function PlayersPage() {
         ) : (
           <div className="space-y-4">
             {/* Mobile Cards Grid View (< md / 768px, optimized for Pixel 6a & smartphones) */}
-            {(() => {
-              const latestTrainingDate = players.map(p => p.last_training_date).filter(Boolean).sort().reverse()[0];
-              const latestMatchDate = players.map(p => p.last_match_date).filter(Boolean).sort().reverse()[0];
+            <div className="grid grid-cols-1 gap-3.5 md:hidden">
+              {sortedPlayers.map((player) => (
+                <div
+                  key={`card_${player.id}`}
+                  className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-4 shadow-xl space-y-3.5 backdrop-blur-md"
+                >
+                  {/* Card Header: Avatar/Jersey, Name, Team & Direct Actions */}
+                  {(() => {
+                    const canEditThisPlayer = (() => {
+                      if (!player.team_id) return true;
+                      const tLoaded = teams.find((item: any) => item.id === player.team_id);
+                      if (tLoaded) return Boolean(tLoaded.can_edit);
+                      const tUser = user?.teams?.find((item: any) => item.id === player.team_id);
+                      if (tUser) return Boolean(tUser.can_edit);
+                      return isAdmin;
+                    })();
 
-              const formatHeaderDate = (dStr?: string) => {
-                if (!dStr) return '';
-                const d = new Date(dStr);
-                return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
-              };
-
-              const trainingDateStr = formatHeaderDate(latestTrainingDate);
-              const matchDateStr = formatHeaderDate(latestMatchDate);
-
-              return (
-                <div className="grid grid-cols-1 gap-3.5 md:hidden">
-                  {sortedPlayers.map((player) => (
-                    <div
-                      key={`card_${player.id}`}
-                      className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-4 shadow-xl space-y-3.5 backdrop-blur-md"
-                    >
-                      {/* Card Header: Avatar/Jersey, Name, Team & Direct Actions */}
-                      {(() => {
-                        const canEditThisPlayer = (() => {
-                          if (!player.team_id) return true;
-                          const tLoaded = teams.find((item: any) => item.id === player.team_id);
-                          if (tLoaded) return Boolean(tLoaded.can_edit);
-                          const tUser = user?.teams?.find((item: any) => item.id === player.team_id);
-                          if (tUser) return Boolean(tUser.can_edit);
-                          return isAdmin;
-                        })();
-
-                        return (
-                          <>
-                            <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3">
-                              <Link href={`/players/${player.id}`} className="flex items-center gap-3 min-w-0">
-                                <span className="w-10 h-10 rounded-xl bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-700 flex items-center justify-center font-bold text-sm text-primary shrink-0 shadow-md">
+                    return (
+                      <>
+                        <div className="flex items-start justify-between gap-3">
+                          <Link href={`/players/${player.id}`} className="flex items-center gap-3 min-w-0 flex-1">
+                            <div className="w-11 h-11 rounded-2xl bg-zinc-800 border border-zinc-700 flex items-center justify-center font-bold text-primary shrink-0 relative overflow-hidden">
+                              {player.profile_image_url ? (
+                                <img
+                                  src={getMediaUrl(player.profile_image_url)}
+                                  alt={player.first_name}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <span className="text-base font-extrabold">
                                   {player.jersey_number ? `#${player.jersey_number}` : player.first_name[0]}
                                 </span>
-                                <div className="min-w-0">
-                                  <h3 className="font-bold text-sm text-white truncate hover:text-primary transition-colors">
-                                    {player.first_name} {player.last_name}
-                                  </h3>
-                                  <div className="flex items-center gap-2 text-[10px] text-zinc-400 font-semibold mt-0.5">
-                                    <span className="bg-zinc-800 px-2 py-0.5 rounded text-zinc-300 inline-flex items-center gap-1">
-                                      <span>{player.team_name || 'Kein Team'}</span>
-                                      {canEditThisPlayer && <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400 shrink-0 inline-block ml-0.5" />}
-                                    </span>
-                                    <span>• {player.position || 'Feldspieler'}</span>
-                                  </div>
-                                </div>
-                              </Link>
+                              )}
+                            </div>
 
-                              <div className="flex items-center gap-1.5 shrink-0">
-                                <Link
-                                  href={`/players/${player.id}`}
-                                  className="p-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-xl font-bold text-xs"
-                                  title="Profil öffnen"
-                                >
-                                  <Eye className="w-4 h-4" />
-                                </Link>
-                                {canEditThisPlayer && (
-                                  <button
-                                    onClick={() => openEditPlayerModal(player)}
-                                    className="p-2 bg-zinc-800 text-zinc-400 hover:text-amber-400 rounded-xl"
-                                    title="Bearbeiten"
-                                  >
-                                    <Edit3 className="w-4 h-4" />
-                                  </button>
-                                )}
+                            <div className="min-w-0">
+                              <h3 className="font-bold text-sm text-white truncate hover:text-primary transition-colors">
+                                {player.first_name} {player.last_name}
+                              </h3>
+                              <div className="flex items-center gap-2 text-[10px] text-zinc-400 font-semibold mt-0.5">
+                                <span className="bg-zinc-800 px-2 py-0.5 rounded text-zinc-300 inline-flex items-center gap-1">
+                                  <span>{player.team_name || 'Kein Team'}</span>
+                                  {canEditThisPlayer && <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400 shrink-0 inline-block ml-0.5" />}
+                                </span>
+                                <span>• {player.position || 'Feldspieler'}</span>
                               </div>
                             </div>
-                          </>
-                        );
-                      })()}
+                          </Link>
 
-                      {/* Daily Attendance Toggles (Large touch targets for Mobile) */}
-                      <div className="grid grid-cols-2 gap-2">
-                        {/* Training Toggle */}
-                        <button
-                          type="button"
-                          onClick={() => handleToggleTodayAttendance(player.id, 'TRAINING')}
-                          className={`p-2.5 rounded-xl border text-xs font-bold transition-all flex flex-col items-center justify-center gap-1 active:scale-95 ${
-                            player.is_present_last_training
-                              ? 'bg-emerald-600/90 text-white border-emerald-500 shadow-md shadow-emerald-600/20'
-                              : 'bg-zinc-950/80 text-zinc-400 border-zinc-800 hover:border-zinc-700'
-                          }`}
-                        >
-                          <span className="text-[10px] uppercase tracking-wider font-extrabold opacity-80">
-                            Training {trainingDateStr && `(${trainingDateStr})`}
-                          </span>
-                          <div className="flex items-center gap-1.5 font-bold">
-                            <input
-                              type="checkbox"
-                              checked={player.is_present_last_training || false}
-                              readOnly
-                              className="w-4 h-4 accent-emerald-500 rounded cursor-pointer"
-                            />
-                            <span>{player.is_present_last_training ? 'Anwesend' : 'Abwesend'}</span>
-                          </div>
-                        </button>
-
-                        {/* Match Toggle */}
-                        {(() => {
-                          const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-                          const hasRecentMatch = player.last_match_date && new Date(player.last_match_date) >= thirtyDaysAgo;
-
-                          return (
-                            <button
-                              type="button"
-                              disabled={!hasRecentMatch}
-                              onClick={() => hasRecentMatch && handleToggleTodayAttendance(player.id, 'MATCH')}
-                              className={`p-2.5 rounded-xl border text-xs font-bold transition-all flex flex-col items-center justify-center gap-1 ${
-                                !hasRecentMatch
-                                  ? 'bg-zinc-950/40 text-zinc-600 border-zinc-800/80 cursor-not-allowed opacity-50'
-                                  : player.is_present_last_match
-                                  ? 'bg-blue-600/90 text-white border-blue-500 shadow-md shadow-blue-600/20 active:scale-95'
-                                  : 'bg-zinc-950/80 text-zinc-400 border-zinc-800 hover:border-zinc-700 active:scale-95'
-                              }`}
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <Link
+                              href={`/players/${player.id}`}
+                              className="p-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-xl font-bold text-xs"
+                              title="Profil öffnen"
                             >
-                              <span className="text-[10px] uppercase tracking-wider font-extrabold opacity-80">
-                                Spiel {hasRecentMatch ? (matchDateStr && `(${matchDateStr})`) : '(Kein Spiel)'}
-                              </span>
-                              <div className="flex items-center gap-1.5 font-bold">
-                                <input
-                                  type="checkbox"
-                                  disabled={!hasRecentMatch}
-                                  checked={hasRecentMatch && (player.is_present_last_match || false)}
-                                  readOnly
-                                  className="w-4 h-4 accent-blue-500 rounded cursor-pointer disabled:cursor-not-allowed"
-                                />
-                                <span>{!hasRecentMatch ? 'Kein Spiel' : player.is_present_last_match ? 'Anwesend' : 'Abwesend'}</span>
-                              </div>
-                            </button>
-                          );
-                        })()}
-                      </div>
+                              <Eye className="w-4 h-4" />
+                            </Link>
+                            {canEditThisPlayer && (
+                              <button
+                                onClick={() => openEditPlayerModal(player)}
+                                className="p-2 bg-zinc-800 text-zinc-400 hover:text-amber-400 rounded-xl"
+                                title="Bearbeiten"
+                              >
+                                <Edit3 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
 
-                      {/* Mini Stats Footer: Attendance Rate, Latest Rating & Rating Date */}
-                      <div className="flex items-center justify-between text-xs pt-1 border-t border-zinc-800/60">
+                  {/* Mini Stats Footer: Attendance Rate, Latest Rating & Rating Date */}
+                  <div className="flex items-center justify-between text-xs pt-1 border-t border-zinc-800/60">
                         <div className="flex items-center gap-2">
                           <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-lg text-[11px] font-bold">
                             {player.attendance_rate !== undefined ? `${player.attendance_rate}%` : '100%'} Quote
@@ -817,8 +704,6 @@ export default function PlayersPage() {
                     </div>
                   ))}
                 </div>
-              );
-            })()}
 
             {/* Desktop Table View (>= md / 768px) */}
             <div className="hidden md:block bg-zinc-900/80 border border-zinc-800/80 rounded-2xl overflow-hidden backdrop-blur-xl shadow-xl">
@@ -856,51 +741,6 @@ export default function PlayersPage() {
                           <ArrowUpDown className="w-3 h-3 text-zinc-500" />
                         </div>
                       </th>
-                      {(() => {
-                        const now = new Date();
-                        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-
-                        const latestTrainingDate = players.map(p => p.last_training_date).filter(Boolean).sort().reverse()[0];
-                        const latestMatchDate = players.map(p => p.last_match_date).filter(Boolean).sort().reverse()[0];
-
-                        const hasRecentMatch = latestMatchDate && new Date(latestMatchDate) >= thirtyDaysAgo;
-
-                        const formatHeaderDate = (dStr?: string) => {
-                          if (!dStr) return null;
-                          const d = new Date(dStr);
-                          return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
-                        };
-
-                        const trainingDateFormatted = formatHeaderDate(latestTrainingDate);
-                        const matchDateFormatted = formatHeaderDate(latestMatchDate);
-
-                        return (
-                          <>
-                            <th className="py-4 px-4 text-center">
-                              <div>Letztes Training</div>
-                              {trainingDateFormatted && (
-                                <div className="text-[10px] font-mono text-emerald-400 font-normal lowercase tracking-normal mt-0.5">
-                                  ({trainingDateFormatted})
-                                </div>
-                              )}
-                            </th>
-                            <th className="py-4 px-4 text-center">
-                              <div>Letztes Spiel</div>
-                              {hasRecentMatch ? (
-                                matchDateFormatted && (
-                                  <div className="text-[10px] font-mono text-blue-400 font-normal lowercase tracking-normal mt-0.5">
-                                    ({matchDateFormatted})
-                                  </div>
-                                )
-                              ) : (
-                                <div className="text-[10px] font-medium text-amber-400/80 normal-case tracking-normal mt-0.5">
-                                  (Kein Spiel stattgefunden)
-                                </div>
-                              )}
-                            </th>
-                          </>
-                        );
-                      })()}
                       <th onClick={() => handleSort('attendance')} className="py-4 px-4 text-center cursor-pointer hover:text-white transition-colors">
                         <div className="flex items-center justify-center gap-1.5">
                           <span>Gesamt %</span>
@@ -974,61 +814,6 @@ export default function PlayersPage() {
                           {player.dfb_id || '—'}
                         </td>
 
-                        {/* Direct Checkbox: Last Training Attendance */}
-                        <td className="py-3.5 px-4 text-center">
-                          <button
-                            type="button"
-                            onClick={() => handleToggleTodayAttendance(player.id, 'TRAINING')}
-                            className={`inline-flex items-center gap-1.5 px-4 py-1 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-                              player.is_present_last_training
-                                ? 'bg-emerald-600 text-white border-emerald-500 shadow-md shadow-emerald-600/20'
-                                : 'bg-zinc-950 text-zinc-400 hover:text-zinc-200 border-zinc-800 hover:border-zinc-700'
-                            }`}
-                            title="Klicken, um Anwesenheit fürs letzte Training umzuschalten"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={player.is_present_last_training || false}
-                              readOnly
-                              className="w-3.5 h-3.5 accent-emerald-500 rounded cursor-pointer"
-                            />
-                            <span>{player.is_present_last_training ? 'Da' : 'Fehlt'}</span>
-                          </button>
-                        </td>
-
-                        {/* Direct Checkbox: Last Match Attendance */}
-                        <td className="py-3.5 px-4 text-center">
-                          {(() => {
-                            const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-                            const hasRecentMatch = player.last_match_date && new Date(player.last_match_date) >= thirtyDaysAgo;
-
-                            return (
-                              <button
-                                type="button"
-                                disabled={!hasRecentMatch}
-                                onClick={() => hasRecentMatch && handleToggleTodayAttendance(player.id, 'MATCH')}
-                                className={`inline-flex items-center gap-1.5 px-4 py-1 rounded-xl text-xs font-bold transition-all border ${
-                                  !hasRecentMatch
-                                    ? 'bg-zinc-900/50 text-zinc-600 border-zinc-800/80 cursor-not-allowed opacity-50'
-                                    : player.is_present_last_match
-                                    ? 'bg-blue-600 text-white border-blue-500 shadow-md shadow-blue-600/20 cursor-pointer'
-                                    : 'bg-zinc-950 text-zinc-400 hover:text-zinc-200 border-zinc-800 hover:border-zinc-700 cursor-pointer'
-                                }`}
-                                title={hasRecentMatch ? "Klicken, um Anwesenheit fürs letzte Spiel umzuschalten" : "Kein Spiel im letzten Monat stattgefunden"}
-                              >
-                                <input
-                                  type="checkbox"
-                                  disabled={!hasRecentMatch}
-                                  checked={hasRecentMatch && (player.is_present_last_match || false)}
-                                  readOnly
-                                  className="w-3.5 h-3.5 accent-blue-500 rounded cursor-pointer disabled:cursor-not-allowed"
-                                />
-                                <span>{!hasRecentMatch ? '—' : player.is_present_last_match ? 'Da' : 'Fehlt'}</span>
-                              </button>
-                            );
-                          })()}
-                        </td>
-
                       {/* Anwesenheit Rate */}
                       <td className="py-3.5 px-4 text-center">
                         <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-lg text-xs font-bold">
@@ -1068,20 +853,6 @@ export default function PlayersPage() {
 
                           return (
                             <div className="flex items-center justify-end gap-1.5">
-                              {canEditThisPlayer && (
-                                <button
-                                  onClick={() => {
-                                    setSelectedPlayerForAtt(player);
-                                    setAttType('TRAINING');
-                                    setIsQuickAttModalOpen(true);
-                                  }}
-                                  className="p-1.5 bg-emerald-600/20 hover:bg-emerald-600 hover:text-white text-emerald-400 rounded-lg transition-all border border-emerald-500/30"
-                                  title="Anwesenheit für letztes Training/Spiel eintragen"
-                                >
-                                  <UserCheck className="w-4 h-4" />
-                                </button>
-                              )}
-
                               {canEditThisPlayer && (
                                 <button
                                   onClick={() => {
@@ -1470,125 +1241,6 @@ export default function PlayersPage() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* --- Modal: Anwesenheit für letztes Training/Spiel eintragen --- */}
-      {isQuickAttModalOpen && selectedPlayerForAtt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5">
-            <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                <UserCheck className="w-5 h-5 text-emerald-400" />
-                Anwesenheit eintragen
-              </h2>
-              <button
-                onClick={() => setIsQuickAttModalOpen(false)}
-                className="text-zinc-400 hover:text-white text-xl font-bold"
-              >
-                &times;
-              </button>
-            </div>
-
-            <p className="text-xs text-zinc-300">
-              Erfasse die Teilnahme für <strong className="text-white">{selectedPlayerForAtt.first_name} {selectedPlayerForAtt.last_name}</strong> beim letzten Training oder Spiel.
-            </p>
-
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1.5">Einheit</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setAttType('TRAINING')}
-                    className={`py-2 rounded-xl text-xs font-bold transition-all ${
-                      attType === 'TRAINING' ? 'bg-primary text-white' : 'bg-zinc-950 text-zinc-400 hover:text-white border border-zinc-800'
-                    }`}
-                  >
-                    ⚽ Training
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAttType('MATCH')}
-                    className={`py-2 rounded-xl text-xs font-bold transition-all ${
-                      attType === 'MATCH' ? 'bg-primary text-white' : 'bg-zinc-950 text-zinc-400 hover:text-white border border-zinc-800'
-                    }`}
-                  >
-                    🏆 Spiel
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">Status auswählen</label>
-                <div className="grid grid-cols-1 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleQuickAttendance('PRESENT')}
-                    className="w-full flex items-center justify-between bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white p-3 rounded-xl border border-emerald-500/30 text-xs font-bold transition-all"
-                  >
-                    <span className="flex items-center gap-2">
-                      <Check className="w-4 h-4" />
-                      Anwesend
-                    </span>
-                    <span>✓</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleQuickAttendance('EXCUSED', 'KRANKHEIT')}
-                    className="w-full flex items-center justify-between bg-red-500/10 hover:bg-red-600 text-red-400 hover:text-white p-3 rounded-xl border border-red-500/20 text-xs font-bold transition-all"
-                  >
-                    <span className="flex items-center gap-2">
-                      <HeartPulse className="w-4 h-4 text-red-400" />
-                      Abgemeldet: Krankheit
-                    </span>
-                    <span>🤒</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleQuickAttendance('EXCUSED', 'PRIVATES')}
-                    className="w-full flex items-center justify-between bg-amber-500/10 hover:bg-amber-600 text-amber-400 hover:text-white p-3 rounded-xl border border-amber-500/20 text-xs font-bold transition-all"
-                  >
-                    <span>Abgemeldet: Privates / Schule</span>
-                    <span>🏠</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleQuickAttendance('EXCUSED', 'VERLETZUNG')}
-                    className="w-full flex items-center justify-between bg-purple-500/10 hover:bg-purple-600 text-purple-400 hover:text-white p-3 rounded-xl border border-purple-500/20 text-xs font-bold transition-all"
-                  >
-                    <span>Abgemeldet: Verletzung</span>
-                    <span>🚑</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleQuickAttendance('ABSENT')}
-                    className="w-full flex items-center justify-between bg-zinc-800 hover:bg-zinc-700 text-zinc-300 p-3 rounded-xl border border-zinc-700 text-xs font-bold transition-all"
-                  >
-                    <span className="flex items-center gap-2">
-                      <UserX className="w-4 h-4" />
-                      Unentschuldigt gefehlt
-                    </span>
-                    <span>✗</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end pt-2 border-t border-zinc-800">
-              <button
-                type="button"
-                onClick={() => setIsQuickAttModalOpen(false)}
-                className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs font-bold"
-              >
-                Abbrechen
-              </button>
-            </div>
           </div>
         </div>
       )}

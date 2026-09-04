@@ -22,11 +22,13 @@ import {
   MoreVertical,
   List,
   Star,
-  Loader2
+  Loader2,
+  UserCheck
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import PageHeader from '@/components/PageHeader';
 import PrintableTrainingModal from '@/components/PrintableTrainingModal';
+import EditCalendarEventModal from '@/components/EditCalendarEventModal';
 import {
   getCalendarEvents,
   createCalendarEvent,
@@ -78,6 +80,11 @@ export default function OrganizerPage() {
   const [viewMode, setViewMode] = useState<'GRID' | 'LIST'>('GRID');
   const [pushStatus, setPushStatus] = useState<'checking' | 'enabled' | 'disabled' | 'unsupported'>('checking');
   const [pushBusy, setPushBusy] = useState(false);
+
+  // Edit Calendar Event Modal State (with Attendance Tab)
+  const [editingEventModalItem, setEditingEventModalItem] = useState<any | null>(null);
+  const [isEditCalendarEventModalOpen, setIsEditCalendarEventModalOpen] = useState(false);
+  const [editingEventModalInitialTab, setEditingEventModalInitialTab] = useState<'DETAILS' | 'ATTENDANCE'>('DETAILS');
 
   // Set default viewMode to LIST on mobile devices (< 768px)
   useEffect(() => {
@@ -1199,10 +1206,29 @@ export default function OrganizerPage() {
 
                       {isEventMenuOpen && (
                         <div className="absolute right-0 top-full mt-2 w-52 rounded-xl bg-zinc-900 border border-zinc-700 shadow-2xl p-1.5 z-[110] space-y-1 text-xs font-semibold">
+                          {(selectedEventDetails.event_type === 'TRAINING' || selectedEventDetails.event_type === 'MATCH') && (
+                            <button
+                              onClick={() => {
+                                const ev = selectedEventDetails;
+                                setIsEventMenuOpen(false);
+                                setSelectedEventDetails(null);
+                                setEditingEventModalItem(ev);
+                                setEditingEventModalInitialTab('ATTENDANCE');
+                                setIsEditCalendarEventModalOpen(true);
+                              }}
+                              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300 transition-all text-left"
+                            >
+                              <UserCheck className="w-3.5 h-3.5" /> Anwesenheit erfassen
+                            </button>
+                          )}
                           <button
                             onClick={() => {
+                              const ev = selectedEventDetails;
                               setIsEventMenuOpen(false);
-                              handleEditEventRequest(selectedEventDetails);
+                              setSelectedEventDetails(null);
+                              setEditingEventModalItem(ev);
+                              setEditingEventModalInitialTab('DETAILS');
+                              setIsEditCalendarEventModalOpen(true);
                             }}
                             className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-zinc-200 hover:bg-zinc-800 hover:text-white transition-all text-left"
                           >
@@ -1409,13 +1435,49 @@ export default function OrganizerPage() {
                 )}
               </div>
 
-              <div className="flex justify-end border-t border-zinc-800 pt-4">
-                <button
-                  onClick={() => { setIsEventMenuOpen(false); setSelectedEventDetails(null); }}
-                  className="px-5 py-2 rounded-xl bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-white text-xs font-bold transition-all"
-                >
-                  Schließen
-                </button>
+              <div className="flex items-center justify-between border-t border-zinc-800 pt-4">
+                {(selectedEventDetails.event_type === 'TRAINING' || selectedEventDetails.event_type === 'MATCH') ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const ev = selectedEventDetails;
+                      setIsEventMenuOpen(false);
+                      setSelectedEventDetails(null);
+                      setEditingEventModalItem(ev);
+                      setEditingEventModalInitialTab('ATTENDANCE');
+                      setIsEditCalendarEventModalOpen(true);
+                    }}
+                    className="px-3.5 py-2 rounded-xl bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-600 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5"
+                  >
+                    <UserCheck className="w-4 h-4" />
+                    <span>👥 Anwesenheit erfassen</span>
+                  </button>
+                ) : <div />}
+
+                <div className="flex items-center gap-2">
+                  {canEditEvent(selectedEventDetails) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const ev = selectedEventDetails;
+                        setIsEventMenuOpen(false);
+                        setSelectedEventDetails(null);
+                        setEditingEventModalItem(ev);
+                        setEditingEventModalInitialTab('DETAILS');
+                        setIsEditCalendarEventModalOpen(true);
+                      }}
+                      className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-bold transition-all"
+                    >
+                      Termin bearbeiten
+                    </button>
+                  )}
+                  <button
+                    onClick={() => { setIsEventMenuOpen(false); setSelectedEventDetails(null); }}
+                    className="px-5 py-2 rounded-xl bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-white text-xs font-bold transition-all"
+                  >
+                    Schließen
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1868,6 +1930,21 @@ export default function OrganizerPage() {
             session={printingSession}
             exercisesList={[]}
             onClose={() => setPrintingSession(null)}
+          />
+        )}
+
+        {/* Edit Calendar Event Modal with Attendance Tab */}
+        {isEditCalendarEventModalOpen && editingEventModalItem && (
+          <EditCalendarEventModal
+            isOpen={isEditCalendarEventModalOpen}
+            onClose={() => {
+              setIsEditCalendarEventModalOpen(false);
+              setEditingEventModalItem(null);
+            }}
+            event={editingEventModalItem}
+            initialTab={editingEventModalInitialTab}
+            onSaved={loadData}
+            onDeleted={loadData}
           />
         )}
       </main>
