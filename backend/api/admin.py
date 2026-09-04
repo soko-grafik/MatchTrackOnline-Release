@@ -972,6 +972,149 @@ async def delete_match_stream(
         }
     }
 
+class ConvertStreamTypeRequest(BaseModel):
+    new_type: str # "16x9", "32x9", "standard", "panorama"
+
+@router.post("/matches/{match_id}/streams/{stream_id}/convert-type", status_code=200)
+async def convert_match_stream_type(
+    match_id: str,
+    stream_id: str,
+    req: ConvertStreamTypeRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_trainer)
+):
+    """
+    Ändert den Typ einer Videospur zwischen Standard (16:9) und Panorama (32:9).
+    Benennt die Dateien auf der Festplatte um und aktualisiert die DB-Einträge.
+    """
+    match = db.query(Match).filter(Match.id == match_id).first()
+    if not match:
+        raise HTTPException(status_code=404, detail="Match nicht gefunden.")
+
+    source_is_pano = stream_id.lower() in ["32x9", "panorama", "pano", "32:9"]
+    source_is_std = stream_id.lower() in ["16x9", "standard", "std", "16:9"]
+
+    target_is_pano = req.new_type.lower() in ["32x9", "panorama", "pano", "32:9"]
+    target_is_std = req.new_type.lower() in ["16x9", "standard", "std", "16:9"]
+
+    if not source_is_pano and not source_is_std:
+        raise HTTPException(status_code=400, detail="Ungültiger Ausgangs-Stream (Erlaubt: '16x9', '32x9').")
+
+    if not target_is_pano and not target_is_std:
+        raise HTTPException(status_code=400, detail="Ungültiger Ziel-Typ (Erlaubt: '16x9', '32x9').")
+
+    if source_is_pano == target_is_pano:
+        return {"status": "success", "message": "Typ ist bereits zugewiesen.", "new_type": "32x9" if target_is_pano else "16x9"}
+
+    match_folder = os.path.join(UPLOAD_DIR, match_id)
+    chunks = db.query(VideoChunk).filter(VideoChunk.match_id == match_id).all()
+
+    has_existing_pano = os.path.exists(os.path.join(match_folder, "panorama_32x9.mp4")) or any("panorama_32x9" in (c.video_path or "") for c in chunks)
+    has_existing_std = any("panorama_32x9" not in (c.video_path or "") for c in chunks)
+
+    # 1. Umwandlung von Standard (16:9) -> Panorama (32:9)
+    if source_is_std and target_is_pano:
+        if has_existing_pano:
+            raise HTTPException(status_code=400, detail="Für dieses Match existiert bereits ein Panorama-Video (32:9). Bitte lösche oder ersetze dieses zuerst.")
+
+        std_chunk = next((c for c in chunks if "panorama_32x9" not in (c.video_path or "")), None)
+        if not std_chunk:
+            raise HTTPException(status_code=404, detail="Kein Standard-Video für dieses Match gefunden.")
+
+        old_video_rel = std_chunk.video_path
+        old_video_abs = os.path.join(BASE_DIR, old_video_rel.replace('backend/', '', 1)) if old_video_rel else None
+        new_video_abs = os.path.join(match_folder, "panorama_32x9.mp4")
+
+        if old_video_abs and os.path.exists(old_video_abs):
+            try:
+                shutil.move(old_video_abs, new_video_abs)
+            except Exception as e:
+                print(f"[ConvertStream] Fehler beim Umbenennen der Videodatei: {e}")
+                shutil.copy2(old_video_abs, new_video_abs)
+                try:
+                    os.remove(old_video_abs)
+                except Exception:
+                    pass
+
+        # ABR / HLS Ordner umbenennen falls vorhanden
+        if old_video_abs:
+            old_base = os.path.splitext(os.path.basename(old_video_abs))[0]
+            old_abr = os.path.join(match_folder, f"{old_base}_abr")
+            new_abr = os.path.join(match_folder, "panorama_32x9_abr")
+            if os.path.exists(old_abr) and not os.path.exists(new_abr):
+                try:
+                    shutil.move(old_abr, new_abr)
+                except Exception as e:
+                    print(f"[ConvertStream] Fehler beim Umbenennen von ABR: {e}")
+
+        std_chunk.video_path = f"uploads/{match_id}/panorama_32x9.mp4"
+        db.commit()
+
+    # 2. Umwandlung von Panorama (32:9) -> Standard (16:9)
+    elif source_is_pano and target_is_std:
+        if has_existing_std:
+            raise HTTPException(status_code=400, detail="Für dieses Match existiert bereits ein Standard-Video (16:9). Bitte lösche oder ersetze dieses zuerst.")
+
+        pano_chunk = next((c for c in chunks if "panorama_32x9" in (c.video_path or "")), None)
+        pano_fixed_abs = os.path.join(match_folder, "panorama_32x9.mp4")
+        new_video_abs = os.path.join(match_folder, "standard_16x9.mp4")
+
+        source_abs = None
+        if pano_chunk and pano_chunk.video_path:
+            source_abs = os.path.join(BASE_DIR, pano_chunk.video_path.replace('backend/', '', 1))
+        if not source_abs or not os.path.exists(source_abs):
+            if os.path.exists(pano_fixed_abs):
+                source_abs = pano_fixed_abs
+
+        if source_abs and os.path.exists(source_abs):
+            try:
+                shutil.move(source_abs, new_video_abs)
+            except Exception as e:
+                print(f"[ConvertStream] Fehler beim Umbenennen von Panorama nach Standard: {e}")
+                shutil.copy2(source_abs, new_video_abs)
+                try:
+                    os.remove(source_abs)
+                except Exception:
+                    pass
+
+        # ABR / HLS Ordner anpassen
+        pano_abr = os.path.join(match_folder, "panorama_32x9_abr")
+        std_abr = os.path.join(match_folder, "standard_16x9_abr")
+        if os.path.exists(pano_abr) and not os.path.exists(std_abr):
+            try:
+                shutil.move(pano_abr, std_abr)
+            except Exception as e:
+                print(f"[ConvertStream] Fehler beim Umbenennen von ABR: {e}")
+
+        if pano_chunk:
+            pano_chunk.video_path = f"uploads/{match_id}/standard_16x9.mp4"
+        else:
+            # Chunk neu anlegen falls er nur als Datei existierte
+            new_chunk = VideoChunk(
+                match_id=match_id,
+                video_path=f"uploads/{match_id}/standard_16x9.mp4",
+                file_size_mb=int(os.path.getsize(new_video_abs) / (1024 * 1024)) if os.path.exists(new_video_abs) else 0,
+                conversion_status="pending"
+            )
+            db.add(new_chunk)
+
+        db.commit()
+
+    # Thumbnail aktualisieren
+    try:
+        background_tasks.add_task(generate_thumbnail, match_id)
+    except Exception:
+        pass
+
+    target_label = "Panorama (32:9)" if target_is_pano else "Standard (16:9)"
+    return {
+        "status": "success",
+        "message": f"Videospur erfolgreich als {target_label} zugewiesen.",
+        "match_id": match_id,
+        "new_type": "32x9" if target_is_pano else "16x9"
+    }
+
 @router.post("/regenerate-thumbnails", status_code=200)
 async def regenerate_all_thumbnails(
     background_tasks: BackgroundTasks,

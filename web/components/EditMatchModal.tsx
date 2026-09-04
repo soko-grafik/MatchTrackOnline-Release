@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { X, Save, Loader2, RefreshCw, Upload, Video, AlertTriangle, Trash2 } from 'lucide-react';
+import { X, Save, Loader2, RefreshCw, Upload, Video, AlertTriangle, Trash2, ArrowLeftRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { replaceMatchVideo, getTeams, getMatchDetails, deleteMatchStream } from '../services/api';
+import { replaceMatchVideo, getTeams, getMatchDetails, deleteMatchStream, convertMatchStreamType } from '../services/api';
 import AlertDialog from '@/components/AlertDialog';
 
 interface EditMatchModalProps {
@@ -26,6 +26,7 @@ export default function EditMatchModal({ isOpen, onClose, onSave, match }: EditM
   const [streams, setStreams] = useState<any[]>([]);
   const [streamsLoading, setStreamsLoading] = useState(false);
   const [deletingStreamId, setDeletingStreamId] = useState<string | null>(null);
+  const [convertingStreamId, setConvertingStreamId] = useState<string | null>(null);
   const [confirmDeleteStream, setConfirmDeleteStream] = useState<{ id: string; label: string } | null>(null);
 
   useEffect(() => {
@@ -155,6 +156,31 @@ export default function EditMatchModal({ isOpen, onClose, onSave, match }: EditM
       });
     } finally {
       setDeletingStreamId(null);
+    }
+  };
+
+  const handleConvertStreamType = async (streamId: string, targetType: '16x9' | '32x9') => {
+    if (!match?.id) return;
+    setConvertingStreamId(streamId);
+    try {
+      const res = await convertMatchStreamType(match.id, streamId, targetType);
+      setAlertConfig({
+        isOpen: true,
+        title: 'Videotyp geändert',
+        message: res.message || 'Die Videospur wurde erfolgreich neu zugeordnet.',
+        type: 'success'
+      });
+      await loadMatchStreams(match.id);
+    } catch (err: any) {
+      console.error("Fehler beim Ändern des Videotyps:", err);
+      setAlertConfig({
+        isOpen: true,
+        title: 'Fehler',
+        message: err.response?.data?.detail || err.message || 'Fehler beim Ändern des Videotyps.',
+        type: 'error'
+      });
+    } finally {
+      setConvertingStreamId(null);
     }
   };
 
@@ -334,44 +360,90 @@ export default function EditMatchModal({ isOpen, onClose, onSave, match }: EditM
                     Keine Videodateien hinterlegt
                   </div>
                 ) : (
-                  streams.map((s: any) => (
-                    <div
-                      key={s.id}
-                      className="flex items-center justify-between gap-3 p-3 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-zinc-700 transition-all"
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <span className="text-base shrink-0">{s.id === '32x9' ? '🏟️' : '📹'}</span>
-                        <div className="min-w-0">
-                          <div className="text-xs font-bold text-white flex items-center gap-2">
-                            <span>{s.label || (s.id === '32x9' ? 'Panorama' : 'Standard')}</span>
-                            <span className="text-[10px] px-1.5 py-0.5 rounded font-mono bg-zinc-800 text-zinc-400">
-                              {s.id === '32x9' ? 'Breitbild' : '16:9'}
-                            </span>
-                          </div>
-                          {s.video_path && (
-                            <div className="text-[10px] text-zinc-500 font-mono truncate max-w-[200px] sm:max-w-xs">
-                              {s.video_path}
+                  streams.map((s: any) => {
+                    const isPano = s.id === '32x9' || s.aspect_ratio === '32:9';
+                    const hasPanoAlready = streams.some((st: any) => st.id === '32x9' || st.aspect_ratio === '32:9');
+                    const hasStdAlready = streams.some((st: any) => st.id === '16x9' || st.aspect_ratio === '16:9');
+
+                    return (
+                      <div
+                        key={s.id}
+                        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-zinc-700 transition-all"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="text-xl shrink-0">{isPano ? '🏟️' : '📹'}</span>
+                          <div className="min-w-0">
+                            <div className="text-xs font-bold text-white flex items-center gap-2">
+                              <span>{s.label || (isPano ? 'Panorama' : 'Standard')}</span>
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono font-bold ${
+                                isPano 
+                                  ? 'bg-primary/20 text-primary border border-primary/30' 
+                                  : 'bg-zinc-800 text-zinc-300 border border-zinc-700'
+                              }`}>
+                                {isPano ? 'Panorama (32:9)' : 'Standard (16:9)'}
+                              </span>
                             </div>
+                            {s.video_path && (
+                              <div className="text-[10px] text-zinc-500 font-mono truncate max-w-[180px] sm:max-w-xs mt-0.5">
+                                {s.video_path}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                          {/* Zuordnungs- / Typ-Änderungs-Button */}
+                          {!isPano ? (
+                            <button
+                              type="button"
+                              onClick={() => handleConvertStreamType('16x9', '32x9')}
+                              disabled={convertingStreamId === s.id || deletingStreamId === s.id || hasPanoAlready}
+                              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                              title={hasPanoAlready ? 'Bereits ein Panorama-Video vorhanden' : 'Als Panorama (32:9) zuordnen'}
+                            >
+                              {convertingStreamId === s.id ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <ArrowLeftRight className="w-3.5 h-3.5" />
+                              )}
+                              <span>Zu Panorama (32:9)</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleConvertStreamType('32x9', '16x9')}
+                              disabled={convertingStreamId === s.id || deletingStreamId === s.id || hasStdAlready}
+                              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                              title={hasStdAlready ? 'Bereits ein Standard-Video vorhanden' : 'Als Standard (16:9) zuordnen'}
+                            >
+                              {convertingStreamId === s.id ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <ArrowLeftRight className="w-3.5 h-3.5" />
+                              )}
+                              <span>Zu Standard (16:9)</span>
+                            </button>
                           )}
+
+                          {/* Löschen-Button */}
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDeleteStream({ id: s.id, label: s.label || (isPano ? 'Panorama-Video' : 'Standard-Video') })}
+                            disabled={deletingStreamId === s.id || convertingStreamId === s.id}
+                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-semibold transition-all disabled:opacity-50"
+                            title={`${s.label || s.id} löschen`}
+                          >
+                            {deletingStreamId === s.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-3.5 h-3.5" />
+                            )}
+                            <span>Löschen</span>
+                          </button>
                         </div>
                       </div>
-
-                      <button
-                        type="button"
-                        onClick={() => setConfirmDeleteStream({ id: s.id, label: s.label || (s.id === '32x9' ? 'Panorama-Video' : 'Standard-Video') })}
-                        disabled={deletingStreamId === s.id}
-                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-semibold transition-all shrink-0 disabled:opacity-50"
-                        title={`${s.label || s.id} löschen`}
-                      >
-                        {deletingStreamId === s.id ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <Trash2 className="w-3.5 h-3.5" />
-                        )}
-                        <span>Löschen</span>
-                      </button>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
               

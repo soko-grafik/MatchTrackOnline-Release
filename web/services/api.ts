@@ -250,6 +250,13 @@ export const deleteMatchStream = async (matchId: string, streamId: string) => {
   return safeJsonParse(response.data);
 };
 
+export const convertMatchStreamType = async (matchId: string, streamId: string, newType: '16x9' | '32x9') => {
+  const response = await api.post(`/admin/matches/${matchId}/streams/${streamId}/convert-type`, {
+    new_type: newType
+  });
+  return safeJsonParse(response.data);
+};
+
 
 
 // Matches
