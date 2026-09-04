@@ -24,9 +24,31 @@ if [ -d ".git" ]; then
     if [ -z "$CURRENT_REMOTE" ]; then
         git remote add origin "${UPDATE_REPO_URL:-https://github.com/soko-grafik/MatchTrackOnline-Public.git}" 2>/dev/null || true
     fi
+
+    # Sparse-Checkout konfigurieren (schließt chats, docs, scripts, plans & Release-Skripte aus)
+    git config core.sparseCheckout true
+    mkdir -p .git/info
+    cat << 'EOF' > .git/info/sparse-checkout
+/*
+!/chats/
+!/chat/
+!/docs/
+!/scripts/
+!/plans/
+!/.idea/
+!/build_production.bat
+!/build_production.sh
+!/update_live.sh
+!/delete_organizer_matches.py
+EOF
+
     git checkout -- web/public/sw.js web/public/workbox-*.js 2>/dev/null || true
     git fetch origin main || true
     git reset --hard origin/main || git pull origin main
+
+    # Sicherstellen, dass ausgeschlossene Dateien/Ordner nicht im Dateisystem liegen
+    rm -rf chats chat docs scripts plans .idea build_production.bat build_production.sh update_live.sh delete_organizer_matches.py 2>/dev/null || true
+
     chmod +x "$PROJECT_DIR"/*.sh "$BACKEND_DIR"/*.sh 2>/dev/null || true
     echo "Git pull completed successfully."
 else

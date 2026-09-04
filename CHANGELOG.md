@@ -1,8 +1,9 @@
 # 📋 MatchTrack Online - Versions-Changelog
 
-## Release: 2026-09-04 10:00:23 (Dev Commit: `9222b462`)
+## Release: 2026-09-04 11:00:07 (Dev Commit: `7208cfb4`)
 
 ### 🚀 Letzte Änderungen aus dem Entwicklungs-Repository:
+* feat(update): use git sparse-checkout to exclude chats, docs, scripts, plans, .idea and production/temp scripts on dev server (7208cfb4 - 2026-09-04)
 * fix(scripts): hash only package.json and requirements.txt for robust dependency caching (9222b462 - 2026-09-04)
 * feat(matches): allow changing/reassigning video stream type between Standard (16:9) and Panorama (32:9) in Match Edit modal (7fd55837 - 2026-09-04)
 * fix(scripts): set executable permissions (chmod +x) in git index and cache npm/pip installs by hash (7bbdd507 - 2026-09-04)
@@ -12,7 +13,6 @@
 * fix(git): preserve configured git remote and prevent auth prompts during updates (18432cf3 - 2026-09-04)
 * feat: DSGVO, Cookie-Consent (TDDDG), Impressum, Datenschutz & Admin-Editierbarkeit (9bb9f0aa - 2026-09-04)
 * re (c78bb961 - 2026-09-03)
-* re (01752273 - 2026-09-03)
 
 ---
 *Automatisch generiert durch die MatchTrack Release Pipeline.*
