@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { loginUser, forgotPassword, getMyProfile, api } from '@/services/api';
 import Image from 'next/image';
 import Link from 'next/link';
+import Footer from '@/components/Footer';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -103,78 +104,82 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-950 p-4 font-sans text-white">
-      <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900/50 p-8 shadow-2xl backdrop-blur-md">
-        <div className="mb-8 flex justify-center">
-          <Image
-            src="/logo_light_wide.png"
-            alt="MatchTracker Logo"
-            width={200}
-            height={50}
-            className="h-10 w-auto object-contain"
-            priority
-          />
-        </div>
-
-        <h2 className="mb-2 text-center text-2xl font-bold">Willkommen zurück</h2>
-        <p className="mb-8 text-center text-sm text-zinc-400">
-          Bitte melde dich an, um auf das Match Dashboard zuzugreifen.
-        </p>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="username" className="sr-only">Benutzername</label>
-            <input
-              id="username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Benutzername"
-              required
-              className="w-full rounded-lg border-zinc-800 bg-zinc-900 p-3 text-sm text-white shadow-sm focus:border-primary focus:ring-primary"
-            />
-          </div>
-          <div>
-            <label htmlFor="password" className="sr-only">Passwort</label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Passwort"
-              required
-              className="w-full rounded-lg border-zinc-800 bg-zinc-900 p-3 text-sm text-white shadow-sm focus:border-primary focus:ring-primary"
+    <div className="flex min-h-screen flex-col justify-between bg-zinc-950 font-sans text-white">
+      <div className="flex flex-1 items-center justify-center p-4">
+        <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900/50 p-8 shadow-2xl backdrop-blur-md">
+          <div className="mb-8 flex justify-center">
+            <Image
+              src="/logo_light_wide.png"
+              alt="MatchTracker Logo"
+              width={200}
+              height={50}
+              className="h-10 w-auto object-contain"
+              priority
             />
           </div>
 
-          <div className="flex justify-end">
+          <h2 className="mb-2 text-center text-2xl font-bold">Willkommen zurück</h2>
+          <p className="mb-8 text-center text-sm text-zinc-400">
+            Bitte melde dich an, um auf das Match Dashboard zuzugreifen.
+          </p>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="username" className="sr-only">Benutzername</label>
+              <input
+                id="username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Benutzername"
+                required
+                className="w-full rounded-lg border-zinc-800 bg-zinc-900 p-3 text-sm text-white shadow-sm focus:border-primary focus:ring-primary"
+              />
+            </div>
+            <div>
+              <label htmlFor="password" className="sr-only">Passwort</label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Passwort"
+                required
+                className="w-full rounded-lg border-zinc-800 bg-zinc-900 p-3 text-sm text-white shadow-sm focus:border-primary focus:ring-primary"
+              />
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setForgotMessage(null);
+                  setIsForgotModalOpen(true);
+                }}
+                className="text-xs text-zinc-400 hover:text-white transition-colors"
+              >
+                Passwort vergessen?
+              </button>
+            </div>
+
+            {error && <p className="text-center text-sm text-red-400">{error}</p>}
+
             <button
-              type="button"
-              onClick={() => {
-                setForgotMessage(null);
-                setIsForgotModalOpen(true);
-              }}
-              className="text-xs text-zinc-400 hover:text-white transition-colors"
+              type="submit"
+              disabled={loading}
+              className="flex w-full items-center justify-center rounded-lg bg-primary px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
             >
-              Passwort vergessen?
+              {loading ? "Lädt..." : "Anmelden"}
             </button>
+          </form>
+          
+          <div className="mt-6 text-center text-sm text-zinc-400">
+             Noch kein Konto? <a href="/register" className="font-medium text-primary hover:underline">Hier registrieren</a>
           </div>
-
-          {error && <p className="text-center text-sm text-red-400">{error}</p>}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex w-full items-center justify-center rounded-lg bg-primary px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
-          >
-            {loading ? "Lädt..." : "Anmelden"}
-          </button>
-        </form>
-        
-        <div className="mt-6 text-center text-sm text-zinc-400">
-           Noch kein Konto? <a href="/register" className="font-medium text-primary hover:underline">Hier registrieren</a>
         </div>
       </div>
+
+      <Footer />
 
       {/* Modal: Passwort vergessen */}
       {isForgotModalOpen && (

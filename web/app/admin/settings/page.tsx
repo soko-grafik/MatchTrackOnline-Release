@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { getSystemSettings, updateSystemSettings, testSmtpEmail, triggerFtpBackup, testFtpConnection, cleanupOrganizerMatches } from '@/services/api';
+import { getSystemSettings, updateSystemSettings, testSmtpEmail, triggerFtpBackup, testFtpConnection, cleanupOrganizerMatches, getLegalTemplates } from '@/services/api';
 import {
   Settings2,
   Layers,
@@ -25,7 +25,13 @@ import {
   Eye,
   EyeOff,
   Sparkles,
-  Trash2
+  Trash2,
+  Scale,
+  FileText,
+  ShieldCheck,
+  ExternalLink,
+  RotateCcw,
+  Building
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import PageHeader from '@/components/PageHeader';
@@ -34,7 +40,8 @@ export default function AdminSettingsPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
 
-  const [activeTab, setActiveTab] = useState<'modules' | 'storage' | 'smtp' | 'ftp'>('modules');
+  const [activeTab, setActiveTab] = useState<'modules' | 'storage' | 'smtp' | 'ftp' | 'legal'>('modules');
+  const [legalSubTab, setLegalSubTab] = useState<'imprint' | 'privacy' | 'terms' | 'club'>('imprint');
 
   const [settings, setSettings] = useState<any>({
     module_stitching_enabled: true,
@@ -64,7 +71,15 @@ export default function AdminSettingsPage() {
     ftp_password: "",
     ftp_path: "/backups",
     ftp_auto_backup: false,
-    ftp_backup_schedule: "DAILY"
+    ftp_backup_schedule: "DAILY",
+    legal_imprint_content: "",
+    legal_privacy_content: "",
+    legal_terms_content: "",
+    legal_club_name: "",
+    legal_contact_email: "",
+    legal_address: "",
+    legal_representative: "",
+    legal_register_info: ""
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -178,6 +193,23 @@ export default function AdminSettingsPage() {
     }
   };
 
+  const handleLoadDefaultLegalTemplate = async (type: 'imprint' | 'privacy' | 'terms') => {
+    try {
+      const templates = await getLegalTemplates();
+      if (templates) {
+        if (type === 'imprint' && templates.default_imprint) {
+          handleChange('legal_imprint_content', templates.default_imprint);
+        } else if (type === 'privacy' && templates.default_privacy) {
+          handleChange('legal_privacy_content', templates.default_privacy);
+        } else if (type === 'terms' && templates.default_terms) {
+          handleChange('legal_terms_content', templates.default_terms);
+        }
+      }
+    } catch (err) {
+      console.error('Fehler beim Laden der Standard-Vorlage:', err);
+    }
+  };
+
   const handleExecuteCleanupMatches = async () => {
     setCleaningMatches(true);
     setCleanupStatus(null);
@@ -253,6 +285,7 @@ export default function AdminSettingsPage() {
               { id: 'storage', label: 'Speicher & Defaults', icon: <HardDrive className="w-4 h-4 text-blue-400" /> },
               { id: 'smtp', label: 'E-Mail & SMTP', icon: <Send className="w-4 h-4 text-purple-400" /> },
               { id: 'ftp', label: 'FTP Backup & Sync', icon: <Database className="w-4 h-4 text-amber-400" /> },
+              { id: 'legal', label: 'Rechtstexte & DSGVO', icon: <Scale className="w-4 h-4 text-rose-400" /> },
             ].map((tab) => (
               <button
                 type="button"
@@ -692,6 +725,224 @@ export default function AdminSettingsPage() {
                   </select>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Tab 5: Rechtstexte & DSGVO */}
+          {activeTab === 'legal' && (
+            <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 md:p-8 space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-6">
+                <div>
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    <Scale className="w-5 h-5 text-rose-400" />
+                    Rechtstexte, Impressum & DSGVO-Verwaltung
+                  </h3>
+                  <p className="text-xs text-zinc-400 mt-1">
+                    Hier kannst du die Inhalte der rechtlichen Pflichtseiten für deinen Verein oder deine Instanz vollständig anpassen und verwalten.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <a
+                    href={`/${legalSubTab === 'club' ? 'impressum' : legalSubTab === 'imprint' ? 'impressum' : legalSubTab === 'privacy' ? 'datenschutz' : 'terms'}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold text-zinc-300 hover:text-white transition-colors"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>Live-Seite öffnen</span>
+                  </a>
+                </div>
+              </div>
+
+              {/* Legal Sub-Navigation */}
+              <div className="flex flex-wrap gap-2 p-1.5 bg-zinc-950 rounded-2xl border border-zinc-800/80">
+                {[
+                  { id: 'imprint', label: '1. Impressum (§ 5 DDG)', icon: <Building className="w-3.5 h-3.5 text-blue-400" /> },
+                  { id: 'privacy', label: '2. Datenschutzerklärung (DSGVO)', icon: <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> },
+                  { id: 'terms', label: '3. Nutzungsbedingungen (Terms)', icon: <FileText className="w-3.5 h-3.5 text-purple-400" /> },
+                  { id: 'club', label: '4. Vereins- & Betreiberdaten', icon: <Scale className="w-3.5 h-3.5 text-amber-400" /> },
+                ].map((st) => (
+                  <button
+                    type="button"
+                    key={st.id}
+                    onClick={() => setLegalSubTab(st.id as any)}
+                    className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
+                      legalSubTab === st.id
+                        ? 'bg-zinc-800 text-white shadow-sm'
+                        : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
+                    }`}
+                  >
+                    {st.icon}
+                    <span>{st.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Sub-Tab 1: Impressum */}
+              {legalSubTab === 'imprint' && (
+                <div className="space-y-4 animate-in fade-in">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-zinc-950/60 p-4 rounded-2xl border border-zinc-800">
+                    <div>
+                      <h4 className="text-sm font-bold text-white">Individuelles Impressum</h4>
+                      <p className="text-xs text-zinc-400">
+                        Unterstützt Markdown-Formatierung. Wenn dieses Feld leer gelassen wird, wird automatisch das Standard-Template anhand der Vereinsdaten generiert.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleLoadDefaultLegalTemplate('imprint')}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold text-rose-300 hover:text-rose-200 transition-colors shrink-0"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Standard-Vorlage einfügen</span>
+                    </button>
+                  </div>
+
+                  <div className="relative">
+                    <textarea
+                      rows={16}
+                      value={settings.legal_imprint_content || ''}
+                      onChange={(e) => handleChange('legal_imprint_content', e.target.value)}
+                      placeholder="Füge hier deinen individuellen Impressumstext ein oder klicke oben auf 'Standard-Vorlage einfügen'..."
+                      className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 p-4 font-mono text-xs text-zinc-200 focus:border-primary focus:outline-none leading-relaxed resize-y"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Sub-Tab 2: Datenschutzerklärung */}
+              {legalSubTab === 'privacy' && (
+                <div className="space-y-4 animate-in fade-in">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-zinc-950/60 p-4 rounded-2xl border border-zinc-800">
+                    <div>
+                      <h4 className="text-sm font-bold text-white">Individuelle Datenschutzerklärung (DSGVO / TDDDG)</h4>
+                      <p className="text-xs text-zinc-400">
+                        Enthält Abschnitte zu Videoanalyse, KI-Tracking, JWT-Sitzungen, LocalStorage und Betroffenenrechten.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleLoadDefaultLegalTemplate('privacy')}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold text-rose-300 hover:text-rose-200 transition-colors shrink-0"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Standard-Vorlage einfügen</span>
+                    </button>
+                  </div>
+
+                  <div className="relative">
+                    <textarea
+                      rows={18}
+                      value={settings.legal_privacy_content || ''}
+                      onChange={(e) => handleChange('legal_privacy_content', e.target.value)}
+                      placeholder="Füge hier deine individuelle Datenschutzerklärung ein..."
+                      className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 p-4 font-mono text-xs text-zinc-200 focus:border-primary focus:outline-none leading-relaxed resize-y"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Sub-Tab 3: Nutzungsbedingungen */}
+              {legalSubTab === 'terms' && (
+                <div className="space-y-4 animate-in fade-in">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-zinc-950/60 p-4 rounded-2xl border border-zinc-800">
+                    <div>
+                      <h4 className="text-sm font-bold text-white">Nutzungsbedingungen / Terms of Service</h4>
+                      <p className="text-xs text-zinc-400">
+                        Regelt die Nutzung der Plattform, Rechte am Videomaterial und Haftungsausschlüsse.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleLoadDefaultLegalTemplate('terms')}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold text-rose-300 hover:text-rose-200 transition-colors shrink-0"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Standard-Vorlage einfügen</span>
+                    </button>
+                  </div>
+
+                  <div className="relative">
+                    <textarea
+                      rows={16}
+                      value={settings.legal_terms_content || ''}
+                      onChange={(e) => handleChange('legal_terms_content', e.target.value)}
+                      placeholder="Füge hier deine Nutzungsbedingungen ein..."
+                      className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 p-4 font-mono text-xs text-zinc-200 focus:border-primary focus:outline-none leading-relaxed resize-y"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Sub-Tab 4: Vereins- & Betreiberdaten */}
+              {legalSubTab === 'club' && (
+                <div className="space-y-6 animate-in fade-in">
+                  <div className="bg-zinc-950/60 p-4 rounded-2xl border border-zinc-800">
+                    <h4 className="text-sm font-bold text-white">Vereins- & Betreiber-Stammdaten</h4>
+                    <p className="text-xs text-zinc-400 mt-1">
+                      Diese Angaben werden automatisch als Platzhalter in Standard-Vorlagen für Impressum und Datenschutzerklärung eingesetzt.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                      <label className="text-xs font-bold text-zinc-400 block mb-1.5">Vereins- oder Firmenname</label>
+                      <input
+                        type="text"
+                        value={settings.legal_club_name || ''}
+                        onChange={(e) => handleChange('legal_club_name', e.target.value)}
+                        placeholder="z. B. FC Musterstadt 1920 e.V."
+                        className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-xs text-white focus:border-primary focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-bold text-zinc-400 block mb-1.5">Offizielle Kontakt- / Datenschutz-E-Mail</label>
+                      <input
+                        type="email"
+                        value={settings.legal_contact_email || ''}
+                        onChange={(e) => handleChange('legal_contact_email', e.target.value)}
+                        placeholder="datenschutz@verein.de"
+                        className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-xs text-white focus:border-primary focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-bold text-zinc-400 block mb-1.5">Vertretungsberechtigte Personen / Vorstand</label>
+                      <input
+                        type="text"
+                        value={settings.legal_representative || ''}
+                        onChange={(e) => handleChange('legal_representative', e.target.value)}
+                        placeholder="z. B. 1. Vorsitzender Max Mustermann"
+                        className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-xs text-white focus:border-primary focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-bold text-zinc-400 block mb-1.5">Registergericht & Registernummer</label>
+                      <input
+                        type="text"
+                        value={settings.legal_register_info || ''}
+                        onChange={(e) => handleChange('legal_register_info', e.target.value)}
+                        placeholder="z. B. VR 12345 Amtsgericht Musterstadt"
+                        className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-xs text-white focus:border-primary focus:outline-none"
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="text-xs font-bold text-zinc-400 block mb-1.5">Vollständige Anschrift</label>
+                      <textarea
+                        rows={3}
+                        value={settings.legal_address || ''}
+                        onChange={(e) => handleChange('legal_address', e.target.value)}
+                        placeholder="Musterstraße 1&#10;12345 Musterstadt&#10;Deutschland"
+                        className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-xs text-white focus:border-primary focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </form>

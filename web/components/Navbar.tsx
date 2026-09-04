@@ -24,7 +24,8 @@ import {
   History,
   Sparkles,
   RotateCw,
-  Presentation
+  Presentation,
+  Scale
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
@@ -265,6 +266,18 @@ export default function Navbar() {
       label: "Handbuch & Anleitungen",
       icon: BookOpen,
       href: "/guides",
+      show: true,
+    },
+    {
+      label: "Datenschutz (DSGVO)",
+      icon: Shield,
+      href: "/datenschutz",
+      show: true,
+    },
+    {
+      label: "Impressum",
+      icon: Scale,
+      href: "/impressum",
       show: true,
     },
   ];

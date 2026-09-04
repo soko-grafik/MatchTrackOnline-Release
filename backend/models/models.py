@@ -243,6 +243,15 @@ class SystemSettings(Base):
     ftp_backup_schedule = Column(String(50), default="DAILY")
     ftp_last_backup_at = Column(DateTime, nullable=True)
     ftp_last_backup_status = Column(String(255), nullable=True, default="NO_BACKUP_YET")
+    # Legal / Rechtstexte & DSGVO (Vollständig editierbar durch Admin)
+    legal_imprint_content = Column(Text, nullable=True)     # Individuelles Impressum (Markdown)
+    legal_privacy_content = Column(Text, nullable=True)     # Individuelle Datenschutzerklärung (Markdown)
+    legal_terms_content = Column(Text, nullable=True)       # Individuelle Nutzungsbedingungen (Markdown)
+    legal_club_name = Column(String(255), nullable=True, default="")
+    legal_contact_email = Column(String(255), nullable=True, default="")
+    legal_address = Column(String(500), nullable=True, default="")
+    legal_representative = Column(String(255), nullable=True, default="")
+    legal_register_info = Column(String(255), nullable=True, default="")
 
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

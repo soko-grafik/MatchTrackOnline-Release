@@ -819,3 +819,15 @@ export const trackUserPing = async (matchId?: string, durationSeconds: number = 
     return null;
   }
 };
+
+// Legal / DSGVO / Impressum Pages
+export const getPublicLegalPages = async () => {
+  const response = await api.get('/public/legal-pages');
+  return safeJsonParse(response.data);
+};
+
+export const getLegalTemplates = async () => {
+  const response = await api.get('/public/legal-templates');
+  return safeJsonParse(response.data);
+};
+

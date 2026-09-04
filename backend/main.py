@@ -2,7 +2,7 @@ import os
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from api import upload, matches, analytics, auth, admin, videos, install, teams, users, training, organizer, players, ai, tactics
+from api import upload, matches, analytics, auth, admin, videos, install, teams, users, training, organizer, players, ai, tactics, public
 from db.session import engine, SessionLocal
 from models import Base
 from db.init_teams import seed_and_migrate_teams
@@ -56,7 +56,15 @@ try:
           "ALTER TABLE video_stitch_jobs ADD COLUMN current_step_text VARCHAR(255)",
           "ALTER TABLE video_stitch_jobs ADD COLUMN error_message TEXT",
           "ALTER TABLE video_stitch_jobs ADD COLUMN created_at DATETIME",
-          "ALTER TABLE video_stitch_jobs ADD COLUMN updated_at DATETIME"
+          "ALTER TABLE video_stitch_jobs ADD COLUMN updated_at DATETIME",
+          "ALTER TABLE system_settings ADD COLUMN legal_imprint_content TEXT",
+          "ALTER TABLE system_settings ADD COLUMN legal_privacy_content TEXT",
+          "ALTER TABLE system_settings ADD COLUMN legal_terms_content TEXT",
+          "ALTER TABLE system_settings ADD COLUMN legal_club_name VARCHAR(255)",
+          "ALTER TABLE system_settings ADD COLUMN legal_contact_email VARCHAR(255)",
+          "ALTER TABLE system_settings ADD COLUMN legal_address VARCHAR(500)",
+          "ALTER TABLE system_settings ADD COLUMN legal_representative VARCHAR(255)",
+          "ALTER TABLE system_settings ADD COLUMN legal_register_info VARCHAR(255)"
       ]:
             try:
                 conn.execute(text(col_def))
@@ -130,6 +138,7 @@ app.include_router(tactics.router, prefix="/tactics", tags=["Tactics"])
 app.include_router(organizer.router, prefix="/organizer", tags=["Organizer"])
 app.include_router(players.router, prefix="/players", tags=["Players"])
 app.include_router(ai.router, prefix="/ai", tags=["AI Assistant"])
+app.include_router(public.router, prefix="/public", tags=["Public"])
 
 import asyncio
 from services.notification_service import check_and_send_event_reminders, check_and_send_birthday_reminders

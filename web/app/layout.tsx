@@ -14,6 +14,7 @@ import WindowControlsToggle from "@/components/WindowControlsToggle";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
+import CookieConsentBanner from "@/components/CookieConsentBanner";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -78,6 +79,7 @@ export default function RootLayout({
           </ToastProvider>
         </ThemeProvider>
         <InstallPrompt />
+        <CookieConsentBanner />
       </body>
     </html>
   );

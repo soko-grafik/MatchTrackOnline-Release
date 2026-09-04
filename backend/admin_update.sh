@@ -17,13 +17,17 @@ echo "--- UPDATE STARTED AT $(date) ---"
 echo "[1/4] Checking out Git & pulling latest changes..."
 cd "$PROJECT_DIR"
 
-RELEASE_REPO_URL="https://github.com/soko-grafik/MatchTrackOnline-Release.git"
+export GIT_TERMINAL_PROMPT=0
+
 if [ -d ".git" ]; then
-    git remote set-url origin "$RELEASE_REPO_URL" 2>/dev/null || true
+    CURRENT_REMOTE=$(git remote get-url origin 2>/dev/null || echo "")
+    if [ -z "$CURRENT_REMOTE" ]; then
+        git remote add origin "${UPDATE_REPO_URL:-https://github.com/soko-grafik/MatchTrackOnline-Public.git}" 2>/dev/null || true
+    fi
     git checkout -- web/public/sw.js web/public/workbox-*.js 2>/dev/null || true
     git fetch origin main || true
     git reset --hard origin/main || git pull origin main
-    echo "Git pull from MatchTrackOnline-Release completed successfully."
+    echo "Git pull completed successfully."
 else
     echo "No .git repository found. Skipping git pull."
 fi

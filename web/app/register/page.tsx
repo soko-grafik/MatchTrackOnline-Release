@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { registerUser, getTeams } from '@/services/api';
 import Image from 'next/image';
 import Link from 'next/link';
+import Footer from '@/components/Footer';
 
 export default function RegisterPage() {
   const [username, setUsername] = useState('');
@@ -14,6 +15,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [selectedTeamId, setSelectedTeamId] = useState('');
   const [teams, setTeams] = useState<any[]>([]);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -39,6 +41,12 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!termsAccepted) {
+      setError('Bitte akzeptiere die Nutzungsbedingungen und nimm die Datenschutzerklärung zur Kenntnis.');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -71,8 +79,9 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-950 p-4 font-sans text-white">
-      <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900/50 p-8 shadow-2xl backdrop-blur-md">
+    <div className="flex min-h-screen flex-col justify-between bg-zinc-950 font-sans text-white">
+      <div className="flex flex-1 items-center justify-center p-4">
+        <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900/50 p-8 shadow-2xl backdrop-blur-md">
         <div className="mb-8 flex justify-center">
           <Image
             src="/logo_light_wide.png"
@@ -170,6 +179,29 @@ export default function RegisterPage() {
             </select>
           </div>
           
+          {/* Terms & Privacy Consent Checkbox */}
+          <div className="pt-2">
+            <label className="flex items-start gap-2.5 cursor-pointer text-xs text-zinc-400">
+              <input
+                type="checkbox"
+                checked={termsAccepted}
+                onChange={(e) => setTermsAccepted(e.target.checked)}
+                className="mt-0.5 rounded border-zinc-700 bg-zinc-900 text-primary focus:ring-primary w-4 h-4 shrink-0"
+              />
+              <span className="leading-snug">
+                Ich akzeptiere die{' '}
+                <Link href="/terms" target="_blank" className="text-primary hover:underline font-semibold">
+                  Nutzungsbedingungen
+                </Link>{' '}
+                und habe die{' '}
+                <Link href="/datenschutz" target="_blank" className="text-primary hover:underline font-semibold">
+                  Datenschutzerklärung
+                </Link>{' '}
+                zur Kenntnis genommen.
+              </span>
+            </label>
+          </div>
+
           {error && <p className="rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-center text-sm text-red-400">{error}</p>}
 
           <button
@@ -186,5 +218,8 @@ export default function RegisterPage() {
         </div>
       </div>
     </div>
+
+    <Footer />
+  </div>
   );
 }

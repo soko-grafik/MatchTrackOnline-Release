@@ -354,6 +354,60 @@ export default function GuidesPage() {
         </div>
       ),
     },
+    {
+      id: 'dsgvo_bildrechte',
+      title: 'Datenschutz, DSGVO & Recht am eigenen Bild',
+      category: 'Admin & Sicherheit',
+      icon: Shield,
+      summary: 'Rechtssicherheit bei Videoaufnahmen im Jugend- & Amateursport, Bildrechte gem. KUG/DSGVO & Muster-Einwilligungserklärung.',
+      content: (
+        <div className="space-y-6 text-zinc-300">
+          <p>
+            Bei der Aufnahme von Fußballspielen und Trainingseinheiten werden personenbezogene Bild- und Videodaten von Spielern (und ggf. Minderjährigen) erfasst. Hier erfährst du, wie Vereine und Trainer rechtssicher und DSGVO-konform vorgehen.
+          </p>
+
+          <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 space-y-3">
+            <h4 className="font-bold text-white flex items-center gap-2">
+              <Shield className="w-4 h-4 text-emerald-400" /> 1. Recht am eigenen Bild im Verein (§ 22 KUG & Art. 6 DSGVO)
+            </h4>
+            <p className="text-sm text-zinc-400 leading-relaxed">
+              Vor dem Upload von Spiel- und Trainingsaufnahmen zur internen Videoanalyse und KI-Bewegungsanalyse sollte der Verein von allen aktiven Spielern (bzw. bei Minderjährigen von den gesetzlichen Vertretern / Eltern) eine schriftliche Einverständniserklärung einholen.
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-5 space-y-3">
+            <h4 className="font-bold text-emerald-400 flex items-center justify-between">
+              <span>📋 Muster-Einverständniserklärung (Vorlage für Vereine)</span>
+              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30">Mustertext</span>
+            </h4>
+            <div className="bg-zinc-950/80 border border-zinc-800 rounded-xl p-4 text-xs font-mono text-zinc-300 space-y-3 whitespace-pre-wrap leading-relaxed select-all">
+{`EINWILLIGUNGSERKLÄRUNG ZUR VIDEO- UND SPIELANALYSE
+
+Hiermit willige ich ein, dass von mir / meinem Kind [Name des Spielers] im Rahmen des Trainings- und Spielbetriebs des [Vereinsname] Videoaufnahmen zu vereinsinternen Analyse- und Coachingzwecken (z. B. MatchTrack Online Plattform) erstellt, gespeichert und verarbeitet werden dürfen.
+
+Verarbeitungszwecke:
+1. Taktische Videoanalyse und Feedback-Gespräche im Trainer- und Mannschaftskreis.
+2. Automatisierte Erstellung von Lauf- und Positions-Heatmaps (KI-Tracking).
+3. Geschützter interner Zugriff nur für autorisierte Vereinstrainer und Spieler.
+
+Rechte:
+Diese Einwilligung ist freiwillig und kann jederzeit mit Wirkung für die Zukunft gegenüber dem Verein widerrufen werden.
+
+Ort, Datum: __________________________
+
+Unterschrift (bei Minderjährigen der/die Erziehungsberechtigte): __________________________`}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 space-y-2 text-sm text-zinc-400">
+            <h4 className="font-bold text-white">2. Datenexport & Recht auf Vergessenwerden</h4>
+            <p>
+              Jeder Nutzer kann im Profilbereich (<code className="text-emerald-400">/profile</code>) einen strukturierten Datenexport seiner Daten einsehen. Scheidet ein Spieler aus dem Verein aus, können dessen Spielerdaten und Profile vom Administrator mit einem Klick rückstandslos aus der Plattform gelöscht werden.
+            </p>
+          </div>
+        </div>
+      ),
+    },
   ];
 
   const categories = ['all', 'Organizer & Training', 'Video & Upload', 'Analyse & KI', 'Grundlagen', 'Admin & Sicherheit'];

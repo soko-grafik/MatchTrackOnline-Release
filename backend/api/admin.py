@@ -97,6 +97,14 @@ class SystemSettingsOut(BaseModel):
     ftp_backup_schedule: Optional[str] = "DAILY"
     ftp_last_backup_at: Optional[datetime] = None
     ftp_last_backup_status: Optional[str] = "NO_BACKUP_YET"
+    legal_imprint_content: Optional[str] = None
+    legal_privacy_content: Optional[str] = None
+    legal_terms_content: Optional[str] = None
+    legal_club_name: Optional[str] = ""
+    legal_contact_email: Optional[str] = ""
+    legal_address: Optional[str] = ""
+    legal_representative: Optional[str] = ""
+    legal_register_info: Optional[str] = ""
 
     class Config:
         orm_mode = True
@@ -131,6 +139,14 @@ class SystemSettingsUpdate(BaseModel):
     ftp_path: Optional[str] = None
     ftp_auto_backup: Optional[bool] = None
     ftp_backup_schedule: Optional[str] = None
+    legal_imprint_content: Optional[str] = None
+    legal_privacy_content: Optional[str] = None
+    legal_terms_content: Optional[str] = None
+    legal_club_name: Optional[str] = None
+    legal_contact_email: Optional[str] = None
+    legal_address: Optional[str] = None
+    legal_representative: Optional[str] = None
+    legal_register_info: Optional[str] = None
 
 from .dependencies import require_admin, require_viewer
 
@@ -1005,27 +1021,32 @@ async def regenerate_single_thumbnail(
 async def check_system_updates(current_user: User = Depends(require_admin)):
     """
     Führt 'git fetch' aus und vergleicht den lokalen Commit mit origin/main.
+    Respektiert das aktuell konfigurierte Remote-Repository (DEV oder LIVE).
     """
     try:
         project_dir = os.path.abspath(os.path.join(BASE_DIR, ".."))
-        release_url = "https://github.com/soko-grafik/MatchTrackOnline-Release.git"
+        env = os.environ.copy()
+        env["GIT_TERMINAL_PROMPT"] = "0"
         
-        # Ensure origin points to MatchTrackOnline-Release
-        subprocess.run(["git", "remote", "set-url", "origin", release_url], cwd=project_dir, capture_output=True, text=True, check=False)
+        # Aktuelles Remote ermitteln (nicht überschreiben)
+        current_remote = subprocess.run(["git", "remote", "get-url", "origin"], cwd=project_dir, capture_output=True, text=True, check=False, env=env).stdout.strip()
+        if not current_remote:
+            fallback_url = os.environ.get("UPDATE_REPO_URL", "https://github.com/soko-grafik/MatchTrackOnline-Public.git")
+            subprocess.run(["git", "remote", "add", "origin", fallback_url], cwd=project_dir, capture_output=True, text=True, check=False, env=env)
 
         # Git fetch ausführen
-        subprocess.run(["git", "fetch", "origin", "main"], cwd=project_dir, capture_output=True, text=True, check=False)
+        subprocess.run(["git", "fetch", "origin", "main"], cwd=project_dir, capture_output=True, text=True, check=False, env=env)
 
         # Lokalen Commit hash & Nachricht holen
-        local_hash = subprocess.run(["git", "rev-parse", "HEAD"], cwd=project_dir, capture_output=True, text=True, check=False).stdout.strip()
-        local_msg = subprocess.run(["git", "log", "-1", "--pretty=%B"], cwd=project_dir, capture_output=True, text=True, check=False).stdout.strip()
+        local_hash = subprocess.run(["git", "rev-parse", "HEAD"], cwd=project_dir, capture_output=True, text=True, check=False, env=env).stdout.strip()
+        local_msg = subprocess.run(["git", "log", "-1", "--pretty=%B"], cwd=project_dir, capture_output=True, text=True, check=False, env=env).stdout.strip()
 
         # Remote Commit hash & Nachricht holen
-        remote_hash = subprocess.run(["git", "rev-parse", "origin/main"], cwd=project_dir, capture_output=True, text=True, check=False).stdout.strip()
-        remote_msg = subprocess.run(["git", "log", "-1", "origin/main", "--pretty=%B"], cwd=project_dir, capture_output=True, text=True, check=False).stdout.strip()
+        remote_hash = subprocess.run(["git", "rev-parse", "origin/main"], cwd=project_dir, capture_output=True, text=True, check=False, env=env).stdout.strip()
+        remote_msg = subprocess.run(["git", "log", "-1", "origin/main", "--pretty=%B"], cwd=project_dir, capture_output=True, text=True, check=False, env=env).stdout.strip()
 
         # Anzahl der ausstehenden Commits
-        behind_count_res = subprocess.run(["git", "rev-list", "--count", "HEAD..origin/main"], cwd=project_dir, capture_output=True, text=True, check=False)
+        behind_count_res = subprocess.run(["git", "rev-list", "--count", "HEAD..origin/main"], cwd=project_dir, capture_output=True, text=True, check=False, env=env)
         commits_behind = int(behind_count_res.stdout.strip()) if behind_count_res.stdout.strip().isdigit() else 0
 
         update_available = local_hash != remote_hash and commits_behind > 0
@@ -1057,13 +1078,16 @@ def run_admin_update_background():
     with open(log_file, "w") as f:
         f.write(f"=== UPDATE PROZESS GESTARTET AT {datetime.now()} ===\n")
 
+    env = os.environ.copy()
+    env["GIT_TERMINAL_PROMPT"] = "0"
+
     if os.path.exists(script_path):
         os.chmod(script_path, 0o755)
-        subprocess.Popen(["bash", script_path], cwd=backend_dir)
+        subprocess.Popen(["bash", script_path], cwd=backend_dir, env=env)
     else:
         # Fallback inline Bash execution
-        cmd = f"cd '{project_dir}' && git remote set-url origin https://github.com/soko-grafik/MatchTrackOnline-Release.git && git fetch origin main && git reset --hard origin/main && cd web && npm install --silent && npm run build && pm2 reload all >> {log_file} 2>&1"
-        subprocess.Popen(cmd, shell=True)
+        cmd = f"cd '{project_dir}' && git fetch origin main && git reset --hard origin/main && cd web && npm install --silent && npm run build && pm2 reload all >> {log_file} 2>&1"
+        subprocess.Popen(cmd, shell=True, env=env)
 
 @router.post("/updates/apply")
 async def apply_system_updates(
