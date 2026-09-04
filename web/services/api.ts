@@ -537,6 +537,13 @@ export const updateCalendarEvent = async (id: number, data: any) => {
   return safeJsonParse(response.data);
 };
 
+export const linkCalendarEventTrainingSession = async (eventId: number, trainingSessionId: number | null) => {
+  const response = await api.put(`/organizer/events/${eventId}/training-session`, {
+    training_session_id: trainingSessionId
+  });
+  return safeJsonParse(response.data);
+};
+
 export const deleteCalendarEvent = async (id: number, deleteFollowing: boolean = false) => {
   const response = await api.delete(`/organizer/events/${id}?delete_following=${deleteFollowing}`);
   return safeJsonParse(response.data);

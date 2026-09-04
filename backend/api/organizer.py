@@ -247,9 +247,40 @@ def update_event(
     for field, value in update_data.items():
         setattr(event_obj, field, value)
 
+    # Explizite Aktualisierung oder Entfernung des verknüpften Trainingsplans
+    if "training_session_id" in event_in.__fields_set__:
+        event_obj.training_session_id = event_in.training_session_id
+        if event_in.training_session_id is None:
+            event_obj.training_session = None
+
     if new_team_ids is not None:
         check_team_access_multi(current_user, new_team_ids, db)
         apply_event_teams(event_obj, new_team_ids, db)
+
+    db.commit()
+    db.refresh(event_obj)
+    return event_obj
+
+
+class LinkTrainingSessionRequest(BaseModel):
+    training_session_id: Optional[int] = None
+
+@router.put("/events/{event_id}/training-session", response_model=CalendarEventResponse)
+def link_training_session(
+    event_id: int,
+    req: LinkTrainingSessionRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_trainer)
+):
+    event_obj = db.query(CalendarEvent).filter(CalendarEvent.id == event_id).first()
+    if not event_obj:
+        raise HTTPException(status_code=404, detail="Termin nicht gefunden")
+
+    check_team_access_multi(current_user, event_obj.team_ids, db)
+
+    event_obj.training_session_id = req.training_session_id
+    if req.training_session_id is None:
+        event_obj.training_session = None
 
     db.commit()
     db.refresh(event_obj)

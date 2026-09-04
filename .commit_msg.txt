@@ -1,11 +1,11 @@
-release: feat(update): use git sparse-checkout to exclude chats, docs, scripts, plans, .idea and production/temp scripts on dev server (dev: 7208cfb4)
+release: fix(organizer): allow removing and switching linked training plan on calendar training events (dev: 15ba69fb)
 
 Letzte Änderungen:
+* fix(organizer): allow removing and switching linked training plan on calendar training events (15ba69fb)
 * feat(update): use git sparse-checkout to exclude chats, docs, scripts, plans, .idea and production/temp scripts on dev server (7208cfb4)
 * fix(scripts): hash only package.json and requirements.txt for robust dependency caching (9222b462)
 * feat(matches): allow changing/reassigning video stream type between Standard (16:9) and Panorama (32:9) in Match Edit modal (7fd55837)
 * fix(scripts): set executable permissions (chmod +x) in git index and cache npm/pip installs by hash (7bbdd507)
 * feat(matches): show video type badge (Panorama | Standard) on MatchCard and MatchListItem (9f6899c4)
-* feat: add MatchTrack.apk download link to login screen and global footer (69c00276)
 
-Build-Zeitstempel: 2026-09-04 11:00:07
+Build-Zeitstempel: 2026-09-04 11:35:29

@@ -32,6 +32,7 @@ import {
   createCalendarEvent,
   updateCalendarEvent,
   deleteCalendarEvent,
+  linkCalendarEventTrainingSession,
   importFussballDeMatches,
   getTeams,
   getMyTeams,
@@ -130,7 +131,7 @@ export default function OrganizerPage() {
     opponent: '',
     team_id: '',
     team_ids: [] as string[],
-    training_session_id: undefined as number | undefined,
+    training_session_id: undefined as number | null | undefined,
     reminder_minutes: 30,
     notes: '',
     repeat_weekly: false,
@@ -318,6 +319,7 @@ export default function OrganizerPage() {
         end_time: formatIso(eventForm.end_time),
         team_ids: eventForm.team_ids,
         team_id: eventForm.team_ids[0] || undefined,
+        training_session_id: eventForm.training_session_id ? Number(eventForm.training_session_id) : null,
         reminder_minutes: Number(eventForm.reminder_minutes ?? 30),
         repeat_weekly: Boolean(eventForm.repeat_weekly),
         repeat_until: eventForm.repeat_weekly && eventForm.repeat_until ? formatIso(eventForm.repeat_until) : undefined
@@ -339,30 +341,21 @@ export default function OrganizerPage() {
     }
   };
 
-  const handleLinkSessionToEvent = async (eventId: number, sessionId: number | undefined) => {
+  const handleLinkSessionToEvent = async (eventId: number, sessionId: number | null | undefined) => {
     try {
-      const eventToUpdate = events.find(e => e.id === eventId) || selectedEventDetails;
-      if (!eventToUpdate) return;
-      const updated = await updateCalendarEvent(eventId, {
-        title: eventToUpdate.title,
-        event_type: eventToUpdate.event_type,
-        start_time: eventToUpdate.start_time,
-        end_time: eventToUpdate.end_time,
-        location: eventToUpdate.location,
-        is_home: eventToUpdate.is_home,
-        opponent: eventToUpdate.opponent,
-        // Must send the full assignment: sending team_id alone would reduce a
-        // multi-team event to a single team on save.
-        team_ids: getEventTeamIds(eventToUpdate),
-        training_session_id: sessionId,
-        notes: eventToUpdate.notes
-      });
+      const targetSessionId = sessionId ? Number(sessionId) : null;
+      const updated = await linkCalendarEventTrainingSession(eventId, targetSessionId);
       setSelectedEventDetails(updated);
       setLinkingSessionId(undefined);
       loadData();
-      toast.success('Trainingsplan erfolgreich verknüpft');
-    } catch (err) {
-      toast.error('Fehler beim Verknüpfen des Trainingsplans');
+      if (targetSessionId) {
+        toast.success('Trainingsplan erfolgreich verknüpft');
+      } else {
+        toast.success('Verknüpfung zum Trainingsplan aufgehoben');
+      }
+    } catch (err: any) {
+      console.error("Fehler beim Aktualisieren des Trainingsplans:", err);
+      toast.error('Fehler beim Aktualisieren des Trainingsplans');
     }
   };
 
@@ -1349,10 +1342,30 @@ export default function OrganizerPage() {
                         </div>
 
                         {canEdit && (
-                          <div className="pt-2 border-t border-zinc-800/80 flex justify-end">
+                          <div className="pt-2.5 border-t border-zinc-800/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <select
+                                value={linkingSessionId || ''}
+                                onChange={(e) => setLinkingSessionId(e.target.value ? parseInt(e.target.value) : undefined)}
+                                className="flex-1 min-w-0 rounded-xl border border-zinc-800 bg-zinc-950 px-2.5 py-1.5 text-xs text-white focus:border-primary focus:outline-none"
+                              >
+                                <option value="">Anderen Plan auswählen...</option>
+                                {trainingSessions.filter((s: any) => s.id !== linkedSession.id).map((s: any) => (
+                                  <option key={s.id} value={s.id}>{s.title} ({s.age_group || s.methodology || 'Plan'})</option>
+                                ))}
+                              </select>
+                              <button
+                                disabled={!linkingSessionId}
+                                onClick={() => handleLinkSessionToEvent(selectedEventDetails.id, linkingSessionId)}
+                                className="px-3 py-1.5 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold text-xs disabled:opacity-40 shrink-0 shadow-sm transition-all"
+                              >
+                                Wechseln
+                              </button>
+                            </div>
+
                             <button
-                              onClick={() => handleLinkSessionToEvent(selectedEventDetails.id, undefined)}
-                              className="text-[11px] text-red-400 hover:underline font-semibold"
+                              onClick={() => handleLinkSessionToEvent(selectedEventDetails.id, null)}
+                              className="text-xs text-red-400 hover:text-red-300 hover:underline font-semibold shrink-0 text-right py-1"
                             >
                               🔗 Verknüpfung aufheben
                             </button>
@@ -1372,7 +1385,7 @@ export default function OrganizerPage() {
                           >
                             <option value="">Trainingsplan auswählen...</option>
                             {trainingSessions.map((s) => (
-                              <option key={s.id} value={s.id}>{s.title} ({s.age_group})</option>
+                              <option key={s.id} value={s.id}>{s.title} ({s.age_group || s.methodology || 'Plan'})</option>
                             ))}
                           </select>
                           <button
@@ -1586,12 +1599,12 @@ export default function OrganizerPage() {
                     <label className="text-xs font-bold text-zinc-400 block mb-1">Trainingsplan zuweisen (optional)</label>
                     <select
                       value={eventForm.training_session_id || ''}
-                      onChange={(e) => setEventForm({ ...eventForm, training_session_id: e.target.value ? parseInt(e.target.value) : undefined })}
+                      onChange={(e) => setEventForm({ ...eventForm, training_session_id: e.target.value ? parseInt(e.target.value) : null })}
                       className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs text-white focus:border-primary focus:outline-none"
                     >
                       <option value="">Kein Trainingsplan verknüpft</option>
                       {trainingSessions.map((s) => (
-                        <option key={s.id} value={s.id}>{s.title} ({s.methodology})</option>
+                        <option key={s.id} value={s.id}>{s.title} ({s.age_group || s.methodology || 'Plan'})</option>
                       ))}
                     </select>
                   </div>
