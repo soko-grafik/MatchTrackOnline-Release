@@ -442,6 +442,196 @@ def send_web_push(user_ids: list[str], title: str, body: str, url: str = "/organ
         return 0
 
 
+def get_event_type_label(event_type: str) -> str:
+    mapping = {
+        "TRAINING": "🟢 Training",
+        "MATCH": "🔴 Spiel",
+        "MEETING": "🔵 Besprechung",
+        "EDUCATION": "🎓 Trainer-Fortbildung",
+        "CLUB_EVENT": "🎉 Vereinsveranstaltung",
+        "COACH_MEETING": "👥 Trainersitzung",
+    }
+    return mapping.get(event_type, "🔵 Termin")
+
+
+def notify_event_attendees_invitation(events: list, creator: User, db: Session):
+    """
+    Sends Web Push and HTML E-Mail invitations to all explicitly assigned attendees / trainers of the event.
+    """
+    if not events:
+        return
+
+    first_event = events[0]
+    attendee_users = list(first_event.attendees or [])
+    
+    # If no attendees relation or empty, also check attendee_ids if needed
+    if not attendee_users and hasattr(first_event, 'attendee_ids') and first_event.attendee_ids:
+        attendee_users = db.query(User).filter(User.id.in_(first_event.attendee_ids)).all()
+
+    if not attendee_users:
+        return
+
+    creator_name = f"{creator.first_name} {creator.last_name}".strip() if (creator.first_name or creator.last_name) else creator.username
+    event_type_label = get_event_type_label(first_event.event_type)
+    date_str = first_event.start_time.strftime("%d.%m.%Y um %H:%M")
+    end_time_str = first_event.end_time.strftime("%H:%M")
+    location_str = first_event.location or "Sportplatz / Vereinsheim"
+
+    count_str = f" ({len(events)} Termine)" if len(events) > 1 else ""
+    push_title = f"📅 Einladung: {first_event.title}{count_str}"
+    push_body = f"{creator_name} hat dich eingeladen: {event_type_label} am {date_str} Uhr ({location_str})."
+
+    # 1. Send Web Push
+    target_user_ids = [u.id for u in attendee_users if u.id != creator.id]
+    if target_user_ids:
+        sent_push = send_web_push(target_user_ids, title=push_title, body=push_body, url="/organizer", db=db)
+        print(f"[PUSH-INVITATION] Sent invitation push for '{first_event.title}' to {sent_push} device(s).")
+
+    # 2. Send HTML E-Mail to each attendee with an email address
+    subject = f"📅 Einladung: {first_event.title} am {date_str} Uhr"
+
+    notes_section = ""
+    if first_event.notes:
+        notes_section = f"""
+        <div style="margin-top: 15px; padding: 12px; background-color: #18181b; border: 1px solid #27272a; border-radius: 8px;">
+            <p style="margin: 0 0 4px 0; font-size: 11px; font-weight: 700; color: #a1a1aa; text-transform: uppercase;">Beschreibung / Notizen:</p>
+            <p style="margin: 0; font-size: 13px; color: #e4e4e7; line-height: 1.5; white-space: pre-line;">{first_event.notes}</p>
+        </div>
+        """
+
+    url_row = ""
+    if first_event.external_url:
+        url_row = f"""
+        <tr>
+          <td style="color: #a1a1aa; font-weight: 600;">🔗 Link / Info:</td>
+          <td><a href="{first_event.external_url}" target="_blank" style="color: #818cf8; text-decoration: underline; word-break: break-all;">{first_event.external_url}</a></td>
+        </tr>
+        """
+
+    series_info = ""
+    if len(events) > 1:
+        series_info = f"<p style='margin: 4px 0 0 0; font-size: 12px; color: #38bdf8; font-weight: 600;'>🔁 Wöchentliche Terminserie mit insgesamt {len(events)} Terminen.</p>"
+
+    for attendee in attendee_users:
+        if not attendee.email or attendee.id == creator.id:
+            continue
+
+        attendee_name = f"{attendee.first_name} {attendee.last_name}".strip() if (attendee.first_name or attendee.last_name) else attendee.username
+
+        body_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Termin-Einladung</title>
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #09090b; margin: 0; padding: 0; color: #f4f4f5;">
+          <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #09090b; padding: 30px 15px;">
+            <tr>
+              <td align="center">
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; background-color: #121215; border: 1px solid #27272a; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+                  
+                  <!-- Header -->
+                  <tr>
+                    <td style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); padding: 25px 30px; border-bottom: 1px solid #3730a3;">
+                      <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                        <tr>
+                          <td>
+                            <h1 style="margin: 0; font-size: 20px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">MatchTracker Online</h1>
+                            <p style="margin: 4px 0 0 0; font-size: 12px; color: #a5b4fc; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Termin-Einladung &bull; Organizer</p>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+
+                  <!-- Main Content -->
+                  <tr>
+                    <td style="padding: 30px;">
+                      <p style="margin: 0 0 16px 0; font-size: 15px; color: #e4e4e7; line-height: 1.5;">
+                        Hallo <strong>{attendee_name}</strong>,<br>
+                        <strong>{creator_name}</strong> hat dich zu folgendem Termin im Vereins-Organizer eingeladen:
+                      </p>
+
+                      <!-- Event Card -->
+                      <div style="background-color: #18181b; border: 1px solid #27272a; border-left: 4px solid #6366f1; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+                        <span style="display: inline-block; background-color: #312e81; color: #c7d2fe; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 6px; margin-bottom: 10px; text-transform: uppercase;">
+                          {event_type_label}
+                        </span>
+                        <h2 style="margin: 0 0 10px 0; font-size: 18px; font-weight: 800; color: #ffffff;">{first_event.title}</h2>
+                        
+                        <table width="100%" border="0" cellspacing="0" cellpadding="4" style="font-size: 13px; color: #d4d4d8;">
+                          <tr>
+                            <td width="30%" style="color: #a1a1aa; font-weight: 600;">📅 Datum:</td>
+                            <td style="font-weight: 700; color: #ffffff;">{date_str} - {end_time_str} Uhr</td>
+                          </tr>
+                          <tr>
+                            <td style="color: #a1a1aa; font-weight: 600;">📍 Ort:</td>
+                            <td>{location_str}</td>
+                          </tr>
+                          <tr>
+                            <td style="color: #a1a1aa; font-weight: 600;">👤 Erstellt von:</td>
+                            <td>{creator_name}</td>
+                          </tr>
+                          {url_row}
+                        </table>
+
+                        {notes_section}
+                        {series_info}
+                      </div>
+
+                      <!-- CTA Button -->
+                      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 25px;">
+                        <tr>
+                          <td align="center">
+                            <a href="https://matchtrack.de/organizer" target="_blank" style="display: inline-block; background-color: #4f46e5; color: #ffffff; font-size: 13px; font-weight: 800; text-decoration: none; padding: 12px 28px; border-radius: 10px; text-transform: uppercase; letter-spacing: 0.5px;">
+                              📅 Im Organizer ansehen
+                            </a>
+                          </td>
+                        </tr>
+                      </table>
+
+                    </td>
+                  </tr>
+
+                  <!-- Footer -->
+                  <tr>
+                    <td style="background-color: #09090b; padding: 18px 30px; border-top: 1px solid #27272a; text-align: center; font-size: 11px; color: #71717a;">
+                      <p style="margin: 0 0 4px 0;">Du erhältst diese E-Mail, weil du als Teilnehmer für diesen Termin im MatchTrack Organizer eingetragen wurdest.</p>
+                      <p style="margin: 0; font-weight: 700; color: #52525b;">MatchTracker Online &bull; Vereinsorganisation & Videoanalyse</p>
+                    </td>
+                  </tr>
+
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
+        """
+
+        text_body = f"""Hallo {attendee_name},
+
+{creator_name} hat dich zu folgendem Termin eingeladen:
+
+Titel: {first_event.title}
+Typ: {event_type_label}
+Datum: {date_str} - {end_time_str} Uhr
+Ort: {location_str}
+{f'Link / Info: {first_event.external_url}' if first_event.external_url else ''}
+{f'Beschreibung / Notizen: {first_event.notes}' if first_event.notes else ''}
+
+Zum Organizer: https://matchtrack.de/organizer
+
+Dein MatchTracker Team
+"""
+        try:
+            send_email_html(attendee.email, subject, body_html, text_body=text_body, db=db)
+            print(f"[EMAIL-INVITATION] Sent invitation email to {attendee.email} for event '{first_event.title}'.")
+        except Exception as mail_err:
+            print(f"[EMAIL-INVITATION] ⚠️ Failed to send email to {attendee.email}: {mail_err}")
+
+
 def notify_team_new_event(events: list, creator: User, db: Session):
     """
     Sends immediate Web Push notification to all members/trainers of the team
@@ -471,7 +661,7 @@ def notify_team_new_event(events: list, creator: User, db: Session):
         return
 
     creator_name = creator.first_name or creator.username
-    event_type_label = "🟢 Training" if first_event.event_type == "TRAINING" else ("🔴 Spiel" if first_event.event_type == "MATCH" else "🔵 Termin")
+    event_type_label = get_event_type_label(first_event.event_type)
     date_str = first_event.start_time.strftime("%d.%m. um %H:%M")
     
     count_str = f" ({len(events)} Termine)" if len(events) > 1 else ""
@@ -485,7 +675,7 @@ def notify_team_new_event(events: list, creator: User, db: Session):
 def check_and_send_event_reminders(db: Session):
     """
     Checks all calendar events and sends WebPush & Email notifications
-    to assigned team trainers/members when an event is due (based on reminder_minutes).
+    to assigned team trainers/members AND explicitly invited attendees when an event is due.
     """
     try:
         from models import CalendarEvent, PushSubscription, User, user_teams, UserRole
@@ -497,10 +687,6 @@ def check_and_send_event_reminders(db: Session):
         now_local = datetime.now()
         print(f"[PUSH-SCHEDULER] Running check_and_send_event_reminders at UTC: {now_utc.strftime('%Y-%m-%d %H:%M:%S')}, Local: {now_local.strftime('%Y-%m-%d %H:%M:%S')}")
 
-        # start_time is naive server-local, so the window must be built from now_local.
-        # Bounding it with now_utc cut the last hours off on a UTC+n server, which put
-        # events with a 1-day reminder out of range entirely. The 2-day lookahead keeps
-        # the largest supported reminder (1440 min) comfortably inside the window.
         events = db.query(CalendarEvent).filter(
             CalendarEvent.reminder_minutes > 0,
             CalendarEvent.start_time >= now_local - timedelta(hours=2),
@@ -514,20 +700,10 @@ def check_and_send_event_reminders(db: Session):
         print(f"[PUSH-SCHEDULER] Found {len(events)} upcoming event(s) to check.")
 
         for ev in events:
-            # start_time is stored naive in server-local time (the frontend submits a
-            # local "YYYY-MM-DDTHH:mm"), so it must be compared against now_local.
             reminder_time = ev.start_time - timedelta(minutes=ev.reminder_minutes)
             seconds_until_start_local = (ev.start_time - now_local).total_seconds()
 
-            # Due from the reminder moment until the event starts. No grace period on
-            # the upper bound: firing before reminder_time would leave reminder_sent_at
-            # behind it, so the next tick would not recognise the reminder as sent and
-            # would fire a second time. The 60s loop makes it fire at most 59s late.
             is_due = 0 <= seconds_until_start_local <= (ev.reminder_minutes * 60)
-
-            # Send once per reminder. Storing the send time also re-arms the reminder
-            # automatically when an event is moved to a later slot, because the new
-            # reminder_time then lies after the recorded timestamp.
             already_sent = ev.reminder_sent_at is not None and ev.reminder_sent_at >= reminder_time
 
             print(f"[PUSH-SCHEDULER] Event ID {ev.id} '{ev.title}' (Start: {ev.start_time}, Reminder: {ev.reminder_minutes}m before -> {reminder_time}). Until start: {seconds_until_start_local:.0f}s, due={is_due}, already_sent={already_sent}")
@@ -535,9 +711,6 @@ def check_and_send_event_reminders(db: Session):
             if is_due and not already_sent:
                 print(f"[PUSH-SCHEDULER] 🎯 Event '{ev.title}' IS DUE FOR PUSH NOTIFICATION!")
 
-                # Mark before dispatching, and regardless of how many devices are
-                # reached: a retry every 60s cannot improve the outcome and would
-                # turn one reminder into a notification storm.
                 ev.reminder_sent_at = now_local
                 try:
                     db.commit()
@@ -546,10 +719,15 @@ def check_and_send_event_reminders(db: Session):
                     print(f"[PUSH-SCHEDULER] ⚠️ Could not persist reminder_sent_at for event {ev.id}: {commit_err}")
                     continue
 
-                # Target users: team members/trainers + event creator + admins
+                # Target users: team members/trainers + invited attendees + event creator + admins
                 target_user_ids = set()
                 if ev.created_by_user_id:
                     target_user_ids.add(ev.created_by_user_id)
+
+                # Add invited attendees
+                if hasattr(ev, 'attendee_ids') and ev.attendee_ids:
+                    for att_id in ev.attendee_ids:
+                        target_user_ids.add(att_id)
 
                 ev_team_ids = ev.team_ids
                 if ev_team_ids:
@@ -563,19 +741,19 @@ def check_and_send_event_reminders(db: Session):
                     target_user_ids.add(a_id[0])
 
                 if not target_user_ids:
-                    print(f"[PUSH-SCHEDULER] ⚠️ No target user IDs found for event '{ev.title}' (team_ids: {ev_team_ids}, created_by: {ev.created_by_user_id})")
+                    print(f"[PUSH-SCHEDULER] ⚠️ No target user IDs found for event '{ev.title}'")
                     continue
 
                 print(f"[PUSH-SCHEDULER] Target user IDs for event '{ev.title}': {list(target_user_ids)}")
 
-                event_type_label = "🟢 Training" if ev.event_type == "TRAINING" else ("🔴 Spiel" if ev.event_type == "MATCH" else "🔵 Termin")
+                event_type_label = get_event_type_label(ev.event_type)
                 time_str = ev.start_time.strftime("%H:%M")
                 
                 title = f"⏰ Erinnerung: {ev.title}"
                 body = f"{event_type_label} beginnt in {ev.reminder_minutes} Min. (um {time_str} Uhr)!"
 
                 sent = send_web_push(list(target_user_ids), title=title, body=body, url="/organizer", db=db)
-                print(f"[PUSH-SCHEDULER] ✅ Sent reminder push for '{ev.title}' to {sent} device(s) (Target users: {list(target_user_ids)}).")
+                print(f"[PUSH-SCHEDULER] ✅ Sent reminder push for '{ev.title}' to {sent} device(s).")
 
     except Exception as err:
         print(f"[PUSH-SCHEDULER] ❌ Critical error in check_and_send_event_reminders: {err}")

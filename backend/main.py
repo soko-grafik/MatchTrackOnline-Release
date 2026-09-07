@@ -64,7 +64,8 @@ try:
           "ALTER TABLE system_settings ADD COLUMN legal_contact_email VARCHAR(255)",
           "ALTER TABLE system_settings ADD COLUMN legal_address VARCHAR(500)",
           "ALTER TABLE system_settings ADD COLUMN legal_representative VARCHAR(255)",
-          "ALTER TABLE system_settings ADD COLUMN legal_register_info VARCHAR(255)"
+          "ALTER TABLE system_settings ADD COLUMN legal_register_info VARCHAR(255)",
+          "ALTER TABLE calendar_events ADD COLUMN external_url VARCHAR(1000)"
       ]:
             try:
                 conn.execute(text(col_def))

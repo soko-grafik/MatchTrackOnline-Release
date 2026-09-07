@@ -318,12 +318,21 @@ calendar_event_teams = Table(
     Column('team_id', String(50), ForeignKey('teams.id', ondelete='CASCADE'), primary_key=True)
 )
 
+# Association table for CalendarEvent <-> User (Invited Attendees/Trainers)
+calendar_event_attendees = Table(
+    'calendar_event_attendees',
+    Base.metadata,
+    Column('event_id', Integer, ForeignKey('calendar_events.id', ondelete='CASCADE'), primary_key=True),
+    Column('user_id', String(50), ForeignKey('users.id', ondelete='CASCADE'), primary_key=True),
+    Column('status', String(20), default='INVITED', nullable=False)  # INVITED, ACCEPTED, DECLINED
+)
+
 
 class CalendarEvent(Base):
     __tablename__ = "calendar_events"
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     title = Column(String(255), index=True, nullable=False)
-    event_type = Column(String(50), default="TRAINING", nullable=False)  # MATCH, TRAINING, MEETING, EVENT
+    event_type = Column(String(50), default="TRAINING", nullable=False)  # MATCH, TRAINING, MEETING, EVENT, EDUCATION, CLUB_EVENT, COACH_MEETING
     start_time = Column(DateTime, nullable=False)
     end_time = Column(DateTime, nullable=False)
     location = Column(String(255), nullable=True)
@@ -338,11 +347,13 @@ class CalendarEvent(Base):
     # is moved to a later date (see check_and_send_event_reminders).
     reminder_sent_at = Column(DateTime, nullable=True)
     notes = Column(String(2000), nullable=True)
+    external_url = Column(String(1000), nullable=True)
     created_by_user_id = Column(String(50), ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     team = relationship("Team")
     teams = relationship("Team", secondary=calendar_event_teams, lazy="selectin")
+    attendees = relationship("User", secondary=calendar_event_attendees, lazy="selectin")
     training_session = relationship("TrainingSession")
     created_by = relationship("User")
 
@@ -352,6 +363,13 @@ class CalendarEvent(Base):
         if self.teams:
             return [t.id for t in self.teams]
         return [self.team_id] if self.team_id else []
+
+    @property
+    def attendee_ids(self) -> list:
+        """List of user IDs of invited attendees/trainers."""
+        if self.attendees:
+            return [u.id for u in self.attendees]
+        return []
 
 
 class PushSubscription(Base):

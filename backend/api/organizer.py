@@ -15,7 +15,7 @@ router = APIRouter()
 
 class CalendarEventCreate(BaseModel):
     title: str
-    event_type: str = "TRAINING"  # MATCH, TRAINING, MEETING, EVENT
+    event_type: str = "TRAINING"  # MATCH, TRAINING, MEETING, EVENT, EDUCATION, CLUB_EVENT, COACH_MEETING
     start_time: datetime
     end_time: datetime
     location: Optional[str] = None
@@ -23,13 +23,29 @@ class CalendarEventCreate(BaseModel):
     opponent: Optional[str] = None
     team_id: Optional[str] = None
     team_ids: Optional[List[str]] = None  # Mehrfachzuweisung; team_id bleibt als Primärteam
+    attendee_ids: Optional[List[str]] = None  # Eingeladene Trainer / Teilnehmer
+    notify_attendees: bool = True  # Push & E-Mail Benachrichtigung an eingeladene Teilnehmer
     training_session_id: Optional[int] = None
     reminder_minutes: Optional[int] = 30
     notes: Optional[str] = None
+    external_url: Optional[str] = None
     repeat_weekly: bool = False
     repeat_until: Optional[datetime] = None
 
 from api.training import SessionResponse
+
+class AttendeeUserInfo(BaseModel):
+    id: str
+    username: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[str] = None
+    role: str
+    avatar_url: Optional[str] = None
+
+    class Config:
+        orm_mode = True
+        from_attributes = True
 
 class CalendarEventResponse(BaseModel):
     id: int
@@ -42,11 +58,14 @@ class CalendarEventResponse(BaseModel):
     opponent: Optional[str]
     team_id: Optional[str]
     team_ids: List[str] = []
+    attendee_ids: List[str] = []
+    attendees: List[AttendeeUserInfo] = []
     fussball_de_match_id: Optional[str]
     training_session_id: Optional[int]
     training_session: Optional[SessionResponse] = None
     reminder_minutes: Optional[int] = 30
     notes: Optional[str]
+    external_url: Optional[str] = None
     created_by_user_id: Optional[str]
     created_at: datetime
 
@@ -167,7 +186,30 @@ def apply_event_teams(event_obj: CalendarEvent, team_ids: List[str], db: Session
     event_obj.team_id = team_ids[0] if team_ids else None
 
 
+def apply_event_attendees(event_obj: CalendarEvent, attendee_ids: Optional[List[str]], db: Session):
+    """Sets the invited attendees (users/trainers) for the calendar event."""
+    if attendee_ids is not None:
+        users = db.query(User).filter(User.id.in_(attendee_ids)).all() if attendee_ids else []
+        event_obj.attendees = users
+
+
 # --- Endpoints ---
+
+@router.get("/trainers", response_model=List[AttendeeUserInfo])
+def get_available_trainers(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Returns all trainers, team admins, and club admins for event attendee selection."""
+    users = db.query(User).filter(
+        User.role.in_([UserRole.ADMIN, UserRole.TEAM_ADMIN, UserRole.TRAINER, UserRole.CO_TRAINER])
+    ).order_by(User.first_name, User.last_name, User.username).all()
+
+    if not users:
+        users = db.query(User).order_by(User.username).all()
+
+    return users
+
 
 @router.get("/events", response_model=List[CalendarEventResponse])
 def get_events(
@@ -176,20 +218,21 @@ def get_events(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    from sqlalchemy import or_
     query = db.query(CalendarEvent)
 
     role = current_user.role.value if hasattr(current_user.role, 'value') else str(current_user.role)
     user_team_ids = [t.id for t in current_user.teams]
 
-    # Filter per team access for non-admins. Matching runs over the assignment table
-    # so an event is visible to every team it was assigned to, not just the first.
+    # Filter per team access or attendee for non-admins.
     if role.upper() != "ADMIN":
+        conditions = [
+            ~CalendarEvent.teams.any(),  # Global events
+            CalendarEvent.attendees.any(User.id == current_user.id)  # Directly invited
+        ]
         if user_team_ids:
-            query = query.filter(
-                CalendarEvent.teams.any(Team.id.in_(user_team_ids)) | ~CalendarEvent.teams.any()
-            )
-        else:
-            query = query.filter(~CalendarEvent.teams.any())
+            conditions.append(CalendarEvent.teams.any(Team.id.in_(user_team_ids)))
+        query = query.filter(or_(*conditions))
 
     if team_id:
         query = query.filter(CalendarEvent.teams.any(Team.id == team_id))
@@ -228,9 +271,11 @@ def create_event(
             training_session_id=event_in.training_session_id,
             reminder_minutes=event_in.reminder_minutes,
             notes=event_in.notes,
+            external_url=event_in.external_url,
             created_by_user_id=current_user.id
         )
         apply_event_teams(event_obj, team_ids, db)
+        apply_event_attendees(event_obj, event_in.attendee_ids, db)
         db.add(event_obj)
         created_events.append(event_obj)
 
@@ -244,10 +289,12 @@ def create_event(
         db.refresh(ev)
 
     try:
-        from services.notification_service import notify_team_new_event
+        from services.notification_service import notify_team_new_event, notify_event_attendees_invitation
         notify_team_new_event(created_events, current_user, db)
-    except Exception as push_err:
-        print(f"Error triggering new event push: {push_err}")
+        if event_in.notify_attendees and (event_in.attendee_ids or []):
+            notify_event_attendees_invitation(created_events, current_user, db)
+    except Exception as notif_err:
+        print(f"Error triggering new event notifications: {notif_err}")
 
     return created_events
 
@@ -263,18 +310,18 @@ def update_event(
     if not event_obj:
         raise HTTPException(status_code=404, detail="Termin nicht gefunden")
 
-    # Rights are needed on the current teams as well as on the new ones, so a user
-    # cannot move an event out of a team they are not allowed to edit.
+    # Rights are needed on the current teams as well as on the new ones
     check_team_access_multi(current_user, event_obj.team_ids, db)
 
     update_data = event_in.dict(exclude_unset=True)
-    # team_ids is a read-only property and team_id is derived from it, so both are
-    # applied through apply_event_teams() instead of setattr().
     new_team_ids = resolve_team_ids(event_in) if (
         update_data.get("team_ids") is not None or update_data.get("team_id") is not None
     ) else None
     update_data.pop("team_ids", None)
     update_data.pop("team_id", None)
+    
+    new_attendee_ids = update_data.pop("attendee_ids", None)
+    notify_att = update_data.pop("notify_attendees", True)
 
     for field, value in update_data.items():
         setattr(event_obj, field, value)
@@ -289,8 +336,19 @@ def update_event(
         check_team_access_multi(current_user, new_team_ids, db)
         apply_event_teams(event_obj, new_team_ids, db)
 
+    if new_attendee_ids is not None:
+        apply_event_attendees(event_obj, new_attendee_ids, db)
+
     db.commit()
     db.refresh(event_obj)
+
+    if notify_att and new_attendee_ids:
+        try:
+            from services.notification_service import notify_event_attendees_invitation
+            notify_event_attendees_invitation([event_obj], current_user, db)
+        except Exception as notif_err:
+            print(f"Error triggering event invitation update: {notif_err}")
+
     return event_obj
 
 

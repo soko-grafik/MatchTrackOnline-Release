@@ -23,7 +23,12 @@ import {
   List,
   Star,
   Loader2,
-  UserCheck
+  UserCheck,
+  GraduationCap,
+  PartyPopper,
+  UserPlus,
+  Mail,
+  ExternalLink
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import PageHeader from '@/components/PageHeader';
@@ -42,7 +47,8 @@ import {
   subscribePushNotifications,
   unsubscribePushNotifications,
   sendTestPushNotification,
-  cleanupOrganizerMatches
+  cleanupOrganizerMatches,
+  getOrganizerTrainers
 } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSettings } from '@/contexts/SettingsContext';
@@ -55,6 +61,7 @@ export default function OrganizerPage() {
   const [events, setEvents] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
   const [trainingSessions, setTrainingSessions] = useState<any[]>([]);
+  const [trainers, setTrainers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Filters
@@ -138,12 +145,32 @@ export default function OrganizerPage() {
     opponent: '',
     team_id: '',
     team_ids: [] as string[],
+    attendee_ids: [] as string[],
+    notify_attendees: true,
     training_session_id: undefined as number | null | undefined,
     reminder_minutes: 30,
     notes: '',
+    external_url: '',
     repeat_weekly: false,
     repeat_until: ''
   });
+
+  const getEventTypeBadge = (type: string) => {
+    switch (type) {
+      case 'MATCH':
+        return { label: '🔴 Spiel', bg: 'bg-red-500/20 border-red-500/40 text-red-300', badge: 'bg-red-500/20 text-red-400 border-red-500/30' };
+      case 'TRAINING':
+        return { label: '🟢 Training', bg: 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300', badge: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' };
+      case 'EDUCATION':
+        return { label: '🎓 Fortbildung', bg: 'bg-purple-500/20 border-purple-500/40 text-purple-300', badge: 'bg-purple-500/20 text-purple-400 border-purple-500/30' };
+      case 'CLUB_EVENT':
+        return { label: '🎉 Vereinsfest', bg: 'bg-amber-500/20 border-amber-500/40 text-amber-300', badge: 'bg-amber-500/20 text-amber-400 border-amber-500/30' };
+      case 'COACH_MEETING':
+        return { label: '👥 Trainersitzung', bg: 'bg-cyan-500/20 border-cyan-500/40 text-cyan-300', badge: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30' };
+      default:
+        return { label: '🔵 Besprechung', bg: 'bg-blue-500/20 border-blue-500/40 text-blue-300', badge: 'bg-blue-500/20 text-blue-400 border-blue-500/30' };
+    }
+  };
 
   const roundToQuarterHour = (date: Date): string => {
     const minutes = date.getMinutes();
@@ -161,7 +188,6 @@ export default function OrganizerPage() {
     const mins = String(d.getMinutes()).padStart(2, '0');
     return `${year}-${month}-${day}T${hours}:${mins}`;
   };
-
 
   const handleStartTimeChange = (newStartTimeStr: string, isEditing: boolean = false) => {
     let newEndTimeStr = eventForm.end_time;
@@ -183,11 +209,16 @@ export default function OrganizerPage() {
     }));
   };
 
-
   // Events from older records may only carry team_id, so fall back to it.
   const getEventTeamIds = (ev: any): string[] => {
-    if (Array.isArray(ev?.team_ids) && ev.team_ids.length > 0) return ev.team_ids;
-    return ev?.team_id ? [ev.team_id] : [];
+    if (Array.isArray(ev?.team_ids) && ev.team_ids.length > 0) return ev.team_ids.map(String);
+    return ev?.team_id ? [String(ev.team_id)] : [];
+  };
+
+  const getEventAttendeeIds = (ev: any): string[] => {
+    if (Array.isArray(ev?.attendee_ids) && ev.attendee_ids.length > 0) return ev.attendee_ids.map(String);
+    if (Array.isArray(ev?.attendees) && ev.attendees.length > 0) return ev.attendees.map((a: any) => String(a.id));
+    return [];
   };
 
   const getEventTeamNames = (ev: any): string => {
@@ -201,7 +232,6 @@ export default function OrganizerPage() {
   };
 
   const getReminderLabel = (mins?: number) => {
-
     if (mins === 0) return 'Keine';
     if (mins === 15) return '15 Min. vorher';
     if (mins === 60) return '1 Std. vorher';
@@ -272,16 +302,18 @@ export default function OrganizerPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [evData, teamsData, sesData] = await Promise.all([
+      const [evData, teamsData, sesData, trainersData] = await Promise.all([
         getCalendarEvents({
           team_id: selectedTeamFilter !== 'ALL' ? selectedTeamFilter : undefined,
           event_type: selectedTypeFilter !== 'ALL' ? selectedTypeFilter : undefined
         }),
         getMyTeams(),
-        getTrainingSessions()
+        getTrainingSessions(),
+        getOrganizerTrainers().catch(() => [])
       ]);
 
       if (Array.isArray(evData)) setEvents(evData);
+      if (Array.isArray(trainersData)) setTrainers(trainersData);
       if (Array.isArray(teamsData)) {
         setTeams(teamsData);
         const editableTeams = teamsData.filter((t: any) => {
@@ -313,7 +345,6 @@ export default function OrganizerPage() {
       }
 
       const formatIso = (dtStr: string) => {
-
         if (!dtStr) return undefined;
         if (dtStr.length === 10) return `${dtStr}T23:59:59`; // date only (YYYY-MM-DD)
         if (dtStr.length === 16) return `${dtStr}:00`; // datetime-local (YYYY-MM-DDTHH:mm)
@@ -326,6 +357,8 @@ export default function OrganizerPage() {
         end_time: formatIso(eventForm.end_time),
         team_ids: eventForm.team_ids,
         team_id: eventForm.team_ids[0] || undefined,
+        attendee_ids: eventForm.attendee_ids,
+        notify_attendees: eventForm.notify_attendees,
         training_session_id: eventForm.training_session_id ? Number(eventForm.training_session_id) : null,
         reminder_minutes: Number(eventForm.reminder_minutes ?? 30),
         repeat_weekly: Boolean(eventForm.repeat_weekly),
@@ -383,7 +416,6 @@ export default function OrganizerPage() {
     const endIso = toLocalIso(ev.end_time);
 
     setEventForm({
-
       title: ev.title || '',
       event_type: ev.event_type || 'TRAINING',
       start_time: startIso,
@@ -393,9 +425,12 @@ export default function OrganizerPage() {
       opponent: ev.opponent || '',
       team_id: ev.team_id || '',
       team_ids: getEventTeamIds(ev),
+      attendee_ids: getEventAttendeeIds(ev),
+      notify_attendees: true,
       training_session_id: ev.training_session_id || undefined,
       reminder_minutes: ev.reminder_minutes ?? 30,
       notes: ev.notes || '',
+      external_url: ev.external_url || '',
       repeat_weekly: false,
       repeat_until: ''
     });
@@ -721,7 +756,10 @@ export default function OrganizerPage() {
                 <option value="ALL">Alle Termine</option>
                 <option value="MATCH">🔴 Spiele</option>
                 <option value="TRAINING">🟢 Training</option>
-                <option value="MEETING">🔵 Besprechung / Event</option>
+                <option value="EDUCATION">🎓 Trainer-Fortbildungen</option>
+                <option value="CLUB_EVENT">🎉 Vereinsveranstaltungen</option>
+                <option value="COACH_MEETING">👥 Trainersitzungen</option>
+                <option value="MEETING">🔵 Besprechungen</option>
               </select>
             </div>
           </div>
@@ -773,9 +811,12 @@ export default function OrganizerPage() {
                     opponent: '',
                     team_id: firstEditable?.id || teams[0]?.id || '',
                     team_ids: firstEditable?.id ? [firstEditable.id] : (teams[0]?.id ? [teams[0].id] : []),
+                    attendee_ids: [],
+                    notify_attendees: true,
                     training_session_id: undefined,
                     reminder_minutes: 30,
                     notes: '',
+                    external_url: '',
                     repeat_weekly: false,
                     repeat_until: ''
                   });
@@ -957,15 +998,9 @@ export default function OrganizerPage() {
 
                     <div className="space-y-1">
                       {dayEvents.map((ev) => {
-                        const isMatch = ev.event_type === 'MATCH';
-                        const isTraining = ev.event_type === 'TRAINING';
                         const isPast = new Date(ev.start_time) < new Date(new Date().setHours(0, 0, 0, 0));
-
-                        let colorClass = isMatch
-                          ? 'bg-red-500/20 border-red-500/40 text-red-300'
-                          : isTraining
-                          ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
-                          : 'bg-blue-500/20 border-blue-500/40 text-blue-300';
+                        const badgeInfo = getEventTypeBadge(ev.event_type);
+                        let colorClass = badgeInfo.bg;
 
                         if (isPast) {
                           colorClass = 'bg-zinc-900/40 border-zinc-800 text-zinc-500 opacity-60 hover:opacity-100 hover:text-zinc-300';
@@ -1015,10 +1050,8 @@ export default function OrganizerPage() {
                             {/* Hover Tooltip Card */}
                             <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden group-hover/event:block z-[90] w-64 p-3 rounded-xl bg-zinc-950 border border-zinc-700 shadow-2xl text-xs space-y-1.5 pointer-events-none">
                               <div className="flex items-center justify-between border-b border-zinc-800 pb-1.5">
-                                <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${
-                                  isMatch ? 'bg-red-500/20 text-red-400 border border-red-500/30' : isTraining ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                                }`}>
-                                  {isMatch ? '🔴 Spiel' : isTraining ? '🟢 Training' : ev.event_type}
+                                <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${badgeInfo.badge}`}>
+                                  {badgeInfo.label}
                                 </span>
                                 {teamName && (
                                   <span className="text-[10px] font-bold text-primary truncate max-w-[120px]">
@@ -1030,7 +1063,7 @@ export default function OrganizerPage() {
                               <h4 className="font-bold text-white text-xs">{ev.title}</h4>
 
                               <div className="text-[11px] text-zinc-300 space-y-1">
-                                {isMatch ? (
+                                {ev.event_type === 'MATCH' ? (
                                   <div>⏱️ <strong className="text-white">Anstoß:</strong> <span className="text-red-400 font-bold">{new Date(ev.start_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr</span></div>
                                 ) : (
                                   <div>🕒 {new Date(ev.start_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} - {new Date(ev.end_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr</div>
@@ -1088,12 +1121,7 @@ export default function OrganizerPage() {
                     const isPast = evDate < new Date(new Date().setHours(0, 0, 0, 0));
                     const teamName = getEventTeamNames(ev);
                     const isEditable = canEditEvent(ev);
-
-                    const badgeColor = isMatch
-                      ? 'bg-red-500/20 text-red-400 border-red-500/30'
-                      : isTraining
-                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-                      : 'bg-blue-500/20 text-blue-400 border-blue-500/30';
+                    const badgeInfo = getEventTypeBadge(ev.event_type);
 
                     return (
                       <button
@@ -1107,8 +1135,8 @@ export default function OrganizerPage() {
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <span className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase border ${badgeColor}`}>
-                              {ev.event_type}
+                            <span className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase border ${badgeInfo.badge}`}>
+                              {badgeInfo.label}
                             </span>
                             {teamName && (
                               <span className="text-xs font-bold text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-md flex items-center gap-1">
@@ -1163,6 +1191,13 @@ export default function OrganizerPage() {
                             <span className="truncate"><strong className="text-zinc-300">Spielort:</strong> {ev.location}</span>
                           </div>
                         )}
+
+                        {ev.event_type !== 'TRAINING' && ev.event_type !== 'MATCH' && ev.external_url && (
+                          <div className="flex items-center gap-1.5 text-xs text-primary/90 font-mono">
+                            <ExternalLink className="w-3.5 h-3.5 text-primary shrink-0" />
+                            <span className="truncate">{ev.external_url}</span>
+                          </div>
+                        )}
                       </button>
                     );
                   })}
@@ -1174,8 +1209,8 @@ export default function OrganizerPage() {
 
         {/* Modal: Event Details */}
         {selectedEventDetails && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 backdrop-blur-md">
-            <div className="w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-950 p-6 shadow-2xl space-y-4">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 backdrop-blur-md overflow-y-auto">
+            <div className="w-full max-w-2xl lg:max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-950 p-6 shadow-2xl space-y-4">
               <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
                 <div className="flex items-center gap-2">
                   <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${
@@ -1299,7 +1334,7 @@ export default function OrganizerPage() {
                 {selectedEventDetails.location && (
                   <div className="flex items-center gap-2 text-zinc-300">
                     <MapPin className="w-4 h-4 text-emerald-400" />
-                    <span><strong className="text-white">Spielort:</strong> {selectedEventDetails.location}</span>
+                    <span><strong className="text-white">Ort:</strong> {selectedEventDetails.location}</span>
                   </div>
                 )}
 
@@ -1308,6 +1343,24 @@ export default function OrganizerPage() {
                   <span>Push-Erinnerung: {getReminderLabel(selectedEventDetails.reminder_minutes)}</span>
                 </div>
 
+                {selectedEventDetails.event_type !== 'TRAINING' && selectedEventDetails.event_type !== 'MATCH' && selectedEventDetails.attendees && selectedEventDetails.attendees.length > 0 && (
+                  <div className="p-3 bg-zinc-900 border border-zinc-800 rounded-xl space-y-1.5 text-xs text-zinc-300">
+                    <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider block">
+                      👥 Eingeladene Trainer & Teilnehmer ({selectedEventDetails.attendees.length})
+                    </span>
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {selectedEventDetails.attendees.map((att: any) => {
+                        const name = att.first_name || att.last_name ? `${att.first_name || ''} ${att.last_name || ''}`.trim() : att.username;
+                        return (
+                          <span key={att.id} className="px-2 py-0.5 rounded-md bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-[11px] font-semibold">
+                            {name}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 {/* Linked Training Session Section */}
                 {(() => {
                   const linkedSession = selectedEventDetails.training_session || trainingSessions.find(s => s.id === selectedEventDetails.training_session_id);
@@ -1315,9 +1368,9 @@ export default function OrganizerPage() {
                   if (linkedSession) {
                     const grouped: { [key: string]: any[] } = {};
                     (linkedSession.exercises || []).forEach((exItem: any) => {
-                      const sec = exItem.section_name || 'Hauptteil';
-                      if (!grouped[sec]) grouped[sec] = [];
-                      grouped[sec].push(exItem);
+                      const phase = exItem.phase || 'MAIN';
+                      if (!grouped[phase]) grouped[phase] = [];
+                      grouped[phase].push(exItem);
                     });
 
                     return (
@@ -1326,7 +1379,7 @@ export default function OrganizerPage() {
                           <div>
                             <span className="text-[10px] font-bold text-primary uppercase tracking-wider block">Verknüpfter Trainingsplan</span>
                             <h4 className="font-bold text-white text-sm mt-0.5">{linkedSession.title}</h4>
-                            <span className="text-[10px] text-zinc-400">{linkedSession.methodology} • {linkedSession.age_group}</span>
+                            <span className="text-[10px] text-zinc-400">{linkedSession.methodology} &bull; {linkedSession.age_group}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <button
@@ -1428,10 +1481,31 @@ export default function OrganizerPage() {
                   return null;
                 })()}
 
-                {selectedEventDetails.notes && (
-                  <p className="p-3 bg-zinc-900/50 rounded-xl border border-zinc-800 text-zinc-400">
-                    {selectedEventDetails.notes}
-                  </p>
+                {selectedEventDetails.event_type !== 'TRAINING' && selectedEventDetails.event_type !== 'MATCH' && selectedEventDetails.external_url && (
+                  <div className="p-3 bg-zinc-900/60 rounded-xl border border-zinc-800 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 overflow-hidden">
+                      <ExternalLink className="w-4 h-4 text-primary shrink-0" />
+                      <span className="text-xs text-zinc-300 truncate">{selectedEventDetails.external_url}</span>
+                    </div>
+                    <a
+                      href={selectedEventDetails.external_url.startsWith('http') ? selectedEventDetails.external_url : `https://${selectedEventDetails.external_url}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 rounded-lg bg-primary/20 hover:bg-primary/30 border border-primary/40 text-primary text-xs font-bold transition-all shrink-0 flex items-center gap-1"
+                    >
+                      <span>Link öffnen</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                )}
+
+                {selectedEventDetails.event_type !== 'TRAINING' && selectedEventDetails.event_type !== 'MATCH' && selectedEventDetails.notes && (
+                  <div className="p-3.5 bg-zinc-900/50 rounded-xl border border-zinc-800 space-y-1">
+                    <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Beschreibung / Details</span>
+                    <p className="text-xs text-zinc-300 whitespace-pre-line leading-relaxed">
+                      {selectedEventDetails.notes}
+                    </p>
+                  </div>
                 )}
               </div>
 
@@ -1485,8 +1559,8 @@ export default function OrganizerPage() {
 
         {/* Modal: Manuell Termin anlegen / bearbeiten */}
         {isEventModalOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 backdrop-blur-md">
-            <div className="w-full max-w-xl rounded-2xl border border-zinc-800 bg-zinc-950 p-6 shadow-2xl space-y-5">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 backdrop-blur-md overflow-y-auto">
+            <div className="w-full max-w-3xl lg:max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-950 p-6 shadow-2xl space-y-5 my-auto">
               <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
                 <h3 className="text-lg font-bold text-white">
                   {editingEventId ? 'Termin einzeln bearbeiten' : 'Neuen Termin anlegen'}
@@ -1507,7 +1581,7 @@ export default function OrganizerPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="text-xs font-bold text-zinc-400 block mb-1">Termin-Typ</label>
                     <select
@@ -1524,18 +1598,21 @@ export default function OrganizerPage() {
                     >
                       <option value="TRAINING">🟢 Training</option>
                       <option value="MATCH">🔴 Spiel</option>
-                      <option value="MEETING">🔵 Besprechung / Event</option>
+                      <option value="EDUCATION">🎓 Fortbildung / Schulung</option>
+                      <option value="CLUB_EVENT">🎉 Vereinsveranstaltung</option>
+                      <option value="COACH_MEETING">👥 Trainersitzung</option>
+                      <option value="MEETING">🔵 Sonstige Besprechung</option>
                     </select>
                   </div>
 
                   <div>
                     <label className="text-xs font-bold text-zinc-400 block mb-1">
-                      Mannschaft(en)
+                      Mannschaft(en) {eventForm.event_type === 'EDUCATION' && <span className="text-emerald-400 font-normal">(optional)</span>}
                       {eventForm.team_ids.length > 1 && (
                         <span className="ml-1.5 font-semibold text-zinc-500">({eventForm.team_ids.length} ausgewählt)</span>
                       )}
                     </label>
-                    <div className="flex flex-wrap gap-2 p-2.5 rounded-xl border border-zinc-800 bg-zinc-900">
+                    <div className="flex flex-wrap gap-2 p-2.5 rounded-xl border border-zinc-800 bg-zinc-900 max-h-32 overflow-y-auto">
                       {teams
                         .filter((t) => isAdmin || t.can_edit !== false)
                         .map((t) => {
@@ -1563,7 +1640,9 @@ export default function OrganizerPage() {
                     </div>
                     {eventForm.team_ids.length === 0 && (
                       <p className="text-[10px] text-amber-400/80 mt-1.5">
-                        Ohne Auswahl ist der Termin für alle sichtbar und löst keine Team-Erinnerung aus.
+                        {eventForm.event_type === 'EDUCATION'
+                          ? 'Kein Team erforderlich: Fortbildung gilt allgemein für alle eingeladenen Trainer.'
+                          : 'Ohne Auswahl ist der Termin für alle sichtbar und löst keine Team-Erinnerung aus.'}
                       </p>
                     )}
                   </div>
@@ -1671,6 +1750,82 @@ export default function OrganizerPage() {
                     </select>
                   </div>
                 )}
+                {/* Trainer & Teilnehmer Einladung (nur für Fortbildungen / Events / Sitzungen) */}
+                {eventForm.event_type !== 'TRAINING' && eventForm.event_type !== 'MATCH' && trainers.length > 0 && (
+                  <div className="p-3.5 rounded-xl border border-zinc-800 bg-zinc-900/60 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 text-primary" />
+                        Trainer & Teilnehmer einladen
+                        {eventForm.attendee_ids.length > 0 && (
+                          <span className="text-primary font-semibold">({eventForm.attendee_ids.length} ausgewählt)</span>
+                        )}
+                      </label>
+                      <div className="flex items-center gap-2 text-[10px]">
+                        <button
+                          type="button"
+                          onClick={() => setEventForm({ ...eventForm, attendee_ids: trainers.map((t) => String(t.id)) })}
+                          className="text-primary hover:underline font-semibold"
+                        >
+                          Alle Trainer
+                        </button>
+                        <span className="text-zinc-600">|</span>
+                        <button
+                          type="button"
+                          onClick={() => setEventForm({ ...eventForm, attendee_ids: [] })}
+                          className="text-zinc-400 hover:underline"
+                        >
+                          Keine
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1">
+                      {trainers.map((t) => {
+                        const isSelected = eventForm.attendee_ids.includes(String(t.id));
+                        return (
+                          <button
+                            key={t.id}
+                            type="button"
+                            onClick={() => {
+                              const updated = isSelected
+                                ? eventForm.attendee_ids.filter((id) => id !== String(t.id))
+                                : [...eventForm.attendee_ids, String(t.id)];
+                              setEventForm({ ...eventForm, attendee_ids: updated });
+                            }}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all border flex items-center gap-1.5 ${
+                              isSelected
+                                ? 'bg-primary/20 border-primary text-primary shadow-sm font-semibold'
+                                : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white'
+                            }`}
+                          >
+                            <span>{t.name || t.username}</span>
+                            {t.role && (
+                              <span className="text-[9px] px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-400">
+                                {t.role}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {eventForm.attendee_ids.length > 0 && (
+                      <label className="flex items-center gap-2 cursor-pointer pt-1 border-t border-zinc-800/80">
+                        <input
+                          type="checkbox"
+                          checked={eventForm.notify_attendees}
+                          onChange={(e) => setEventForm({ ...eventForm, notify_attendees: e.target.checked })}
+                          className="w-3.5 h-3.5 rounded border-zinc-700 bg-zinc-800 text-primary focus:ring-primary"
+                        />
+                        <span className="text-[11px] text-zinc-300">
+                          📨 Eingeladene Teilnehmer sofort per Push & E-Mail benachrichtigen
+                        </span>
+                      </label>
+                    )}
+                  </div>
+                )}
+
                 <div>
                   <label className="text-xs font-bold text-zinc-400 block mb-1">🔔 Push-Erinnerungszeit</label>
                   <select
@@ -1735,10 +1890,61 @@ export default function OrganizerPage() {
                     type="text"
                     value={eventForm.location}
                     onChange={(e) => setEventForm({ ...eventForm, location: e.target.value })}
-                    placeholder="z. B. Sportplatz Großengottern"
+                    placeholder="z. B. Sportplatz Großengottern, Vereinsheim oder Online"
                     className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs text-white focus:border-primary focus:outline-none"
                   />
                 </div>
+
+                {/* Externer Link (nur für Fortbildungen, Vereinsfeste, Trainersitzungen, Besprechungen) */}
+                {eventForm.event_type !== 'TRAINING' && eventForm.event_type !== 'MATCH' && (
+                  <div>
+                    <label className="text-xs font-bold text-zinc-400 block mb-1">
+                      🔗 Externer Link (optional)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="url"
+                        value={eventForm.external_url}
+                        onChange={(e) => setEventForm({ ...eventForm, external_url: e.target.value })}
+                        placeholder="https://... (z. B. Schulungsunterlagen, Teams/Zoom-Link oder Anmeldeseite)"
+                        className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs text-white placeholder:text-zinc-600 focus:border-primary focus:outline-none font-mono"
+                      />
+                      {eventForm.external_url && (
+                        <a
+                          href={eventForm.external_url.startsWith('http') ? eventForm.external_url : `https://${eventForm.external_url}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-primary hover:text-primary-hover p-1 rounded hover:bg-zinc-800 text-xs font-bold flex items-center gap-1"
+                          title="Link in neuem Tab öffnen"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Beschreibung / Notizen / Agenda (nur für Fortbildungen, Vereinsfeste, Trainersitzungen, Besprechungen) */}
+                {eventForm.event_type !== 'TRAINING' && eventForm.event_type !== 'MATCH' && (
+                  <div>
+                    <label className="text-xs font-bold text-zinc-400 block mb-1">
+                      📝 Beschreibung / Details / Agenda (optional)
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={eventForm.notes}
+                      onChange={(e) => setEventForm({ ...eventForm, notes: e.target.value })}
+                      placeholder={
+                        eventForm.event_type === 'EDUCATION'
+                          ? "Inhalte der Fortbildung, Voraussetzungen, mitzubringende Unterlagen oder Agenda..."
+                          : eventForm.event_type === 'CLUB_EVENT'
+                          ? "Programmablauf, Treffpunkt-Details, Infos für Helfer oder Ablauf..."
+                          : "Zusätzliche Informationen, Notizen oder Agenda..."
+                      }
+                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs text-white placeholder:text-zinc-600 focus:border-primary focus:outline-none resize-y"
+                    />
+                  </div>
+                )}
 
                 <div className="flex items-center justify-between border-t border-zinc-800 pt-4">
                   {editingEventId ? (

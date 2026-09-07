@@ -2,7 +2,7 @@ from .models import (
     Base, User, UserRole, Match, Subscription, VideoChunk, MatchEvent,
     HeatmapStatus, StitchingStatus, SystemSettings, Team, user_teams,
     TrainingExercise, TrainingSession, TrainingSessionExercise,
-    CalendarEvent, calendar_event_teams, PushSubscription, Player,
+    CalendarEvent, calendar_event_teams, calendar_event_attendees, PushSubscription, Player,
     PlayerAttendance, PlayerEvaluation,
     UserTacticsPreference, TacticsBoard, TacticsFormationPreset,
     VideoStitchJob, UserActivityLog, UserActivityType

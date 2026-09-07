@@ -527,6 +527,11 @@ export const getCalendarEvents = async (params?: { team_id?: string; event_type?
   return safeJsonParse(response.data);
 };
 
+export const getOrganizerTrainers = async () => {
+  const response = await api.get('/organizer/trainers');
+  return safeJsonParse(response.data);
+};
+
 export const createCalendarEvent = async (data: any) => {
   const response = await api.post('/organizer/events', data);
   return safeJsonParse(response.data);

@@ -1,11 +1,11 @@
-release: fix(dashboard): hide quick actions navigation in mobile view (dev: cc819723)
+release: feat(organizer): widen modals and hide attendees/links/notes for training and match events (dev: 7fad7a49)
 
 Letzte Änderungen:
+* feat(organizer): widen modals and hide attendees/links/notes for training and match events (7fad7a49)
+* feat(organizer): add external URL, description textarea and optional team for education events (9ec40890)
+* feat(organizer): add trainer/club event types and attendee invitations with push/mail (e99c34a1)
 * fix(dashboard): hide quick actions navigation in mobile view (cc819723)
 * feat(attendance): migrate attendance tracking from player list to organizer events (6558bad8)
 * feat(dashboard): open event edit modal on appointment click and limit to 3 mobile side-by-side quick actions (e8ecad2a)
-* fix(organizer): allow removing and switching linked training plan on calendar training events (15ba69fb)
-* feat(update): use git sparse-checkout to exclude chats, docs, scripts, plans, .idea and production/temp scripts on dev server (7208cfb4)
-* fix(scripts): hash only package.json and requirements.txt for robust dependency caching (9222b462)
 
-Build-Zeitstempel: 2026-09-04 21:59:02
+Build-Zeitstempel: 2026-09-07 16:33:38

@@ -19,7 +19,12 @@ import {
   AlertCircle,
   Search,
   UserCheck,
-  Check
+  Check,
+  GraduationCap,
+  PartyPopper,
+  Mail,
+  Bell,
+  UserPlus
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
@@ -30,7 +35,8 @@ import {
   getTeams,
   getTrainingSessions,
   getEventAttendance,
-  saveEventAttendance
+  saveEventAttendance,
+  getOrganizerTrainers
 } from '@/services/api';
 
 interface EditCalendarEventModalProps {
@@ -57,6 +63,7 @@ export default function EditCalendarEventModal({
 
   const [teams, setTeams] = useState<any[]>([]);
   const [trainingSessions, setTrainingSessions] = useState<any[]>([]);
+  const [trainers, setTrainers] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -103,6 +110,16 @@ export default function EditCalendarEventModal({
     return ev?.team_id ? [String(ev.team_id)] : [];
   };
 
+  const getEventAttendeeIds = (ev: any): string[] => {
+    if (Array.isArray(ev?.attendee_ids) && ev.attendee_ids.length > 0) {
+      return ev.attendee_ids.map(String);
+    }
+    if (Array.isArray(ev?.attendees) && ev.attendees.length > 0) {
+      return ev.attendees.map((a: any) => String(a.id));
+    }
+    return [];
+  };
+
   const [eventForm, setEventForm] = useState({
     title: '',
     event_type: 'TRAINING',
@@ -113,9 +130,12 @@ export default function EditCalendarEventModal({
     opponent: '',
     team_id: '',
     team_ids: [] as string[],
+    attendee_ids: [] as string[],
+    notify_attendees: true,
     training_session_id: undefined as number | null | undefined,
     reminder_minutes: 30,
     notes: '',
+    external_url: '',
     repeat_weekly: false,
     repeat_until: ''
   });
@@ -138,7 +158,7 @@ export default function EditCalendarEventModal({
     }
   }, [isOpen, initialTab, isAttendanceApplicable]);
 
-  // Load teams and training sessions when modal opens
+  // Load teams, training sessions and trainers when modal opens
   useEffect(() => {
     if (!isOpen) return;
 
@@ -147,12 +167,14 @@ export default function EditCalendarEventModal({
 
     Promise.all([
       getMyTeams().catch(() => getTeams()),
-      getTrainingSessions().catch(() => [])
+      getTrainingSessions().catch(() => []),
+      getOrganizerTrainers().catch(() => [])
     ])
-      .then(([teamsRes, sessionsRes]) => {
+      .then(([teamsRes, sessionsRes, trainersRes]) => {
         if (!isMounted) return;
         if (Array.isArray(teamsRes)) setTeams(teamsRes);
         if (Array.isArray(sessionsRes)) setTrainingSessions(sessionsRes);
+        if (Array.isArray(trainersRes)) setTrainers(trainersRes);
       })
       .finally(() => {
         if (isMounted) setLoadingData(false);
@@ -202,6 +224,7 @@ export default function EditCalendarEventModal({
     const startIso = toLocalIso(event.start_time);
     const endIso = toLocalIso(event.end_time);
     const initialTeamIds = getEventTeamIds(event);
+    const initialAttendeeIds = getEventAttendeeIds(event);
 
     setEventForm({
       title: event.title || '',
@@ -213,9 +236,12 @@ export default function EditCalendarEventModal({
       opponent: event.opponent || '',
       team_id: initialTeamIds[0] || (event.team_id ? String(event.team_id) : ''),
       team_ids: initialTeamIds,
+      attendee_ids: initialAttendeeIds,
+      notify_attendees: true,
       training_session_id: event.training_session_id || event.training_session?.id || undefined,
       reminder_minutes: event.reminder_minutes ?? 30,
       notes: event.notes || '',
+      external_url: event.external_url || '',
       repeat_weekly: Boolean(event.repeat_weekly),
       repeat_until: event.repeat_until ? toLocalIso(event.repeat_until).slice(0, 10) : ''
     });
@@ -285,6 +311,8 @@ export default function EditCalendarEventModal({
         end_time: formatIso(eventForm.end_time),
         team_ids: eventForm.team_ids,
         team_id: eventForm.team_ids[0] || undefined,
+        attendee_ids: eventForm.attendee_ids,
+        notify_attendees: eventForm.notify_attendees,
         training_session_id: eventForm.training_session_id ? Number(eventForm.training_session_id) : null,
         reminder_minutes: Number(eventForm.reminder_minutes ?? 30),
         repeat_weekly: Boolean(eventForm.repeat_weekly),
@@ -432,7 +460,7 @@ export default function EditCalendarEventModal({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 backdrop-blur-md overflow-y-auto">
-      <div className="relative w-full max-w-xl max-h-[90vh] flex flex-col rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-3xl lg:max-w-4xl max-h-[90vh] flex flex-col rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
         {/* Modal Header */}
         <div className="flex items-center justify-between border-b border-zinc-800 px-6 py-4 bg-zinc-900/60">
           <div className="flex items-center gap-2.5">
@@ -442,10 +470,24 @@ export default function EditCalendarEventModal({
                   ? 'bg-red-500/10 border-red-500/20 text-red-400'
                   : eventForm.event_type === 'TRAINING'
                   ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                  : eventForm.event_type === 'EDUCATION'
+                  ? 'bg-purple-500/10 border-purple-500/20 text-purple-400'
+                  : eventForm.event_type === 'CLUB_EVENT'
+                  ? 'bg-amber-500/10 border-amber-500/20 text-amber-400'
+                  : eventForm.event_type === 'COACH_MEETING'
+                  ? 'bg-cyan-500/10 border-cyan-500/20 text-cyan-400'
                   : 'bg-blue-500/10 border-blue-500/20 text-blue-400'
               }`}
             >
-              <CalendarIcon className="w-4 h-4" />
+              {eventForm.event_type === 'EDUCATION' ? (
+                <GraduationCap className="w-4 h-4" />
+              ) : eventForm.event_type === 'CLUB_EVENT' ? (
+                <PartyPopper className="w-4 h-4" />
+              ) : eventForm.event_type === 'COACH_MEETING' ? (
+                <Users className="w-4 h-4" />
+              ) : (
+                <CalendarIcon className="w-4 h-4" />
+              )}
             </div>
             <div>
               <h3 className="text-base font-bold text-white flex items-center gap-2">
@@ -457,7 +499,17 @@ export default function EditCalendarEventModal({
                 )}
               </h3>
               <p className="text-[11px] text-zinc-400">
-                {eventForm.event_type === 'TRAINING' ? 'Training' : eventForm.event_type === 'MATCH' ? 'Spiel' : 'Termin'} verwalten
+                {eventForm.event_type === 'TRAINING'
+                  ? 'Training verwalten'
+                  : eventForm.event_type === 'MATCH'
+                  ? 'Spiel verwalten'
+                  : eventForm.event_type === 'EDUCATION'
+                  ? 'Trainer-Fortbildung'
+                  : eventForm.event_type === 'CLUB_EVENT'
+                  ? 'Vereinsveranstaltung'
+                  : eventForm.event_type === 'COACH_MEETING'
+                  ? 'Trainersitzung'
+                  : 'Termin verwalten'}
               </p>
             </div>
           </div>
@@ -530,7 +582,7 @@ export default function EditCalendarEventModal({
                 disabled={!canEditEvent}
                 value={eventForm.title}
                 onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })}
-                placeholder="z. B. Dienstagstraining oder Punktspiel vs. FC Muster"
+                placeholder="z. B. Trainer-Fortbildung Defensive oder Vereins-Sommerfest"
                 className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs text-white placeholder:text-zinc-600 focus:border-primary focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
               />
             </div>
@@ -554,13 +606,16 @@ export default function EditCalendarEventModal({
                 >
                   <option value="TRAINING">🟢 Training</option>
                   <option value="MATCH">🔴 Spiel</option>
-                  <option value="MEETING">🔵 Besprechung / Event</option>
+                  <option value="EDUCATION">🎓 Trainer-Fortbildung / Schulung</option>
+                  <option value="CLUB_EVENT">🎉 Vereinsveranstaltung / Fest</option>
+                  <option value="COACH_MEETING">👥 Trainersitzung</option>
+                  <option value="MEETING">🔵 Besprechung</option>
                 </select>
               </div>
 
               <div>
                 <label className="text-xs font-bold text-zinc-400 block mb-1">
-                  Mannschaft(en)
+                  Mannschaft(en) {eventForm.event_type === 'EDUCATION' && <span className="text-emerald-400 font-normal">(optional)</span>}
                   {eventForm.team_ids.length > 1 && (
                     <span className="ml-1.5 font-semibold text-zinc-500">({eventForm.team_ids.length} ausgewählt)</span>
                   )}
@@ -578,8 +633,8 @@ export default function EditCalendarEventModal({
                           onClick={() => {
                             const idStr = String(t.id);
                             const updated = isSelected
-                              ? eventForm.team_ids.filter((id) => id !== idStr)
-                              : [...eventForm.team_ids, idStr];
+                                ? eventForm.team_ids.filter((id) => id !== idStr)
+                                : [...eventForm.team_ids, idStr];
                             setEventForm({ ...eventForm, team_ids: updated, team_id: updated[0] || '' });
                           }}
                           className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all border disabled:opacity-60 ${
@@ -595,12 +650,105 @@ export default function EditCalendarEventModal({
                 </div>
                 {eventForm.team_ids.length === 0 && (
                   <p className="text-[10px] text-amber-400/80 mt-1">
-                    Ohne Auswahl ist der Termin für alle sichtbar.
+                    {eventForm.event_type === 'EDUCATION'
+                      ? 'Kein Team erforderlich: Fortbildung gilt für alle eingeladenen Trainer.'
+                      : 'Ohne Mannschaftsauswahl ist der Termin allgemein / teamübergreifend.'}
                   </p>
                 )}
               </div>
             </div>
 
+            {/* Trainer & Teilnehmer Einladung (Nur für Fortbildung, Vereinsfest, Trainersitzung, Besprechung) */}
+            {eventForm.event_type !== 'TRAINING' && eventForm.event_type !== 'MATCH' && (
+              <div className="p-3.5 rounded-xl border border-zinc-800 bg-zinc-900/60 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
+                    <UserPlus className="w-3.5 h-3.5 text-primary" />
+                    <span>Eingeladene Trainer & Teilnehmer</span>
+                    {eventForm.attendee_ids.length > 0 && (
+                      <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-primary/20 text-primary border border-primary/30">
+                        {eventForm.attendee_ids.length}
+                      </span>
+                    )}
+                  </label>
+                  {trainers.length > 0 && canEditEvent && (
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const allIds = trainers.map((t) => String(t.id));
+                          setEventForm((prev) => ({ ...prev, attendee_ids: allIds }));
+                        }}
+                        className="text-[10px] font-semibold text-primary hover:underline"
+                      >
+                        Alle Trainer
+                      </button>
+                      <span className="text-zinc-600">&bull;</span>
+                      <button
+                        type="button"
+                        onClick={() => setEventForm((prev) => ({ ...prev, attendee_ids: [] }))}
+                        className="text-[10px] font-semibold text-zinc-400 hover:text-zinc-200"
+                      >
+                        Keine
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {trainers.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto p-1.5 rounded-lg border border-zinc-800 bg-zinc-950">
+                    {trainers.map((t) => {
+                      const idStr = String(t.id);
+                      const isSelected = eventForm.attendee_ids.includes(idStr);
+                      const displayName = `${t.first_name || ''} ${t.last_name || ''}`.trim() || t.username;
+                      const roleLabel = t.role === 'ADMIN' ? 'Admin' : t.role === 'CO_TRAINER' ? 'Co-Trainer' : 'Trainer';
+
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          disabled={!canEditEvent}
+                          onClick={() => {
+                            const updated = isSelected
+                              ? eventForm.attendee_ids.filter((id) => id !== idStr)
+                              : [...eventForm.attendee_ids, idStr];
+                            setEventForm((prev) => ({ ...prev, attendee_ids: updated }));
+                          }}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all border flex items-center gap-1.5 disabled:opacity-60 ${
+                            isSelected
+                              ? 'bg-indigo-600/30 border-indigo-500/50 text-indigo-200 shadow-sm'
+                              : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white'
+                          }`}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-indigo-400' : 'bg-zinc-600'}`} />
+                          <span>{displayName}</span>
+                          <span className="text-[9px] opacity-60 font-mono">({roleLabel})</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-zinc-500">Keine Trainer für Einladungen gefunden.</p>
+                )}
+
+                {/* Notification Toggle */}
+                {canEditEvent && (
+                  <label className="flex items-center gap-2 pt-1 text-xs text-zinc-300 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={eventForm.notify_attendees}
+                      onChange={(e) => setEventForm((prev) => ({ ...prev, notify_attendees: e.target.checked }))}
+                      className="w-4 h-4 rounded border-zinc-700 bg-zinc-900 text-primary focus:ring-primary focus:ring-offset-zinc-950"
+                    />
+                    <span className="flex items-center gap-1.5">
+                      <Bell className="w-3.5 h-3.5 text-primary" />
+                      <Mail className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>Teilnehmer per Push & E-Mail einladen / benachrichtigen</span>
+                    </span>
+                  </label>
+                )}
+              </div>
+            )}
             {/* Date & Times */}
             <div className="space-y-3 p-3.5 rounded-xl border border-zinc-800 bg-zinc-900/60">
               <div>
@@ -723,10 +871,63 @@ export default function EditCalendarEventModal({
                 disabled={!canEditEvent}
                 value={eventForm.location}
                 onChange={(e) => setEventForm({ ...eventForm, location: e.target.value })}
-                placeholder="z. B. Sportplatz Großengottern"
+                placeholder="z. B. Sportplatz Großengottern, Vereinsheim oder Online"
                 className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs text-white focus:border-primary focus:outline-none disabled:opacity-60"
               />
             </div>
+
+            {/* Externer Link (nur für Fortbildungen, Vereinsfeste, Trainersitzungen, Besprechungen) */}
+            {eventForm.event_type !== 'TRAINING' && eventForm.event_type !== 'MATCH' && (
+              <div>
+                <label className="text-xs font-bold text-zinc-400 block mb-1">
+                  🔗 Externer Link (optional)
+                </label>
+                <div className="relative">
+                  <input
+                    type="url"
+                    disabled={!canEditEvent}
+                    value={eventForm.external_url}
+                    onChange={(e) => setEventForm({ ...eventForm, external_url: e.target.value })}
+                    placeholder="https://... (z. B. Schulungsunterlagen, Teams/Zoom-Link oder Anmeldeseite)"
+                    className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs text-white placeholder:text-zinc-600 focus:border-primary focus:outline-none disabled:opacity-60 font-mono"
+                  />
+                  {eventForm.external_url && (
+                    <a
+                      href={eventForm.external_url.startsWith('http') ? eventForm.external_url : `https://${eventForm.external_url}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-primary hover:text-primary-hover p-1 rounded hover:bg-zinc-800 text-xs font-bold flex items-center gap-1"
+                      title="Link in neuem Tab öffnen"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Beschreibung / Notizen / Agenda (nur für Fortbildungen, Vereinsfeste, Trainersitzungen, Besprechungen) */}
+            {eventForm.event_type !== 'TRAINING' && eventForm.event_type !== 'MATCH' && (
+              <div>
+                <label className="text-xs font-bold text-zinc-400 block mb-1">
+                  📝 Beschreibung / Details / Agenda (optional)
+                </label>
+                <textarea
+                  rows={3}
+                  disabled={!canEditEvent}
+                  value={eventForm.notes}
+                  onChange={(e) => setEventForm({ ...eventForm, notes: e.target.value })}
+                  placeholder={
+                    eventForm.event_type === 'EDUCATION'
+                      ? "Inhalte der Fortbildung, Voraussetzungen, mitzubringende Unterlagen oder Agenda..."
+                      : eventForm.event_type === 'CLUB_EVENT'
+                      ? "Programmablauf, Treffpunkt-Details, Infos für Helfer oder Ablauf..."
+                      : "Zusätzliche Informationen, Notizen oder Agenda..."
+                  }
+                  className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs text-white placeholder:text-zinc-600 focus:border-primary focus:outline-none disabled:opacity-60 resize-y"
+                />
+              </div>
+            )}
 
             {/* Push Reminder */}
             <div>
