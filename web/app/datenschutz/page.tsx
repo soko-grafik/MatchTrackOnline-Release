@@ -6,12 +6,14 @@ import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import { getPublicLegalPages } from '@/services/api';
 import MarkdownRenderer from '@/components/MarkdownRenderer';
-import { ChevronLeft, Edit3, Printer, ShieldCheck, Cookie } from 'lucide-react';
+import PrintableConsentModal from '@/components/PrintableConsentModal';
+import { ChevronLeft, Edit3, Printer, ShieldCheck, Cookie, FileText } from 'lucide-react';
 
 export default function DatenschutzPage() {
   const { user } = useAuth();
   const [privacyContent, setPrivacyContent] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const [isConsentModalOpen, setIsConsentModalOpen] = useState(false);
 
   useEffect(() => {
     getPublicLegalPages()
@@ -70,6 +72,15 @@ export default function DatenschutzPage() {
 
           <div className="flex items-center gap-2">
             <button
+              onClick={() => setIsConsentModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 text-xs font-bold transition-all shadow-sm"
+              title="Druckfertige Muster-Einwilligung für Erziehungsberechtigte"
+            >
+              <FileText className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Muster-Einwilligung (PDF)</span>
+            </button>
+
+            <button
               onClick={handleOpenCookieSettings}
               className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white text-xs font-semibold transition-colors"
               title="Cookie- und Speichereinstellungen verwalten"
@@ -102,6 +113,29 @@ export default function DatenschutzPage() {
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-10">
         <div className="bg-zinc-900/60 border border-zinc-800 rounded-3xl p-6 sm:p-10 shadow-2xl backdrop-blur-sm">
+          {/* Jugendsport & Bildrechte Banner */}
+          <div className="mb-8 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-950/40 via-zinc-900/60 to-zinc-900/40 border border-emerald-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg">
+            <div className="space-y-1">
+              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5" /> Für Trainer &amp; Jugendleiter
+              </span>
+              <h2 className="text-sm sm:text-base font-bold text-white m-0">
+                Muster-Einwilligungserklärung für Videoaufnahmen im Jugendsport
+              </h2>
+              <p className="text-xs text-zinc-400 leading-relaxed max-w-xl m-0">
+                Rechtssichere Vorlage nach DSGVO &amp; §§ 22, 23 KUG zur schriftlichen Einwilligung der Erziehungsberechtigten für vereins- und teaminterne Videoanalysen.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsConsentModalOpen(true)}
+              className="shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/20 transition-all"
+            >
+              <FileText className="w-4 h-4" />
+              <span>Muster-Vorlage öffnen &amp; drucken</span>
+            </button>
+          </div>
+
           <div className="flex items-center gap-3 mb-6 pb-4 border-b border-zinc-800/80 text-emerald-400">
             <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
               <ShieldCheck className="w-6 h-6 text-emerald-400" />
@@ -137,6 +171,12 @@ export default function DatenschutzPage() {
           </div>
         </div>
       </main>
+
+      {/* Printable Consent Sheet Modal */}
+      <PrintableConsentModal
+        isOpen={isConsentModalOpen}
+        onClose={() => setIsConsentModalOpen(false)}
+      />
     </div>
   );
 }

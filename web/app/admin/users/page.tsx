@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
-import { getAllUsers, updateUserRole, deleteUser, approveUser, getTeams, createTeam, updateTeam, deleteTeam, updateUserTeams, adminCreateUser, updateUserModulePermissions, getUserStatisticsOverview, getMediaUrl } from '@/services/api';
-import { User as UserIcon, Trash2, Edit2, ChevronLeft, CheckCircle, XCircle, UploadCloud, Users as UsersIcon, Plus, ShieldAlert, BarChart3, Activity, Clock, Flame, Eye, Layers, ArrowUpRight, RefreshCw } from 'lucide-react';
+import { getAllUsers, updateUserRole, deleteUser, approveUser, getTeams, createTeam, updateTeam, deleteTeam, updateUserTeams, adminCreateUser, updateUserModulePermissions, getUserStatisticsOverview, getMediaUrl, getUnassignedMatches, batchAssignMatches } from '@/services/api';
+import { User as UserIcon, Trash2, Edit2, ChevronLeft, CheckCircle, XCircle, UploadCloud, Users as UsersIcon, Plus, ShieldAlert, BarChart3, Activity, Clock, Flame, Eye, Layers, ArrowUpRight, RefreshCw, Video, CheckSquare, Square, Film, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import ConfirmModal from '@/components/ConfirmModal';
@@ -90,10 +90,92 @@ export default function AdminUsersPage() {
   const [addUserError, setAddUserError] = useState<string | null>(null);
 
   // User Statistics State
-  const [activeMainTab, setActiveMainTab] = useState<'users' | 'statistics'>('users');
+  const [activeMainTab, setActiveMainTab] = useState<'users' | 'statistics' | 'unassigned'>('users');
   const [statsOverview, setStatsOverview] = useState<any>(null);
   const [statsLoading, setStatsLoading] = useState(false);
   const [selectedStatsUserId, setSelectedStatsUserId] = useState<string | null>(null);
+
+  // Unassigned Matches / Batch-Zuweisung State
+  const [unassignedMatches, setUnassignedMatches] = useState<any[]>([]);
+  const [unassignedLoading, setUnassignedLoading] = useState(false);
+  const [selectedMatchIds, setSelectedMatchIds] = useState<string[]>([]);
+  const [batchTargetTeamId, setBatchTargetTeamId] = useState<string>('');
+  const [batchTargetCategory, setBatchTargetCategory] = useState<string>('');
+  const [batchAssigning, setBatchAssigning] = useState(false);
+  const [unassignedSearchQuery, setUnassignedSearchQuery] = useState('');
+
+  const fetchUnassignedMatchesList = async () => {
+    setUnassignedLoading(true);
+    try {
+      const data = await getUnassignedMatches();
+      if (Array.isArray(data)) {
+        setUnassignedMatches(data);
+      }
+    } catch (err: any) {
+      console.error("Fehler beim Laden nicht zugewiesener Videos:", err);
+      toast.error(err.response?.data?.detail || "Fehler beim Laden der nicht zugewiesenen Videos.");
+    } finally {
+      setUnassignedLoading(false);
+    }
+  };
+
+  const handleToggleSelectMatch = (matchId: string) => {
+    setSelectedMatchIds(prev => 
+      prev.includes(matchId) ? prev.filter(id => id !== matchId) : [...prev, matchId]
+    );
+  };
+
+  const handleSelectAllMatches = () => {
+    if (selectedMatchIds.length === filteredUnassignedMatches.length) {
+      setSelectedMatchIds([]);
+    } else {
+      setSelectedMatchIds(filteredUnassignedMatches.map(m => m.id));
+    }
+  };
+
+  const handleBatchAssign = async () => {
+    if (!batchTargetTeamId) {
+      toast.error("Bitte wähle eine Ziel-Mannschaft für die Zuweisung aus.");
+      return;
+    }
+    if (selectedMatchIds.length === 0) {
+      toast.error("Bitte wähle mindestens ein Video für die Zuweisung aus.");
+      return;
+    }
+
+    const selectedTeam = teams.find(t => t.id === batchTargetTeamId);
+    const teamName = selectedTeam?.name || batchTargetTeamId;
+
+    const isConfirmed = await confirmModal({
+      title: 'Batch-Zuweisung bestätigen',
+      message: `Möchtest du die ${selectedMatchIds.length} ausgewählten Video(s) wirklich der Mannschaft "${teamName}" zuweisen?`,
+      confirmText: 'Zuweisen',
+      cancelText: 'Abbrechen',
+      type: 'info'
+    });
+    if (!isConfirmed) return;
+
+    setBatchAssigning(true);
+    try {
+      const res = await batchAssignMatches(selectedMatchIds, batchTargetTeamId, batchTargetCategory || undefined);
+      toast.success(res?.message || `${selectedMatchIds.length} Video(s) erfolgreich zugewiesen!`);
+      setSelectedMatchIds([]);
+      await Promise.all([
+        fetchUnassignedMatchesList(),
+        fetchUsersAndTeams()
+      ]);
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || "Fehler bei der Batch-Zuweisung.");
+    } finally {
+      setBatchAssigning(false);
+    }
+  };
+
+  const filteredUnassignedMatches = unassignedMatches.filter(m => {
+    if (!unassignedSearchQuery) return true;
+    const q = unassignedSearchQuery.toLowerCase();
+    return (m.name?.toLowerCase().includes(q)) || (m.id?.toLowerCase().includes(q));
+  });
 
   const fetchStatisticsOverview = async () => {
     setStatsLoading(true);
@@ -125,6 +207,7 @@ export default function AdminUsersPage() {
         getAllUsers(),
         getTeams()
       ]);
+      fetchUnassignedMatchesList();
 
       if (usersData.error) setError(usersData.error);
       else setUsers(usersData);
@@ -364,7 +447,7 @@ export default function AdminUsersPage() {
                 <Plus className="h-4 w-4" />
                 <span>Benutzer hinzufügen</span>
               </button>
-            ) : (
+            ) : activeMainTab === 'statistics' ? (
               <button
                 onClick={fetchStatisticsOverview}
                 className="flex shrink-0 items-center gap-2 rounded-lg bg-blue-600 px-5 py-3 text-xs font-bold uppercase tracking-wider text-white shadow-lg transition-all hover:bg-blue-500 active:scale-95"
@@ -372,12 +455,20 @@ export default function AdminUsersPage() {
                 <RefreshCw className={`h-4 w-4 ${statsLoading ? 'animate-spin' : ''}`} />
                 <span>Statistiken aktualisieren</span>
               </button>
+            ) : (
+              <button
+                onClick={fetchUnassignedMatchesList}
+                className="flex shrink-0 items-center gap-2 rounded-lg bg-amber-600 px-5 py-3 text-xs font-bold uppercase tracking-wider text-white shadow-lg transition-all hover:bg-amber-500 active:scale-95"
+              >
+                <RefreshCw className={`h-4 w-4 ${unassignedLoading ? 'animate-spin' : ''}`} />
+                <span>Liste aktualisieren</span>
+              </button>
             )
           }
         />
 
         {/* Main Navigation Tabs */}
-        <div className="flex items-center gap-3 mb-6 border-b border-zinc-800 pb-3">
+        <div className="flex flex-wrap items-center gap-3 mb-6 border-b border-zinc-800 pb-3">
           <button
             onClick={() => setActiveMainTab('users')}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${
@@ -388,6 +479,28 @@ export default function AdminUsersPage() {
           >
             <UsersIcon className="w-4 h-4" />
             <span>Benutzer & Teams</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setActiveMainTab('unassigned');
+              fetchUnassignedMatchesList();
+            }}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+              activeMainTab === 'unassigned'
+                ? 'bg-amber-600 text-white shadow-lg shadow-amber-500/20'
+                : 'text-zinc-400 hover:text-white hover:bg-zinc-900 border border-zinc-800'
+            }`}
+          >
+            <Film className="w-4 h-4" />
+            <span>Alt-Videos Zuweisung</span>
+            {unassignedMatches.length > 0 && (
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                activeMainTab === 'unassigned' ? 'bg-black/30 text-white' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+              }`}>
+                {unassignedMatches.length}
+              </span>
+            )}
           </button>
 
           <button
@@ -406,7 +519,260 @@ export default function AdminUsersPage() {
           </button>
         </div>
 
-        {activeMainTab === 'statistics' ? (
+        {activeMainTab === 'unassigned' ? (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            {/* Batch Action Bar / Schnell-Zuweisungsleiste */}
+            <div className="sticky top-20 z-30 rounded-2xl border border-amber-500/30 bg-gradient-to-r from-amber-950/90 via-zinc-900 to-zinc-900 p-5 shadow-2xl backdrop-blur-md">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-400">
+                    <Film className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <span>Batch-Zuweisungsleiste für Alt-Videos</span>
+                      <span className="rounded-full bg-amber-500/20 px-2.5 py-0.5 text-[10px] font-black text-amber-400 border border-amber-500/30">
+                        {unassignedMatches.length} unzugeordnet
+                      </span>
+                    </h3>
+                    <p className="text-xs text-zinc-400">
+                      Weise mehrere Alt-Videos ohne Mannschaft mit einem Klick einer Mannschaft & Kategorie zu.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Batch Actions Form */}
+                <div className="flex flex-wrap items-center gap-3">
+                  {/* Target Team Select */}
+                  <div className="relative min-w-[200px]">
+                    <select
+                      value={batchTargetTeamId}
+                      onChange={(e) => setBatchTargetTeamId(e.target.value)}
+                      className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3.5 py-2.5 text-xs font-semibold text-white focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                    >
+                      <option value="">-- Ziel-Mannschaft wählen * --</option>
+                      {teams.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name} {t.age_group ? `(${t.age_group})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Optional Category Select */}
+                  <div className="relative min-w-[150px]">
+                    <select
+                      value={batchTargetCategory}
+                      onChange={(e) => setBatchTargetCategory(e.target.value)}
+                      className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3.5 py-2.5 text-xs font-semibold text-white focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                    >
+                      <option value="">Kategorie unverändert</option>
+                      <option value="Punktspiel">Punktspiel</option>
+                      <option value="Pokalspiel">Pokalspiel</option>
+                      <option value="Testspiel">Testspiel</option>
+                      <option value="Training">Training</option>
+                      <option value="Trainingslager">Trainingslager</option>
+                    </select>
+                  </div>
+
+                  {/* Execute Button */}
+                  <button
+                    onClick={handleBatchAssign}
+                    disabled={batchAssigning || selectedMatchIds.length === 0 || !batchTargetTeamId}
+                    className="flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-black shadow-lg shadow-amber-500/20 transition-all hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
+                  >
+                    <ArrowRight className="h-4 w-4" />
+                    <span>
+                      {batchAssigning 
+                        ? 'Weise zu...' 
+                        : `${selectedMatchIds.length > 0 ? selectedMatchIds.length : '0'} Video(s) zuweisen`}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Selection Summary Bar */}
+              <div className="mt-4 pt-3 border-t border-zinc-800/80 flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleSelectAllMatches}
+                    className="inline-flex items-center gap-1.5 text-zinc-300 hover:text-white font-medium"
+                  >
+                    {selectedMatchIds.length === filteredUnassignedMatches.length && filteredUnassignedMatches.length > 0 ? (
+                      <CheckSquare className="w-4 h-4 text-amber-400" />
+                    ) : (
+                      <Square className="w-4 h-4 text-zinc-500" />
+                    )}
+                    <span>
+                      {selectedMatchIds.length === filteredUnassignedMatches.length && filteredUnassignedMatches.length > 0
+                        ? 'Alle abwählen'
+                        : 'Alle auswählen'}
+                    </span>
+                  </button>
+                  <span className="text-zinc-600">•</span>
+                  <span className="text-zinc-400">
+                    <strong className="text-amber-400 font-mono">{selectedMatchIds.length}</strong> von {filteredUnassignedMatches.length} ausgewählt
+                  </span>
+                </div>
+
+                {/* Filter / Search Bar */}
+                <div className="w-full sm:w-64">
+                  <input
+                    type="text"
+                    placeholder="Videos filtern..."
+                    value={unassignedSearchQuery}
+                    onChange={(e) => setUnassignedSearchQuery(e.target.value)}
+                    className="w-full rounded-lg border border-zinc-800 bg-zinc-950/80 px-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:border-amber-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* List / Table of Unassigned Videos */}
+            {unassignedLoading ? (
+              <div className="flex flex-col items-center justify-center py-20">
+                <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-amber-500/20 border-t-amber-500"></div>
+                <p className="animate-pulse text-zinc-500">Lade nicht zugewiesene Videos...</p>
+              </div>
+            ) : filteredUnassignedMatches.length === 0 ? (
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-12 text-center">
+                <CheckCircle className="mx-auto h-12 w-12 text-emerald-400 mb-3 opacity-80" />
+                <h4 className="text-base font-bold text-white">Perfekt! Keine unzugeordneten Videos vorhanden</h4>
+                <p className="mt-1 text-xs text-zinc-400 max-w-md mx-auto">
+                  Alle vorhandenen Spiele und Videos sind bereits einer Mannschaft zugewiesen. Neu hochgeladene Videos erhalten ihr Team direkt beim Upload.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900 shadow-xl">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-zinc-800">
+                    <thead className="bg-zinc-950/60">
+                      <tr>
+                        <th scope="col" className="w-12 px-6 py-4 text-left">
+                          <input
+                            type="checkbox"
+                            checked={selectedMatchIds.length === filteredUnassignedMatches.length && filteredUnassignedMatches.length > 0}
+                            onChange={handleSelectAllMatches}
+                            className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-amber-500 focus:ring-amber-500 focus:ring-offset-zinc-950"
+                          />
+                        </th>
+                        <th scope="col" className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">
+                          Video / Spielname
+                        </th>
+                        <th scope="col" className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">
+                          Kategorie
+                        </th>
+                        <th scope="col" className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">
+                          Erstellt am
+                        </th>
+                        <th scope="col" className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">
+                          Status
+                        </th>
+                        <th scope="col" className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wider text-zinc-400">
+                          Schnellaktion
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-800 text-sm">
+                      {filteredUnassignedMatches.map((m) => {
+                        const isSelected = selectedMatchIds.includes(m.id);
+                        return (
+                          <tr
+                            key={m.id}
+                            onClick={() => handleToggleSelectMatch(m.id)}
+                            className={`cursor-pointer transition-colors ${
+                              isSelected
+                                ? 'bg-amber-500/10 hover:bg-amber-500/15'
+                                : 'hover:bg-zinc-800/40'
+                            }`}
+                          >
+                            <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => handleToggleSelectMatch(m.id)}
+                                className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-amber-500 focus:ring-amber-500 focus:ring-offset-zinc-950"
+                              />
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-3">
+                                {m.thumbnail_path ? (
+                                  <div className="relative h-10 w-16 shrink-0 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950">
+                                    <Image
+                                      src={getMediaUrl(m.thumbnail_path)}
+                                      alt={m.name}
+                                      fill
+                                      className="object-cover"
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="flex h-10 w-16 shrink-0 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-950 text-zinc-600">
+                                    <Video className="h-4 w-4" />
+                                  </div>
+                                )}
+                                <div>
+                                  <Link
+                                    href={`/matches?id=${m.id}`}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="font-bold text-white hover:text-primary transition-colors line-clamp-1"
+                                  >
+                                    {m.name || `Match ${m.id}`}
+                                  </Link>
+                                  <span className="font-mono text-[11px] text-zinc-500">{m.id}</span>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className="rounded-md border border-zinc-700 bg-zinc-800 px-2 py-0.5 text-xs font-medium text-zinc-300">
+                                {m.category || 'Punktspiel'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap font-mono text-xs text-zinc-400">
+                              {m.created_at ? new Date(m.created_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'Unbekannt'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-bold text-amber-400">
+                                <span className="h-1.5 w-1.5 rounded-full bg-amber-400"></span>
+                                <span>Ohne Mannschaft</span>
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                              <div className="inline-flex items-center gap-2">
+                                <select
+                                  defaultValue=""
+                                  onChange={async (e) => {
+                                    const tid = e.target.value;
+                                    if (!tid) return;
+                                    try {
+                                      await batchAssignMatches([m.id], tid);
+                                      toast.success(`Video "${m.name}" zugewiesen.`);
+                                      fetchUnassignedMatchesList();
+                                      fetchUsersAndTeams();
+                                    } catch (err: any) {
+                                      toast.error("Fehler beim Zuweisen.");
+                                    }
+                                  }}
+                                  className="rounded-lg border border-zinc-700 bg-zinc-950 px-2.5 py-1.5 text-xs text-zinc-200 focus:border-amber-500 focus:outline-none"
+                                >
+                                  <option value="">Sofort zuweisen...</option>
+                                  {teams.map((t) => (
+                                    <option key={t.id} value={t.id}>
+                                      {t.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : activeMainTab === 'statistics' ? (
           <div className="space-y-6 animate-in fade-in duration-200">
             {statsLoading && !statsOverview ? (
               <div className="flex flex-col items-center justify-center py-20">

@@ -82,7 +82,7 @@ else
     fi
 fi
 
-python3 -c "from db.session import engine, SessionLocal; from models import Base; from db.init_teams import seed_and_migrate_teams; from sqlalchemy import text; c = engine.connect(); c.execute(text('SET FOREIGN_KEY_CHECKS=0;')) if 'mysql' in str(engine.url) else None; c.commit(); c.close(); Base.metadata.create_all(bind=engine); c2 = engine.connect(); c2.execute(text('SET FOREIGN_KEY_CHECKS=1;')) if 'mysql' in str(engine.url) else None; c2.commit(); c2.close(); db=SessionLocal(); seed_and_migrate_teams(db); db.close()" || true
+python3 -c "from db.session import engine; from db.migrate import run_migrations; run_migrations(engine)" || true
 
 echo "Backend & DB updated successfully."
 
@@ -109,10 +109,27 @@ fi
 
 npm run build
 
-echo "[4/4] Reloading PM2 live services..."
+echo "[4/4] Restarting PM2 live services..."
+for srv in matchtrack.service matchtrack-backend.service; do
+    if command -v systemctl &>/dev/null && (systemctl is-active --quiet "$srv" 2>/dev/null || systemctl is-enabled --quiet "$srv" 2>/dev/null); then
+        systemctl stop "$srv" 2>/dev/null || true
+        systemctl disable "$srv" 2>/dev/null || true
+    fi
+done
+
 if command -v pm2 &> /dev/null; then
-    pm2 reload all || pm2 restart all || true
-    echo "PM2 services reloaded."
+    pm2 stop matchtrack-backend 2>/dev/null || true
+    fuser -k -9 8000/tcp 2>/dev/null || true
+    sleep 1
+    if [ -f "$PROJECT_DIR/ecosystem.config.js" ]; then
+        pm2 startOrRestart "$PROJECT_DIR/ecosystem.config.js" || pm2 restart all
+    else
+        pm2 restart all || true
+    fi
+    pm2 save 2>/dev/null || true
+    echo "PM2 services restarted successfully."
+else
+    echo "PM2 not found. Please restart manually."
 fi
 
 echo "--- UPDATE COMPLETED SUCCESSFULLY AT $(date) ---"

@@ -29,10 +29,13 @@ import {
   Monitor,
   Smartphone,
   Users,
-  MoreVertical
+  MoreVertical,
+  FileText,
+  Printer
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import PageHeader from '@/components/PageHeader';
+import PrintableConsentModal from '@/components/PrintableConsentModal';
 
 interface GuideSection {
   id: string;
@@ -47,6 +50,7 @@ export default function GuidesPage() {
   const [activeTab, setActiveTab] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGuide, setSelectedGuide] = useState<string | null>('organizer');
+  const [isConsentModalOpen, setIsConsentModalOpen] = useState(false);
 
   const guides: GuideSection[] = [
     {
@@ -376,10 +380,24 @@ export default function GuidesPage() {
           </div>
 
           <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-5 space-y-3">
-            <h4 className="font-bold text-emerald-400 flex items-center justify-between">
-              <span>📋 Muster-Einverständniserklärung (Vorlage für Vereine)</span>
-              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30">Mustertext</span>
-            </h4>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h4 className="font-bold text-emerald-400 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-emerald-400" />
+                  Muster-Einwilligungserklärung (DSGVO & KUG)
+                </h4>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  Vollständig formatierte, druckbare DIN A4 Einverständniserklärung für Eltern minderjähriger Spieler.
+                </p>
+              </div>
+              <button
+                onClick={() => setIsConsentModalOpen(true)}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-900/30 transition-all shrink-0 self-start sm:self-auto cursor-pointer"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                Muster-PDF öffnen & drucken
+              </button>
+            </div>
             <div className="bg-zinc-950/80 border border-zinc-800 rounded-xl p-4 text-xs font-mono text-zinc-300 space-y-3 whitespace-pre-wrap leading-relaxed select-all">
 {`EINWILLIGUNGSERKLÄRUNG ZUR VIDEO- UND SPIELANALYSE
 
@@ -521,6 +539,12 @@ Unterschrift (bei Minderjährigen der/die Erziehungsberechtigte): ______________
           </div>
         </div>
       </main>
+
+      {/* Printable Consent Modal */}
+      <PrintableConsentModal
+        isOpen={isConsentModalOpen}
+        onClose={() => setIsConsentModalOpen(false)}
+      />
     </div>
   );
 }

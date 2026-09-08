@@ -18,6 +18,8 @@ class FisheyeCorrectionParams(BaseModel):
     k1: Optional[float] = 0.0
     k2: Optional[float] = 0.0
     points: Optional[List[CorrectionPoint]] = None
+    auto_crop: Optional[bool] = True
+    crop_percent: Optional[float] = 0.0
 
 class VideoAdjustments(BaseModel):
     brightness: int

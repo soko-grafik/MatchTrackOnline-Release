@@ -355,8 +355,23 @@ export const generateHeatmap = async (matchId: string) => {
     return safeJsonParse(response.data);
 };
 
+export const getHeatmapStatus = async (matchId: string) => {
+    const response = await api.get(`/matches/${matchId}/heatmap-status`);
+    return safeJsonParse(response.data);
+};
+
 export const deleteHeatmap = async (matchId: string) => {
     const response = await api.delete(`/matches/${matchId}/heatmap`);
+    return safeJsonParse(response.data);
+};
+
+export const getFieldCalibration = async (matchId: string) => {
+    const response = await api.get(`/matches/${matchId}/calibration`);
+    return safeJsonParse(response.data);
+};
+
+export const saveFieldCalibration = async (matchId: string, calibration: { src_points: { x: number; y: number }[]; pitch_type?: string; homography_matrix?: number[] }) => {
+    const response = await api.post(`/matches/${matchId}/calibration`, calibration);
     return safeJsonParse(response.data);
 };
 
@@ -400,6 +415,20 @@ export const updateTeam = async (teamId: string, data: { name?: string, age_grou
 
 export const deleteTeam = async (teamId: string) => {
   const response = await api.delete(`/teams/${teamId}`);
+  return safeJsonParse(response.data);
+};
+
+export const getUnassignedMatches = async () => {
+  const response = await api.get('/matches/unassigned/list');
+  return safeJsonParse(response.data);
+};
+
+export const batchAssignMatches = async (matchIds: string[], teamId: string, category?: string) => {
+  const response = await api.post('/matches/batch-assign', {
+    match_ids: matchIds,
+    team_id: teamId,
+    category: category || null
+  });
   return safeJsonParse(response.data);
 };
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { getMatchDetails, getMatchAnalytics, addMatchEvent, deleteMatchEvent, updateMatchEvent, updateMatchPasswordProtection, verifyMatchPassword, generateHeatmap, deleteHeatmap, getMediaUrl, detectMatchHighlights, getMatchHighlightStatus, trackUserPing, getPlayers } from '@/services/api';
+import { getMatchDetails, getMatchAnalytics, addMatchEvent, deleteMatchEvent, updateMatchEvent, updateMatchPasswordProtection, verifyMatchPassword, generateHeatmap, deleteHeatmap, getHeatmapStatus, getMediaUrl, detectMatchHighlights, getMatchHighlightStatus, trackUserPing, getPlayers } from '@/services/api';
 import MatchPlayer from '@/components/MatchPlayer';
 import HeatmapOverlay from '@/components/HeatmapOverlay';
 import EventList from '@/components/EventList';
@@ -22,6 +22,7 @@ import { subscribeToMatch, unsubscribeFromMatch } from '@/services/api';
 import ConversionStatus from '@/components/ConversionStatus';
 import FisheyeCorrectionModal from '@/components/FisheyeCorrectionModal';
 import VideoAdjustmentModal from '@/components/VideoAdjustmentModal';
+import FieldCalibrationModal from '@/components/FieldCalibrationModal';
 import AlertDialog from '@/components/AlertDialog';
 
 export default function MatchDetailContent() {
@@ -51,6 +52,13 @@ export default function MatchDetailContent() {
   const [seekTo, setSeekTo] = useState<number | null>(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [heatmapStatus, setHeatmapStatus] = useState<string>('none');
+  const [heatmapJob, setHeatmapJob] = useState<{
+    has_job?: boolean;
+    status: string;
+    progress: number;
+    current_step_text: string;
+    error_message?: string | null;
+  } | null>(null);
   const [teamPlayers, setTeamPlayers] = useState<any[]>([]);
   const [selectedStreamId, setSelectedStreamId] = useState<string | null>(null);
 
@@ -64,6 +72,8 @@ export default function MatchDetailContent() {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isFisheyeModalOpen, setIsFisheyeModalOpen] = useState(false);
   const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
+  const [isCalibrationModalOpen, setIsCalibrationModalOpen] = useState(false);
+  const [fieldCalibration, setFieldCalibration] = useState<any>(null);
   const [isEventListOpen, setIsEventListOpen] = useState(false); // Default to closed on mobile
   const [isToolbarOpen, setIsToolbarOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -153,6 +163,16 @@ export default function MatchDetailContent() {
             setIsSubscribed(data.is_subscribed || false);
             const matchObj = data.match || data;
             setHeatmapStatus(matchObj?.heatmap_status || 'none');
+            if (matchObj?.heatmap_job) {
+              setHeatmapJob(matchObj.heatmap_job);
+            } else if (matchObj?.heatmap_progress !== undefined) {
+              setHeatmapJob({
+                has_job: ['QUEUED', 'PROCESSING'].includes((matchObj.heatmap_status || '').toUpperCase()),
+                status: (matchObj.heatmap_status || 'NONE').toUpperCase(),
+                progress: matchObj.heatmap_progress || 0,
+                current_step_text: matchObj.heatmap_step_text || ''
+              });
+            }
 
             // Set video adjustments
             if (matchObj) {
@@ -162,6 +182,9 @@ export default function MatchDetailContent() {
                 saturation: matchObj.video_saturation ?? 100,
                 hue: matchObj.video_hue ?? 0
               });
+              if (matchObj.field_calibration) {
+                setFieldCalibration(matchObj.field_calibration);
+              }
             }
 
             // Fetch team players for mentions (only for authenticated users)
@@ -223,6 +246,9 @@ export default function MatchDetailContent() {
             .then(data => {
               console.debug("[HeatmapDebug] Received analytics data:", data);
               setAnalyticsData(data);
+              if (data?.field_calibration) {
+                setFieldCalibration(data.field_calibration);
+              }
             })
             .catch(err => console.error("[HeatmapDebug] Analytics error:", err));
         }
@@ -323,14 +349,15 @@ export default function MatchDetailContent() {
     if (!id || !isAdmin) return;
     try {
       console.debug(`[HeatmapDebug] Requesting heatmap generation for match ${id}...`);
-      await generateHeatmap(id as string);
-      loadData(); // Reload to get updated status
-      setAlertConfig({
-        isOpen: true,
-        message: "Heatmap-Generierung in die Warteschlange aufgenommen.",
-        type: 'success',
-        title: "Heatmap gestartet"
+      setHeatmapStatus('queued');
+      setHeatmapJob({
+        has_job: true,
+        status: 'QUEUED',
+        progress: 0.0,
+        current_step_text: "In Warteschlange..."
       });
+      await generateHeatmap(id as string);
+      toast.info("Heatmap-Generierung in die Warteschlange aufgenommen. Live-Fortschritt aktiv.");
     } catch (error) {
       console.error("[HeatmapDebug] Failed to generate heatmap:", error);
       setAlertConfig({
@@ -356,6 +383,7 @@ export default function MatchDetailContent() {
       setShowHeatmap(false);
       setAnalyticsData(null);
       setHeatmapStatus('none');
+      setHeatmapJob(null);
       loadData();
       toast.success("Heatmap wurde gelöscht.");
     } catch (err) {
@@ -364,27 +392,48 @@ export default function MatchDetailContent() {
     }
   };
 
-
-
   useEffect(() => {
     if (!authLoading) {
       loadData();
     }
+  }, [id, authLoading, user?.id]);
 
-    // Polling for heatmap status if it's processing or queued
-    let interval: NodeJS.Timeout;
-    if (heatmapStatus === 'processing' || heatmapStatus === 'queued') {
-      interval = setInterval(() => {
-        if (!authLoading) {
-          loadData();
+  // Live-Polling für Heatmap-Fortschritt (alle 3 Sekunden während Verarbeitung)
+  useEffect(() => {
+    if (!id || authLoading) return;
+
+    const isProcessing = ['processing', 'queued'].includes((heatmapStatus || '').toLowerCase()) ||
+                         ['PROCESSING', 'QUEUED'].includes((heatmapJob?.status || '').toUpperCase());
+
+    if (!isProcessing) return;
+
+    const checkHeatmapProgress = async () => {
+      try {
+        const job = await getHeatmapStatus(id as string);
+        if (job) {
+          setHeatmapJob(job);
+          const jobStatusLower = (job.status || '').toLowerCase();
+          if (jobStatusLower && jobStatusLower !== (heatmapStatus || '').toLowerCase()) {
+            setHeatmapStatus(jobStatusLower);
+          }
+          if (job.status === 'DONE' || job.status === 'COMPLETED') {
+            toast.success("🎉 KI-Heatmap wurde erfolgreich berechnet!");
+            loadData();
+          } else if (job.status === 'ERROR' || job.status === 'FAILED') {
+            toast.error(job.error_message || "Fehler bei der Heatmap-Generierung.");
+            loadData();
+          }
         }
-      }, 10000); // Poll every 10 seconds
-    }
-
-    return () => {
-      if (interval) clearInterval(interval);
+      } catch (pollErr) {
+        console.error("[HeatmapPolling] Error fetching status:", pollErr);
+      }
     };
-  }, [id, heatmapStatus, authLoading, user?.id]);
+
+    checkHeatmapProgress();
+    const interval = setInterval(checkHeatmapProgress, 3000);
+
+    return () => clearInterval(interval);
+  }, [id, heatmapStatus, heatmapJob?.status, authLoading]);
 
   const handleOpenModal = () => {
     if (!canEdit && !canComment) return;
@@ -686,14 +735,24 @@ export default function MatchDetailContent() {
   };
 
   const renderHeatmapStatus = () => {
-    switch ((heatmapStatus || '').toUpperCase()) {
+    const statusUpper = (heatmapStatus || heatmapJob?.status || '').toUpperCase();
+    const progress = Math.round(heatmapJob?.progress || 0);
+    const stepText = heatmapJob?.current_step_text || '';
+
+    switch (statusUpper) {
       case 'QUEUED':
-        return <span className="text-yellow-500 text-xs ml-2">In Warteschlange...</span>;
+        return <span className="text-amber-400 text-xs ml-2">In Warteschlange...</span>;
       case 'PROCESSING':
-        return <span className="text-blue-500 text-xs ml-2">Wird verarbeitet (ca. 12 Min)...</span>;
+        return (
+          <span className="text-orange-400 text-xs ml-2 font-mono">
+            {progress}% {stepText ? `• ${stepText}` : ''}
+          </span>
+        );
       case 'DONE':
+      case 'COMPLETED':
         return null;
       case 'ERROR':
+      case 'FAILED':
         return <span className="text-red-500 text-xs ml-2">Fehler</span>;
       default:
         return null;
@@ -721,13 +780,21 @@ export default function MatchDetailContent() {
     },
     {
       key: 'heatmap-gen',
-      show: !isExternalGuest && isAdmin && heatmapStatus !== 'DONE' && settings?.module_heatmap_enabled,
+      show: !isExternalGuest && isAdmin && !['DONE', 'COMPLETED'].includes((heatmapStatus || '').toUpperCase()) && settings?.module_heatmap_enabled,
       onClick: handleGenerateHeatmap,
-      disabled: heatmapStatus === 'QUEUED' || heatmapStatus === 'PROCESSING',
-      className: `flex items-center gap-1.5 lg:gap-2 px-2 lg:px-3 py-1.5 rounded-md text-[11px] font-bold transition-all border border-zinc-800 ${(heatmapStatus === 'QUEUED' || heatmapStatus === 'PROCESSING') ? 'opacity-50 cursor-not-allowed text-zinc-500' : 'hover:bg-white/5 text-zinc-400 hover:text-orange-500'}`,
+      disabled: ['QUEUED', 'PROCESSING'].includes((heatmapStatus || heatmapJob?.status || '').toUpperCase()),
+      className: `flex items-center gap-1.5 lg:gap-2 px-2 lg:px-3 py-1.5 rounded-md text-[11px] font-bold transition-all border border-zinc-800 ${
+        ['QUEUED', 'PROCESSING'].includes((heatmapStatus || heatmapJob?.status || '').toUpperCase())
+          ? 'opacity-90 text-orange-400 bg-orange-500/10 border-orange-500/30'
+          : 'hover:bg-white/5 text-zinc-400 hover:text-orange-500'
+      }`,
       title: "Heatmap generieren",
-      icon: <Flame className="w-3.5 h-3.5 lg:w-4 lg:h-4" />,
-      label: "Heatmap generieren",
+      icon: <Flame className={`w-3.5 h-3.5 lg:w-4 lg:h-4 text-orange-400 ${['QUEUED', 'PROCESSING'].includes((heatmapStatus || heatmapJob?.status || '').toUpperCase()) ? 'animate-bounce' : ''}`} />,
+      label: (heatmapStatus || heatmapJob?.status || '').toUpperCase() === 'PROCESSING'
+        ? `Heatmap (${Math.round(heatmapJob?.progress || 0)}%)`
+        : (heatmapStatus || heatmapJob?.status || '').toUpperCase() === 'QUEUED'
+          ? "Heatmap (Warteschlange)"
+          : "Heatmap generieren",
       extra: renderHeatmapStatus(),
     },
     {
@@ -1001,6 +1068,32 @@ export default function MatchDetailContent() {
             </div>
           )}
 
+          {/* Live KI-Heatmap Floating Progress Indicator */}
+          {((heatmapStatus || '').toUpperCase() === 'PROCESSING' || heatmapJob?.status === 'PROCESSING') && highlightJob?.status !== 'PROCESSING' && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 max-w-md w-11/12 bg-zinc-950/90 border border-orange-500/40 rounded-xl p-3 shadow-2xl backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-300 pointer-events-none">
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <div className="flex items-center gap-2 text-xs font-bold text-orange-300">
+                  <Flame className="w-4 h-4 animate-bounce text-orange-400" />
+                  <span>KI-Heatmap-Generierung läuft</span>
+                </div>
+                <span className="font-mono text-xs font-black text-orange-400 bg-orange-500/20 px-2 py-0.5 rounded border border-orange-500/30">
+                  {Math.round(heatmapJob?.progress || 0)}%
+                </span>
+              </div>
+              <div className="w-full bg-zinc-900 rounded-full h-2 overflow-hidden border border-zinc-800 mb-1.5 shadow-inner">
+                <div
+                  className="bg-gradient-to-r from-orange-600 via-amber-500 to-yellow-400 h-full rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(249,115,22,0.5)]"
+                  style={{ width: `${Math.max(5, heatmapJob?.progress || 0)}%` }}
+                />
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-zinc-400 font-medium">
+                <span className="truncate max-w-[340px]">
+                  {heatmapJob?.current_step_text || 'YOLOv8 Spieler-Tracking & Heatmap-Berechnung...'}
+                </span>
+              </div>
+            </div>
+          )}
+
           {firstChunk ? (
             <>
               {availableStreams.length > 1 && (
@@ -1041,9 +1134,16 @@ export default function MatchDetailContent() {
               {analyticsData && (
                 <HeatmapOverlay
                   data={analyticsData.player_positions}
+                  pitchData={analyticsData.pitch_positions || []}
+                  zoneStats={analyticsData.zone_stats}
+                  teamZoneStats={analyticsData.team_zone_stats}
+                  teams={analyticsData.teams}
+                  players={analyticsData.players || []}
                   visible={showHeatmap}
                   onDeleteHeatmap={handleDeleteHeatmap}
                   isAdmin={isAdmin}
+                  onOpenCalibration={() => setIsCalibrationModalOpen(true)}
+                  canCalibrate={canEdit || isAdmin}
                 />
               )}
 
@@ -1145,6 +1245,25 @@ export default function MatchDetailContent() {
               initialAdjustments={videoAdjustments}
               videoUrl={firstChunk?.video_path ? getMediaUrl(firstChunk.video_path) : ''}
               onSave={(newAdjustments) => setVideoAdjustments(newAdjustments)}
+            />
+          )}
+
+          {isCalibrationModalOpen && id && (
+            <FieldCalibrationModal
+              matchId={id as string}
+              isOpen={isCalibrationModalOpen}
+              onClose={() => setIsCalibrationModalOpen(false)}
+              initialCalibration={fieldCalibration}
+              samplePositions={analyticsData?.player_positions || []}
+              onSaved={(savedCalib) => {
+                setFieldCalibration(savedCalib);
+                // Reload analytics to refresh transformed 2D points
+                getMatchAnalytics(id as string)
+                  .then(data => {
+                    if (data) setAnalyticsData(data);
+                  })
+                  .catch(err => console.error("Fehler beim Aktualisieren der Analytics nach Kalibrierung:", err));
+              }}
             />
           )}
 

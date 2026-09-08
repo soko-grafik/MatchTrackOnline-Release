@@ -5,92 +5,14 @@ from fastapi.staticfiles import StaticFiles
 from api import upload, matches, analytics, auth, admin, videos, install, teams, users, training, organizer, players, ai, tactics, public
 from db.session import engine, SessionLocal
 from models import Base
-from db.init_teams import seed_and_migrate_teams
+from db.migrate import run_migrations
 
-from sqlalchemy import text
-
-# Tabellen erstellen und Default Teams seeden
+# Tabellen erstellen, Migrationen durchführen und Default-Werte seeden
 try:
-    if "mysql" in str(engine.url):
-        with engine.connect() as conn:
-            conn.execute(text("SET FOREIGN_KEY_CHECKS=0;"))
-            conn.commit()
-    Base.metadata.create_all(bind=engine)
-    if "mysql" in str(engine.url):
-        with engine.connect() as conn:
-            conn.execute(text("SET FOREIGN_KEY_CHECKS=1;"))
-            conn.commit()
-    db = SessionLocal()
-    seed_and_migrate_teams(db)
-    db.close()
-
-    # Automatisches Hinzufügen neuer Spalten zu bestehenden SQLite/MySQL Tabellen
-    with engine.connect() as conn:
-      for col_def in [
-          "ALTER TABLE users ADD COLUMN avatar_path VARCHAR(255)",
-          "ALTER TABLE users ADD COLUMN first_name VARCHAR(100)",
-          "ALTER TABLE users ADD COLUMN last_name VARCHAR(100)",
-          "ALTER TABLE users ADD COLUMN notify_on_new_video BOOLEAN DEFAULT 1",
-          "ALTER TABLE users ADD COLUMN notify_on_analysis BOOLEAN DEFAULT 1",
-          "ALTER TABLE users ADD COLUMN reset_token VARCHAR(255)",
-          "ALTER TABLE users ADD COLUMN reset_token_expires_at DATETIME",
-          "ALTER TABLE training_sessions ADD COLUMN is_shared BOOLEAN DEFAULT 0",
-          "ALTER TABLE matches ADD COLUMN plain_password VARCHAR(255)",
-          "ALTER TABLE calendar_events ADD COLUMN reminder_minutes INTEGER DEFAULT 30",
-          "ALTER TABLE system_settings ADD COLUMN show_push_test_button BOOLEAN DEFAULT 0",
-          "ALTER TABLE player_evaluations ADD COLUMN raw_transcript TEXT",
-          "ALTER TABLE player_evaluations ADD COLUMN strengths TEXT",
-          "ALTER TABLE player_evaluations ADD COLUMN weaknesses TEXT",
-          "ALTER TABLE users ADD COLUMN ai_provider VARCHAR(50) DEFAULT 'OPENAI'",
-          "ALTER TABLE users ADD COLUMN ai_api_key VARCHAR(255)",
-          "ALTER TABLE users ADD COLUMN ai_model_name VARCHAR(100)",
-          "ALTER TABLE users ADD COLUMN last_login DATETIME",
-          "ALTER TABLE user_teams ADD COLUMN can_edit BOOLEAN DEFAULT 1",
-          "ALTER TABLE system_settings ADD COLUMN module_ai_assistant_enabled BOOLEAN DEFAULT 1",
-          "ALTER TABLE calendar_events ADD COLUMN reminder_sent_at DATETIME",
-          "ALTER TABLE players ADD COLUMN birthday_notified_at DATETIME",
-          "ALTER TABLE system_settings ADD COLUMN show_match_cleanup_button BOOLEAN DEFAULT 0",
-          "ALTER TABLE video_stitch_jobs ADD COLUMN detailed_logs TEXT",
-          "ALTER TABLE video_stitch_jobs ADD COLUMN audio_sync_offset_ms INTEGER DEFAULT 0",
-          "ALTER TABLE video_stitch_jobs ADD COLUMN detect_events_auto BOOLEAN DEFAULT 1",
-          "ALTER TABLE video_stitch_jobs ADD COLUMN current_step_text VARCHAR(255)",
-          "ALTER TABLE video_stitch_jobs ADD COLUMN error_message TEXT",
-          "ALTER TABLE video_stitch_jobs ADD COLUMN created_at DATETIME",
-          "ALTER TABLE video_stitch_jobs ADD COLUMN updated_at DATETIME",
-          "ALTER TABLE system_settings ADD COLUMN legal_imprint_content TEXT",
-          "ALTER TABLE system_settings ADD COLUMN legal_privacy_content TEXT",
-          "ALTER TABLE system_settings ADD COLUMN legal_terms_content TEXT",
-          "ALTER TABLE system_settings ADD COLUMN legal_club_name VARCHAR(255)",
-          "ALTER TABLE system_settings ADD COLUMN legal_contact_email VARCHAR(255)",
-          "ALTER TABLE system_settings ADD COLUMN legal_address VARCHAR(500)",
-          "ALTER TABLE system_settings ADD COLUMN legal_representative VARCHAR(255)",
-          "ALTER TABLE system_settings ADD COLUMN legal_register_info VARCHAR(255)",
-          "ALTER TABLE calendar_events ADD COLUMN external_url VARCHAR(1000)"
-      ]:
-            try:
-                conn.execute(text(col_def))
-                conn.commit()
-            except Exception:
-                pass # Spalte existiert bereits
-
-    # Bestehende Termine in die neue Mehrfach-Zuordnung übernehmen (idempotent).
-    # Ohne diesen Schritt hätten Alt-Termine nach dem Update kein zugewiesenes Team mehr.
-    with engine.connect() as conn:
-        try:
-            conn.execute(text("""
-                INSERT INTO calendar_event_teams (event_id, team_id)
-                SELECT ce.id, ce.team_id FROM calendar_events ce
-                WHERE ce.team_id IS NOT NULL
-                  AND ce.team_id IN (SELECT id FROM teams)
-                  AND NOT EXISTS (
-                      SELECT 1 FROM calendar_event_teams cet WHERE cet.event_id = ce.id
-                  )
-            """))
-            conn.commit()
-        except Exception as backfill_err:
-            print(f"Warnung beim Backfill von calendar_event_teams: {backfill_err}")
+    run_migrations(engine)
 except Exception as e:
     print(f"Warnung bei DB-Initialisierung: {e}")
+
 
 
 # Wir schalten das automatische Hinzufügen von Slashes aus, um Konflikte zu vermeiden

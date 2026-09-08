@@ -128,6 +128,9 @@ class Match(Base):
     thumbnail_path = Column(String(500), nullable=True)
     heatmap_status = Column(Enum(HeatmapStatus), default=HeatmapStatus.NONE, nullable=False)
     heatmap_path = Column(String(500), nullable=True)
+    heatmap_progress = Column(Float, default=0.0, nullable=True)
+    heatmap_step_text = Column(String(255), default="", nullable=True)
+    field_calibration = Column(Text, nullable=True) # JSON mit 4 Eckpunkten & Spielfeld-Zuordnung
 
     # Stitching Status
     stitching_status = Column(Enum(StitchingStatus), default=StitchingStatus.NONE, nullable=False)

@@ -1,11 +1,11 @@
-release: feat(organizer): widen modals and hide attendees/links/notes for training and match events (dev: 7fad7a49)
+release: fix(scripts): auto-detect, stop and disable competing systemd services to guarantee PM2 exclusivity on port 8000 (dev: c6beadd3)
 
 Letzte Änderungen:
-* feat(organizer): widen modals and hide attendees/links/notes for training and match events (7fad7a49)
-* feat(organizer): add external URL, description textarea and optional team for education events (9ec40890)
-* feat(organizer): add trainer/club event types and attendee invitations with push/mail (e99c34a1)
-* fix(dashboard): hide quick actions navigation in mobile view (cc819723)
-* feat(attendance): migrate attendance tracking from player list to organizer events (6558bad8)
-* feat(dashboard): open event edit modal on appointment click and limit to 3 mobile side-by-side quick actions (e8ecad2a)
+* fix(scripts): auto-detect, stop and disable competing systemd services to guarantee PM2 exclusivity on port 8000 (c6beadd3)
+* fix(scripts): add automated port 8000 cleanup and ecosystem start to prevent zombie process lockups during updates (27091c26)
+* chore(pm2): add ecosystem.config.js for proper python venv interpreter and backend execution (56d1d81d)
+* fix(settings): make all SystemSettingsOut fields optional with safe defaults and auto-populate nulls (460dd72c)
+* fix(db): add bulletproof unified schema migration runner to eliminate 500 errors and missing column exceptions (89b636e1)
+* fix(deploy): use pm2 restart instead of reload to avoid build cache and port conflicts (21818c21)
 
-Build-Zeitstempel: 2026-09-07 16:33:38
+Build-Zeitstempel: 2026-09-08 17:58:44

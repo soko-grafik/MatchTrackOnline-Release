@@ -57,11 +57,14 @@ export default function MatchListItem({ match, user, onToggleSubscription, onEdi
             )}
 
             {!isStitching && isGeneratingHeatmap && (
-              <div className="absolute bottom-0 inset-x-0 bg-amber-950/95 border-t border-amber-500/40 px-1.5 py-0.5 flex items-center justify-center text-[9px] font-bold text-amber-200 backdrop-blur-sm z-30 animate-pulse">
-                <div className="flex items-center gap-1">
-                  <Flame className="w-3 h-3 text-amber-400 shrink-0" />
-                  <span>Heatmap</span>
+              <div className="absolute bottom-0 inset-x-0 bg-orange-950/95 border-t border-orange-500/40 px-1.5 py-0.5 flex items-center justify-between text-[9px] font-bold text-orange-200 backdrop-blur-sm z-30 animate-pulse">
+                <div className="flex items-center gap-1 truncate">
+                  <Flame className="w-3 h-3 text-orange-400 shrink-0" />
+                  <span className="truncate">Heatmap</span>
                 </div>
+                <span className="font-mono text-[9px] text-orange-300">
+                  {Math.round(match.heatmap_job?.progress ?? match.heatmap_progress ?? 0)}%
+                </span>
               </div>
             )}
 
@@ -140,9 +143,16 @@ export default function MatchListItem({ match, user, onToggleSubscription, onEdi
                 </span>
               )}
 
-              <span className="rounded bg-zinc-800 px-2 py-0.5 text-zinc-300">
-                {match.team_name || 'Kein Team'}
-              </span>
+              {(!match.team_id && (!match.team_name || match.team_name.toLowerCase() === 'kein team')) ? (
+                <span className="rounded border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-amber-400 font-bold flex items-center gap-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                  <span>Kein Team</span>
+                </span>
+              ) : (
+                <span className="rounded bg-zinc-800 px-2 py-0.5 text-zinc-300">
+                  {match.team_name || 'Kein Team'}
+                </span>
+              )}
 
               {match.category && (
                 <span className="rounded border border-zinc-700 bg-zinc-800/50 px-2 py-0.5 text-zinc-300">

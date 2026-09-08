@@ -50,7 +50,7 @@ def run_worker():
                                 command = [
                                     sys.executable,
                                     "-c",
-                                    f"from services.ai.tracker import process_video_for_heatmap; process_video_for_heatmap({repr(video_chunk.video_path)}, {repr(heatmap_output_path)})"
+                                    f"from services.ai.heatmap_generator import run_heatmap_generation; run_heatmap_generation({repr(queued_match.id)})"
                                 ]
                             else:
                                 command = [
@@ -59,32 +59,19 @@ def run_worker():
                                     "10",
                                     sys.executable,
                                     "-c",
-                                    f"from services.ai.tracker import process_video_for_heatmap; process_video_for_heatmap({repr(video_chunk.video_path)}, {repr(heatmap_output_path)})"
+                                    f"from services.ai.heatmap_generator import run_heatmap_generation; run_heatmap_generation({repr(queued_match.id)})"
                                 ]
                             subprocess.run(command, check=True)
-
-                            # Re-establish session for update after long process
-                            db_update_session = SessionLocal()
-                            match_to_update = db_update_session.query(Match).filter(Match.id == queued_match.id).first()
-
-                            # Update match status
-                            heatmap_file_path = os.path.join(heatmap_output_path, "heatmap.png")
-                            if os.path.exists(heatmap_file_path):
-                                match_to_update.heatmap_status = HeatmapStatus.DONE
-                                match_to_update.heatmap_path = heatmap_file_path
-                            else:
-                                match_to_update.heatmap_status = HeatmapStatus.ERROR
-
-                            db_update_session.commit()
-                            db_update_session.close()
                             print(f"Finished processing match: {queued_match.id}")
 
                         except subprocess.CalledProcessError as e:
                             print(f"Error processing video for match {queued_match.id}: {e}")
                             db_update_session = SessionLocal()
                             match_to_update = db_update_session.query(Match).filter(Match.id == queued_match.id).first()
-                            match_to_update.heatmap_status = HeatmapStatus.ERROR
-                            db_update_session.commit()
+                            if match_to_update:
+                                match_to_update.heatmap_status = HeatmapStatus.ERROR
+                                match_to_update.heatmap_step_text = f"Fehler im Hintergrundprozess: {e}"
+                                db_update_session.commit()
                             db_update_session.close()
             else:
                 print("No queued jobs found. Waiting...")

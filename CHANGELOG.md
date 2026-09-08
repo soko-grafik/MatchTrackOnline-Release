@@ -1,18 +1,18 @@
 # 📋 MatchTrack Online - Versions-Changelog
 
-## Release: 2026-09-07 16:33:38 (Dev Commit: `7fad7a49`)
+## Release: 2026-09-08 17:58:44 (Dev Commit: `c6beadd3`)
 
 ### 🚀 Letzte Änderungen aus dem Entwicklungs-Repository:
-* feat(organizer): widen modals and hide attendees/links/notes for training and match events (7fad7a49 - 2026-09-07)
-* feat(organizer): add external URL, description textarea and optional team for education events (9ec40890 - 2026-09-07)
-* feat(organizer): add trainer/club event types and attendee invitations with push/mail (e99c34a1 - 2026-09-07)
-* fix(dashboard): hide quick actions navigation in mobile view (cc819723 - 2026-09-04)
-* feat(attendance): migrate attendance tracking from player list to organizer events (6558bad8 - 2026-09-04)
-* feat(dashboard): open event edit modal on appointment click and limit to 3 mobile side-by-side quick actions (e8ecad2a - 2026-09-04)
-* fix(organizer): allow removing and switching linked training plan on calendar training events (15ba69fb - 2026-09-04)
-* feat(update): use git sparse-checkout to exclude chats, docs, scripts, plans, .idea and production/temp scripts on dev server (7208cfb4 - 2026-09-04)
-* fix(scripts): hash only package.json and requirements.txt for robust dependency caching (9222b462 - 2026-09-04)
-* feat(matches): allow changing/reassigning video stream type between Standard (16:9) and Panorama (32:9) in Match Edit modal (7fd55837 - 2026-09-04)
+* fix(scripts): auto-detect, stop and disable competing systemd services to guarantee PM2 exclusivity on port 8000 (c6beadd3 - 2026-09-08)
+* fix(scripts): add automated port 8000 cleanup and ecosystem start to prevent zombie process lockups during updates (27091c26 - 2026-09-08)
+* chore(pm2): add ecosystem.config.js for proper python venv interpreter and backend execution (56d1d81d - 2026-09-08)
+* fix(settings): make all SystemSettingsOut fields optional with safe defaults and auto-populate nulls (460dd72c - 2026-09-08)
+* fix(db): add bulletproof unified schema migration runner to eliminate 500 errors and missing column exceptions (89b636e1 - 2026-09-08)
+* fix(deploy): use pm2 restart instead of reload to avoid build cache and port conflicts (21818c21 - 2026-09-08)
+* feat(teams): add batch assignment action bar and multi-select for unassigned matches (e5455820 - 2026-09-08)
+* fix(db): add missing dynamic columns migration in init_teams prior to match queries (b3c678f3 - 2026-09-08)
+* feat(heatmap): add team and player specific heatmaps with kit clustering, dual comparison and head-to-head zone analytics (a0d123b2 - 2026-09-08)
+* feat(heatmap): add homography projection to standardized 2d bird's-eye pitch with interactive 4-corner calibration and zone analytics (327c805d - 2026-09-08)
 
 ---
 *Automatisch generiert durch die MatchTrack Release Pipeline.*

@@ -11,6 +11,7 @@ import {
   Trash2, Edit3, Shield, Star, Calendar, ArrowUpDown, Check, FileSpreadsheet, Eye, Gift, Printer, Download, MoreVertical
 } from 'lucide-react';
 import { getPlayers, createPlayer, updatePlayer, deletePlayer, transferPlayerTeam, importDfbCsv, getTeams, getMyTeams, syncBirthdaysToOrganizer, getMediaUrl } from '@/services/api';
+import PrintableConsentModal from '@/components/PrintableConsentModal';
 import { useToast } from '@/contexts/ToastContext';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -26,6 +27,7 @@ export default function PlayersPage() {
   const [selectedTeamId, setSelectedTeamId] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
+  const [isConsentModalOpen, setIsConsentModalOpen] = useState(false);
 
   // Check if current user has edit permission for the selected team
   const canEditCurrentTeam = (() => {
@@ -524,6 +526,17 @@ export default function PlayersPage() {
                     >
                       <Printer className="w-4 h-4 text-blue-400 shrink-0" />
                       <span>PDF Drucken</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setIsMoreActionsMenuOpen(false);
+                        setIsConsentModalOpen(true);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-emerald-400 hover:bg-zinc-800 transition-all text-left"
+                    >
+                      <Shield className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <span>Muster-Einwilligung (PDF)</span>
                     </button>
                   </div>
                 )}
@@ -1314,6 +1327,13 @@ export default function PlayersPage() {
         message={alertConfig.message}
         type={alertConfig.type}
         onClose={() => setAlertConfig({ ...alertConfig, isOpen: false })}
+      />
+
+      {/* Printable Consent Sheet Modal */}
+      <PrintableConsentModal
+        isOpen={isConsentModalOpen}
+        onClose={() => setIsConsentModalOpen(false)}
+        prefilledTeamName={teams.find(t => t.id === selectedTeamId)?.name || ''}
       />
     </div>
   );

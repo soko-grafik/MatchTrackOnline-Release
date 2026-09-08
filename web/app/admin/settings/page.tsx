@@ -114,9 +114,10 @@ export default function AdminSettingsPage() {
       if (data && typeof data === 'object' && !data.error) {
         setSettings((prev: any) => ({ ...prev, ...data }));
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to fetch settings:", err);
-      setError("Fehler beim Laden der Einstellungen.");
+      const detail = err.response?.data?.detail;
+      setError(detail ? `Fehler beim Laden der Einstellungen: ${detail}` : "Fehler beim Laden der Einstellungen.");
     } finally {
       setLoading(false);
     }

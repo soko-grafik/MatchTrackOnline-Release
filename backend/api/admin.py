@@ -66,17 +66,18 @@ class ApprovalUpdate(BaseModel):
     is_approved: bool
 
 class SystemSettingsOut(BaseModel):
-    module_stitching_enabled: bool
-    module_heatmap_enabled: bool
-    module_video_color_enabled: bool
-    module_hls_enabled: bool
-    module_fisheye_enabled: bool
+    id: Optional[int] = 1
+    module_stitching_enabled: Optional[bool] = True
+    module_heatmap_enabled: Optional[bool] = True
+    module_video_color_enabled: Optional[bool] = True
+    module_hls_enabled: Optional[bool] = True
+    module_fisheye_enabled: Optional[bool] = True
     module_ai_assistant_enabled: Optional[bool] = True
-    default_resolution: str
-    default_video_quality: str
-    default_storage_path: str
-    auto_hls_conversion: bool
-    auto_stitching: bool
+    default_resolution: Optional[str] = "1080p"
+    default_video_quality: Optional[str] = "High"
+    default_storage_path: Optional[str] = "uploads"
+    auto_hls_conversion: Optional[bool] = True
+    auto_stitching: Optional[bool] = False
     show_push_test_button: Optional[bool] = False
     show_match_cleanup_button: Optional[bool] = False
     smtp_enabled: Optional[bool] = False
@@ -108,6 +109,7 @@ class SystemSettingsOut(BaseModel):
 
     class Config:
         orm_mode = True
+
 
 class SystemSettingsUpdate(BaseModel):
     module_stitching_enabled: Optional[bool] = None
@@ -152,14 +154,45 @@ from .dependencies import require_admin, require_viewer
 
 @router.get("/settings", response_model=SystemSettingsOut)
 def get_settings(db: Session = Depends(get_db), current_user: User = Depends(require_viewer)):
-    settings = db.query(SystemSettings).first()
-    if not settings:
-        # Create default settings if not exist
-        settings = SystemSettings(id=1)
-        db.add(settings)
-        db.commit()
-        db.refresh(settings)
-    return settings
+    try:
+        settings = db.query(SystemSettings).first()
+        if not settings:
+            settings = SystemSettings(id=1)
+            db.add(settings)
+            db.commit()
+            db.refresh(settings)
+
+        # Fallback values for nullable columns
+        changed = False
+        if settings.module_stitching_enabled is None: settings.module_stitching_enabled = True; changed = True
+        if settings.module_heatmap_enabled is None: settings.module_heatmap_enabled = True; changed = True
+        if settings.module_video_color_enabled is None: settings.module_video_color_enabled = True; changed = True
+        if settings.module_hls_enabled is None: settings.module_hls_enabled = True; changed = True
+        if settings.module_fisheye_enabled is None: settings.module_fisheye_enabled = True; changed = True
+        if settings.module_ai_assistant_enabled is None: settings.module_ai_assistant_enabled = True; changed = True
+        if not settings.default_resolution: settings.default_resolution = "1080p"; changed = True
+        if not settings.default_video_quality: settings.default_video_quality = "High"; changed = True
+        if not settings.default_storage_path: settings.default_storage_path = "uploads"; changed = True
+        if settings.auto_hls_conversion is None: settings.auto_hls_conversion = True; changed = True
+        if settings.auto_stitching is None: settings.auto_stitching = False; changed = True
+        if settings.show_push_test_button is None: settings.show_push_test_button = False; changed = True
+        if settings.show_match_cleanup_button is None: settings.show_match_cleanup_button = False; changed = True
+
+        if changed:
+            try:
+                db.commit()
+                db.refresh(settings)
+            except Exception:
+                db.rollback()
+
+        return settings
+    except Exception as e:
+        import traceback
+        print(f"[Admin Settings Error] {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"SystemSettings error: {str(e)}")
+
+
 
 @router.put("/settings", response_model=SystemSettingsOut)
 def update_settings(settings_update: SystemSettingsUpdate, db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
@@ -349,21 +382,28 @@ def get_online_stats(db: Session = Depends(get_db), current_user: User = Depends
     """
     Liefert für Admins die Anzahl der aktuell aktiven Benutzer (Login/Aktivität in den letzten 15 Minuten).
     """
-    cutoff = datetime.utcnow() - timedelta(minutes=15)
-    online_users = db.query(User).filter(User.last_login >= cutoff).all()
-    return {
-        "online_count": len(online_users),
-        "online_users": [
-            {
-                "id": u.id,
-                "username": u.username,
-                "first_name": u.first_name,
-                "last_name": u.last_name,
-                "last_login": u.last_login
-            }
-            for u in online_users
-        ]
-    }
+    try:
+        cutoff = datetime.utcnow() - timedelta(minutes=15)
+        online_users = db.query(User).filter(User.last_login >= cutoff).all()
+        return {
+            "online_count": len(online_users),
+            "online_users": [
+                {
+                    "id": u.id,
+                    "username": u.username,
+                    "first_name": u.first_name,
+                    "last_name": u.last_name,
+                    "last_login": u.last_login
+                }
+                for u in online_users
+            ]
+        }
+    except Exception as e:
+        import traceback
+        print(f"[Admin Online-Stats Error] {e}")
+        traceback.print_exc()
+        return {"online_count": 0, "online_users": []}
+
 
 @router.put("/users/{user_id}/approve", response_model=UserOut)
 def update_user_approval(user_id: str, approval: ApprovalUpdate, db: Session = Depends(get_db), current_user: User = Depends(require_admin)):

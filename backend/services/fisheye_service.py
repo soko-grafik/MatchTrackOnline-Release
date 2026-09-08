@@ -53,8 +53,12 @@ def apply_fisheye_correction(video_path_abs: str, output_path_abs: str, method: 
     """
     Wendet die Fisheye-Korrektur auf ein Video an.
     method: 'slider' oder 'corners'
-    params: { 'k1': float, 'k2': float } für slider
-            { 'points': [{'x': float, 'y': float}, ...] } für corners (4 Punkte)
+    params: {
+        'k1': float, 'k2': float,
+        'points': [{'x': float, 'y': float}, ...],
+        'auto_crop': bool,
+        'crop_percent': float  (0 to 50)
+    }
     """
     cap = cv2.VideoCapture(video_path_abs)
     if not cap.isOpened():
@@ -64,39 +68,64 @@ def apply_fisheye_correction(video_path_abs: str, output_path_abs: str, method: 
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     fps    = cap.get(cv2.CAP_PROP_FPS)
     
-    # Define codec and create VideoWriter
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     out = cv2.VideoWriter(output_path_abs, fourcc, fps, (width, height))
 
+    auto_crop = params.get('auto_crop', True)
+    crop_percent = float(params.get('crop_percent', 0.0) or 0.0)
+
+    # Determine zoom/scale factor
+    # For slider method with negative distortion (barrel distortion correction),
+    # auto-crop calculates how much the corners pulled in to eliminate black boundaries.
+    zoom_factor = 1.0
     if method == 'slider':
-        k1 = params.get('k1', 0.0)
-        k2 = params.get('k2', 0.0)
-        # Simplified fisheye correction via remapping
-        # For a real implementation, we'd use cv2.undistort with proper K and D
-        # but since we don't have calibration, we use a simpler model.
-        
-        # Build map
-        map_x, map_y = np.zeros((height, width), np.float32), np.zeros((height, width), np.float32)
-        center_x, center_y = width / 2, height / 2
-        
-        for y in range(height):
-            for x in range(width):
-                # Normalized coordinates from -1 to 1
-                nx = (x - center_x) / center_x
-                ny = (y - center_y) / center_y
-                r = np.sqrt(nx**2 + ny**2)
-                
-                # Distortion factor
-                f = 1 + k1 * r**2 + k2 * r**4
-                
-                # Map back to image coordinates
-                map_x[y, x] = nx * f * center_x + center_x
-                map_y[y, x] = ny * f * center_y + center_y
+        k1 = float(params.get('k1', 0.0) or 0.0)
+        k2 = float(params.get('k2', 0.0) or 0.0)
+
+        if auto_crop and crop_percent == 0.0:
+            # Auto calculate required scale to crop black edges
+            # Corner point is at normalized (1, 1), r^2 = 2
+            # Edge center is at (1, 0), r^2 = 1
+            # If k1 < 0, edges curve inwards. We zoom in so edge centers fill boundary.
+            if k1 < 0:
+                # Distortion factor at edge center
+                f_edge = 1.0 + k1 * 1.0 + k2 * 1.0
+                if f_edge > 0.01:
+                    zoom_factor = max(1.0, 1.0 / f_edge)
+        elif crop_percent > 0:
+            zoom_factor = 1.0 + (crop_percent / 100.0)
+
+        # High-performance vectorized map creation via np.meshgrid
+        y_indices, x_indices = np.indices((height, width), dtype=np.float32)
+        center_x, center_y = width / 2.0, height / 2.0
+
+        # Apply zoom factor so zooming in samples a smaller field of view (removes borders)
+        nx = ((x_indices - center_x) / center_x) / zoom_factor
+        ny = ((y_indices - center_y) / center_y) / zoom_factor
+        r2 = nx**2 + ny**2
+
+        # Radial distortion
+        f = 1.0 + k1 * r2 + k2 * (r2**2)
+
+        map_x = (nx * f * center_x + center_x).astype(np.float32)
+        map_y = (ny * f * center_y + center_y).astype(np.float32)
 
     elif method == 'corners':
         src_pts = np.array([[p['x'] * width, p['y'] * height] for p in params['points']], dtype=np.float32)
-        # Destination points: rectangle covering the whole frame
-        dst_pts = np.array([[0, 0], [width, 0], [width, height], [0, height]], dtype=np.float32)
+
+        # Apply optional crop zoom on corners destination
+        if crop_percent > 0:
+            margin_x = (width * (crop_percent / 100.0)) / 2.0
+            margin_y = (height * (crop_percent / 100.0)) / 2.0
+            dst_pts = np.array([
+                [-margin_x, -margin_y],
+                [width + margin_x, -margin_y],
+                [width + margin_x, height + margin_y],
+                [-margin_x, height + margin_y]
+            ], dtype=np.float32)
+        else:
+            dst_pts = np.array([[0, 0], [width, 0], [width, height], [0, height]], dtype=np.float32)
+
         M = cv2.getPerspectiveTransform(src_pts, dst_pts)
 
     while cap.isOpened():

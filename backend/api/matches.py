@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 from typing import Dict, Any, Optional, Union
 from db.session import get_db, BASE_DIR, UPLOAD_DIR
 import os
+import json
 from datetime import datetime
 import traceback
 import uuid
@@ -204,6 +205,14 @@ async def get_matches(
             hm_status_str = str(match.heatmap_status.value if hasattr(match.heatmap_status, 'value') else match.heatmap_status or '').upper()
             is_generating_heatmap = hm_status_str in ["QUEUED", "PROCESSING"]
 
+            # Heatmap Job Status & Fortschritt
+            try:
+                from services.ai.heatmap_generator import get_heatmap_job_status
+                hm_job = get_heatmap_job_status(match.id)
+                hm_info = hm_job if (hm_job and hm_job.get("has_job")) else None
+            except Exception:
+                hm_info = None
+
             # KI-Highlights Job
             try:
                 hl_status = get_highlight_job_status(match.id)
@@ -237,6 +246,9 @@ async def get_matches(
                 "password": match.plain_password if (current_user and str(current_user.role.value if hasattr(current_user.role, 'value') else current_user.role).upper() in ["ADMIN", "TEAM_ADMIN", "TRAINER", "CO_TRAINER"]) else None,
                 "heatmap_status": match.heatmap_status,
                 "heatmap_path": match.heatmap_path,
+                "heatmap_progress": getattr(match, 'heatmap_progress', 0.0) or (hm_info.get('progress', 0.0) if hm_info else 0.0),
+                "heatmap_step_text": getattr(match, 'heatmap_step_text', '') or (hm_info.get('current_step_text', '') if hm_info else ''),
+                "heatmap_job": hm_info,
                 "video_brightness": match.video_brightness,
                 "video_contrast": match.video_contrast,
                 "video_saturation": match.video_saturation,
@@ -317,6 +329,14 @@ async def get_match(match_id: str, request: Request, db: Session = Depends(get_d
             hl_info = None
             is_detecting_highlights = False
 
+        # Heatmap Job Status & Fortschritt
+        try:
+            from services.ai.heatmap_generator import get_heatmap_job_status
+            hm_job = get_heatmap_job_status(match.id)
+            hm_info = hm_job if (hm_job and hm_job.get("has_job")) else None
+        except Exception:
+            hm_info = None
+
         # Verfügbare Video-Streams & Aspect Ratio (16:9 & 32:9 Support)
         match_folder = os.path.join(UPLOAD_DIR, match_id)
         has_pano_file = os.path.exists(os.path.join(match_folder, "panorama_32x9.mp4"))
@@ -394,6 +414,9 @@ async def get_match(match_id: str, request: Request, db: Session = Depends(get_d
             "is_password_expired": is_expired,
             "heatmap_status": str(match.heatmap_status.value if hasattr(match.heatmap_status, 'value') else match.heatmap_status or 'none'),
             "heatmap_path": match.heatmap_path,
+            "heatmap_progress": getattr(match, 'heatmap_progress', 0.0) or (hm_info.get('progress', 0.0) if hm_info else 0.0),
+            "heatmap_step_text": getattr(match, 'heatmap_step_text', '') or (hm_info.get('current_step_text', '') if hm_info else ''),
+            "heatmap_job": hm_info,
             "video_brightness": match.video_brightness,
             "video_contrast": match.video_contrast,
             "video_saturation": match.video_saturation,
@@ -401,6 +424,7 @@ async def get_match(match_id: str, request: Request, db: Session = Depends(get_d
             "highlight_job": hl_info,
             "is_detecting_highlights": is_detecting_highlights,
             "available_streams": available_streams,
+            "field_calibration": json.loads(match.field_calibration) if match.field_calibration else None,
         }
 
         chunks_list = []
@@ -650,6 +674,15 @@ async def delete_event(match_id: str, event_id: str, db: Session = Depends(get_d
 
     return {"status": "success", "message": f"Event {event_id} deleted"}
 
+@router.get("/{match_id}/heatmap-status")
+async def get_heatmap_status_endpoint(match_id: str, db: Session = Depends(get_db)):
+    """
+    Liefert den aktuellen Verarbeitungsstatus und die prozentuale Fortschrittsanzeige
+    der KI-Heatmap-Generierung für ein Match zurück.
+    """
+    from services.ai.heatmap_generator import get_heatmap_job_status
+    return get_heatmap_job_status(match_id)
+
 @router.post("/{match_id}/generate-heatmap")
 async def generate_heatmap(match_id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
     settings = db.query(SystemSettings).filter(SystemSettings.id == 1).first()
@@ -664,10 +697,15 @@ async def generate_heatmap(match_id: str, background_tasks: BackgroundTasks, db:
         return {"status": "info", "message": f"Heatmap status is already {match.heatmap_status.value}"}
 
     match.heatmap_status = HeatmapStatus.QUEUED
+    match.heatmap_progress = 0.0
+    match.heatmap_step_text = "In Warteschlange..."
     db.commit()
 
+    # Job-Status im Speicher initialisieren
+    from services.ai.heatmap_generator import update_heatmap_job_status, run_heatmap_generation
+    update_heatmap_job_status(match_id, "QUEUED", 0.0, "In Warteschlange...", force_db=True)
+
     # Hintergrundtask starten
-    from services.ai.heatmap_generator import run_heatmap_generation
     background_tasks.add_task(run_heatmap_generation, match_id)
 
     return {"status": "success", "message": "Heatmap-Generierung im Hintergrund gestartet."}
@@ -704,7 +742,13 @@ async def delete_heatmap(match_id: str, db: Session = Depends(get_db), current_u
 
         match.heatmap_path = None
         match.heatmap_status = HeatmapStatus.NONE
+        match.heatmap_progress = 0.0
+        match.heatmap_step_text = ""
         db.commit()
+
+        # Job aus Cache entfernen
+        from services.ai.heatmap_generator import HEATMAP_JOBS
+        HEATMAP_JOBS.pop(match_id, None)
 
         return {"status": "success", "message": "Heatmap erfolgreich gelöscht."}
     except Exception as e:
@@ -714,18 +758,171 @@ async def delete_heatmap(match_id: str, db: Session = Depends(get_db), current_u
         raise HTTPException(status_code=500, detail=f"Fehler beim Löschen der Heatmap: {str(e)}")
 
 
-@router.get("/unassigned/list")
+class BatchAssignMatchesPayload(BaseModel):
+    match_ids: list[str]
+    team_id: str
+    category: Optional[str] = None
 
+@router.get("/unassigned/list")
 async def get_unassigned_matches(db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
     """
     Liefert alle Alt-Videos/Spiele zurück, denen noch keine Mannschaft zugewiesen ist.
     """
-    matches = db.query(Match).filter((Match.team_id == None) | (Match.team_id == "")).all()
+    matches = db.query(Match).filter((Match.team_id == None) | (Match.team_id == "")).order_by(Match.created_at.desc()).all()
     return [{
         "id": m.id,
         "name": m.name,
         "team_name": m.team_name,
-        "category": m.category,
-        "created_at": m.created_at
+        "category": getattr(m, 'category', 'Punktspiel') or 'Punktspiel',
+        "recording_date": m.recording_date.isoformat() if m.recording_date else None,
+        "created_at": m.created_at.isoformat() if m.created_at else None,
+        "thumbnail_path": m.thumbnail_path,
+        "video_quality": m.video_quality
     } for m in matches]
+
+@router.post("/batch-assign")
+async def batch_assign_matches(
+    payload: BatchAssignMatchesPayload,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """
+    Weist mehrere Spiele gleichzeitig per 1-Klick einer Mannschaft zu.
+    """
+    if not payload.match_ids:
+        raise HTTPException(status_code=400, detail="Keine Spiel-IDs übergeben.")
+
+    team = db.query(Team).filter(Team.id == payload.team_id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Ausgewählte Mannschaft wurde nicht gefunden.")
+
+    matches = db.query(Match).filter(Match.id.in_(payload.match_ids)).all()
+    if not matches:
+        raise HTTPException(status_code=404, detail="Keine passenden Spiele gefunden.")
+
+    updated_count = 0
+    for match in matches:
+        match.team_id = team.id
+        match.team_name = team.name
+        if payload.category:
+            match.category = payload.category
+        updated_count += 1
+
+    db.commit()
+
+    return {
+        "status": "success",
+        "message": f"{updated_count} Spiel(e) erfolgreich '{team.name}' zugewiesen.",
+        "updated_count": updated_count,
+        "team_id": team.id,
+        "team_name": team.name
+    }
+
+
+
+# --- Spielfeld-Kalibrierung & 2D-Homographie ---
+
+class FieldCalibrationPoint(BaseModel):
+    x: float
+    y: float
+
+class FieldCalibrationPayload(BaseModel):
+    src_points: list[FieldCalibrationPoint]
+    pitch_type: Optional[str] = "full"
+    homography_matrix: Optional[list[float]] = None
+
+@router.get("/{match_id}/calibration")
+async def get_match_calibration(
+    match_id: str,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_user)
+):
+    match = db.query(Match).filter(Match.id == match_id).first()
+    if not match:
+        raise HTTPException(status_code=404, detail="Match nicht gefunden.")
+
+    if not _is_match_access_allowed(match, current_user, request):
+        raise HTTPException(status_code=401, detail="Passwort erforderlich.")
+
+    calib = None
+    if match.field_calibration:
+        try:
+            calib = json.loads(match.field_calibration)
+        except Exception:
+            pass
+
+    return {
+        "match_id": match_id,
+        "field_calibration": calib
+    }
+
+@router.post("/{match_id}/calibration")
+async def save_match_calibration(
+    match_id: str,
+    payload: FieldCalibrationPayload,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    match = db.query(Match).filter(Match.id == match_id).first()
+    if not match:
+        raise HTTPException(status_code=404, detail="Match nicht gefunden.")
+
+    is_admin = current_user.role == UserRole.ADMIN
+    is_trainer = current_user.role in [UserRole.TRAINER, UserRole.CO_TRAINER, UserRole.TEAM_ADMIN]
+    if not (is_admin or is_trainer):
+        raise HTTPException(status_code=403, detail="Keine Berechtigung zur Spielfeld-Kalibrierung.")
+
+    calibration_dict = {
+        "src_points": [{"x": p.x, "y": p.y} for p in payload.src_points],
+        "pitch_type": payload.pitch_type or "full",
+        "homography_matrix": payload.homography_matrix,
+        "updated_at": datetime.utcnow().isoformat(),
+        "updated_by": current_user.name or current_user.email
+    }
+    match.field_calibration = json.dumps(calibration_dict)
+    db.commit()
+
+    # Optional: Falls bereits ein tracking.jsonl existiert, heatmap_2d.png aktualisieren
+    try:
+        chunk = db.query(VideoChunk).filter(VideoChunk.match_id == match_id).first()
+        if chunk and chunk.video_path:
+            video_path_rel = chunk.video_path.replace("backend/", "", 1) if chunk.video_path.startswith("backend/") else chunk.video_path
+            video_dir_abs = os.path.dirname(os.path.join(BASE_DIR, video_path_rel))
+            tracking_file = os.path.join(video_dir_abs, "tracking.jsonl")
+            if os.path.exists(tracking_file):
+                from services.ai.homography import compute_pitch_homography, transform_positions, generate_2d_pitch_heatmap_image
+                positions = []
+                with open(tracking_file, "r") as f_tr:
+                    for line in f_tr:
+                        l = line.strip()
+                        if not l: continue
+                        try:
+                            item = json.loads(l)
+                            for det in item.get("detections", []):
+                                positions.append({
+                                    "x": det.get("x", 0),
+                                    "y": det.get("y", 0),
+                                    "ground_x": det.get("ground_x", det.get("x", 0)),
+                                    "ground_y": det.get("ground_y", det.get("y", 0))
+                                })
+                        except Exception:
+                            pass
+
+                if positions:
+                    H = compute_pitch_homography(calibration_dict["src_points"], pitch_type=calibration_dict["pitch_type"])
+                    if H is not None:
+                        pitch_pts = transform_positions(positions, H)
+                        heatmap_2d_abs = os.path.join(video_dir_abs, "heatmap_2d.png")
+                        generate_2d_pitch_heatmap_image(pitch_pts, heatmap_2d_abs)
+    except Exception as e_2d:
+        print(f"[Calibration] 2D-Heatmap Update im Hintergrund fehlgeschlagen: {e_2d}")
+
+    return {
+        "status": "success",
+        "message": "Spielfeld-Kalibrierung erfolgreich gespeichert.",
+        "field_calibration": calibration_dict
+    }
+
 

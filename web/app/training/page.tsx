@@ -81,6 +81,7 @@ export default function TrainingPage() {
   const [expandedSessionIds, setExpandedSessionIds] = useState<number[]>([]);
   const [modalExerciseSearch, setModalExerciseSearch] = useState('');
   const [printingSession, setPrintingSession] = useState<any | null>(null);
+  const [printingExercise, setPrintingExercise] = useState<any | null>(null);
   const [showSketchEditor, setShowSketchEditor] = useState(false);
 
   // Exercise Form
@@ -637,22 +638,36 @@ export default function TrainingPage() {
                           </div>
                         </div>
 
-                        {canEdit && (
-                          <div className="flex items-center justify-end gap-2 pt-1 border-t border-zinc-800/40">
-                            <button
-                              onClick={() => openEditExerciseModal(ex)}
-                              className="p-2 rounded-lg bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700 transition-all text-xs font-bold flex items-center gap-1"
-                            >
-                              <Pencil className="w-3.5 h-3.5" /> Bearbeiten
-                            </button>
-                            <button
-                              onClick={() => handleDeleteExercise(ex.id)}
-                              className="p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-all text-xs"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        )}
+                        <div className="flex items-center justify-between gap-2 pt-1 border-t border-zinc-800/40">
+                          <button
+                            type="button"
+                            onClick={() => setPrintingExercise(ex)}
+                            className="p-2 rounded-lg bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700 transition-all text-xs font-bold flex items-center gap-1.5"
+                            title="Übung drucken / DIN A4 PDF exportieren"
+                          >
+                            <Printer className="w-3.5 h-3.5 text-emerald-400" />
+                            <span>PDF</span>
+                          </button>
+
+                          {canEdit && (
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => openEditExerciseModal(ex)}
+                                className="p-2 rounded-lg bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700 transition-all text-xs font-bold flex items-center gap-1"
+                              >
+                                <Pencil className="w-3.5 h-3.5" /> Bearbeiten
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteExercise(ex.id)}
+                                className="p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-all text-xs"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1391,12 +1406,18 @@ export default function TrainingPage() {
             </div>
           </div>
         )}
-        {/* Printable Training Plan Modal */}
+        {/* Printable Training Plan / Exercise Modal */}
         {printingSession && (
           <PrintableTrainingModal
             session={printingSession}
             exercisesList={exercises}
             onClose={() => setPrintingSession(null)}
+          />
+        )}
+        {printingExercise && (
+          <PrintableTrainingModal
+            exercise={printingExercise}
+            onClose={() => setPrintingExercise(null)}
           />
         )}
       </main>

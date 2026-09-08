@@ -89,11 +89,14 @@ export default function MatchCard({ match, user, onToggleSubscription, onEditReq
           )}
 
           {!isStitching && isGeneratingHeatmap && (
-            <div className="absolute bottom-0 inset-x-0 bg-amber-950/95 border-t border-amber-500/40 px-2.5 py-1.5 flex items-center justify-between text-[11px] font-bold text-amber-200 backdrop-blur-sm z-30 animate-pulse shadow-md">
+            <div className="absolute bottom-0 inset-x-0 bg-orange-950/95 border-t border-orange-500/40 px-2.5 py-1.5 flex items-center justify-between text-[11px] font-bold text-orange-200 backdrop-blur-sm z-30 animate-pulse shadow-md">
               <div className="flex items-center gap-1.5 truncate">
-                <Flame className="w-3.5 h-3.5 text-amber-400 shrink-0 animate-bounce" />
-                <span className="truncate">Heatmap wird generiert...</span>
+                <Flame className="w-3.5 h-3.5 text-orange-400 shrink-0 animate-bounce" />
+                <span className="truncate">{match.heatmap_job?.current_step_text || match.heatmap_step_text || 'Heatmap wird generiert...'}</span>
               </div>
+              <span className="font-mono text-[10px] bg-orange-500/20 text-orange-300 px-1.5 py-0.5 rounded border border-orange-400/30 shrink-0 ml-1">
+                {Math.round(match.heatmap_job?.progress ?? match.heatmap_progress ?? 0)}%
+              </span>
             </div>
           )}
 
@@ -223,12 +226,20 @@ export default function MatchCard({ match, user, onToggleSubscription, onEditReq
               const userTeams = user?.teams || [];
               // Check if team is editable by user
               const isEditableTeam = userTeams.some((ut: any) => match.team_id && ut.id === match.team_id && Boolean(ut.can_edit));
+              const isUnassigned = !match.team_id && (!match.team_name || match.team_name.toLowerCase() === 'kein team');
               return (
                 <div className="flex items-center gap-1.5">
-                  <span className="inline-flex items-center gap-1 rounded-md bg-zinc-800/90 border border-zinc-700/50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-zinc-200">
-                    <span>{match.team_name || 'Kein Team'}</span>
-                    {isEditableTeam && <Star className="w-3 h-3 fill-amber-400 text-amber-400 shrink-0 ml-0.5" />}
-                  </span>
+                  {isUnassigned ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-md bg-amber-500/10 border border-amber-500/40 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-amber-400" title="Diesem Video ist noch kein Team zugewiesen">
+                      <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                      <span>Kein Team</span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-md bg-zinc-800/90 border border-zinc-700/50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-zinc-200">
+                      <span>{match.team_name || 'Kein Team'}</span>
+                      {isEditableTeam && <Star className="w-3 h-3 fill-amber-400 text-amber-400 shrink-0 ml-0.5" />}
+                    </span>
+                  )}
                 </div>
               );
             })()}

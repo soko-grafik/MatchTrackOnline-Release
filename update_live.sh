@@ -64,7 +64,7 @@ else
 fi
 
 echo "   -> Führe Datenbank-Tabellenerstellung und Mannschafts-Migration aus..."
-python -c "from db.session import engine, SessionLocal; from models import Base; from db.init_teams import seed_and_migrate_teams; from sqlalchemy import text; c = engine.connect(); c.execute(text('SET FOREIGN_KEY_CHECKS=0;')) if 'mysql' in str(engine.url) else None; c.commit(); c.close(); Base.metadata.create_all(bind=engine); c2 = engine.connect(); c2.execute(text('SET FOREIGN_KEY_CHECKS=1;')) if 'mysql' in str(engine.url) else None; c2.commit(); c2.close(); db=SessionLocal(); seed_and_migrate_teams(db); db.close()"
+python -c "from db.session import engine; from db.migrate import run_migrations; run_migrations(engine)"
 echo "   ✅ Datenbank & Mannschaften auf neuestem Stand."
 
 # 3. Frontend Pakete installieren & Next.js kompilieren
@@ -98,9 +98,28 @@ echo "   ✅ Frontend erfolgreich kompiliert."
 # 4. PM2 Dienste neu starten
 echo "🔄 [4/4] Starte PM2-Dienste neu..."
 
+# Verhindern, dass alte Systemd-Dienste Port 8000 blockieren
+for srv in matchtrack.service matchtrack-backend.service; do
+    if command -v systemctl &>/dev/null && (systemctl is-active --quiet "$srv" 2>/dev/null || systemctl is-enabled --quiet "$srv" 2>/dev/null); then
+        echo "   -> Deaktiviere konkurrierenden Systemd-Dienst '$srv'..."
+        systemctl stop "$srv" 2>/dev/null || true
+        systemctl disable "$srv" 2>/dev/null || true
+    fi
+done
+
 if command -v pm2 &> /dev/null; then
-    echo "   -> Neu Laden aller PM2 Dienste..."
-    pm2 reload all || pm2 restart all || echo "⚠️ PM2 konnte Dienste nicht automatisch neu laden."
+    echo "   -> Beende verwaiste Prozesse auf Port 8000 (Safety Kill)..."
+    pm2 stop matchtrack-backend 2>/dev/null || true
+    fuser -k -9 8000/tcp 2>/dev/null || true
+    sleep 1
+
+    echo "   -> Starte PM2 Dienste neu..."
+    if [ -f "$PROJECT_DIR/ecosystem.config.js" ]; then
+        pm2 startOrRestart "$PROJECT_DIR/ecosystem.config.js" || pm2 restart all
+    else
+        pm2 restart all || echo "⚠️ PM2 konnte Dienste nicht automatisch neu starten."
+    fi
+    pm2 save 2>/dev/null || true
     echo "   -> PM2 Status:"
     pm2 status
 else
