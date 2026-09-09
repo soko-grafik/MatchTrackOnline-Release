@@ -233,6 +233,7 @@ class SystemSettings(Base):
     smtp_user = Column(String(255), nullable=True, default="")
     smtp_password = Column(String(255), nullable=True, default="")
     smtp_sender_email = Column(String(255), nullable=True, default="noreply@matchtrack.de")
+    smtp_sender_name = Column(String(255), nullable=True, default="MatchTracker Online")
     smtp_use_tls = Column(Boolean, default=True)
 
     # FTP Backup Settings

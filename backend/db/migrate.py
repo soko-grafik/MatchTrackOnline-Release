@@ -94,6 +94,7 @@ MIGRATION_COLUMNS = [
     ("system_settings", "smtp_user", "VARCHAR(255) DEFAULT ''"),
     ("system_settings", "smtp_password", "VARCHAR(255) DEFAULT ''"),
     ("system_settings", "smtp_sender_email", "VARCHAR(255) DEFAULT 'noreply@matchtrack.de'"),
+    ("system_settings", "smtp_sender_name", "VARCHAR(255) DEFAULT 'MatchTracker Online'"),
     ("system_settings", "smtp_use_tls", "BOOLEAN DEFAULT 1"),
     ("system_settings", "ftp_enabled", "BOOLEAN DEFAULT 0"),
     ("system_settings", "ftp_host", "VARCHAR(255) DEFAULT ''"),

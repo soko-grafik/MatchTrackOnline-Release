@@ -13,6 +13,7 @@ def get_smtp_config(db: Session = None, custom_cfg: dict = None):
             "user": custom_cfg.get("smtp_user"),
             "password": custom_cfg.get("smtp_password"),
             "sender": custom_cfg.get("smtp_sender_email") or "noreply@matchtrack.de",
+            "sender_name": custom_cfg.get("smtp_sender_name") or "MatchTracker Online",
             "use_tls": custom_cfg.get("smtp_use_tls", True)
         }
 
@@ -28,6 +29,7 @@ def get_smtp_config(db: Session = None, custom_cfg: dict = None):
                     "user": settings.smtp_user,
                     "password": settings.smtp_password,
                     "sender": settings.smtp_sender_email or "noreply@matchtrack.de",
+                    "sender_name": getattr(settings, "smtp_sender_name", "MatchTracker Online") or "MatchTracker Online",
                     "use_tls": settings.smtp_use_tls
                 }
         except Exception as e:
@@ -42,6 +44,7 @@ def get_smtp_config(db: Session = None, custom_cfg: dict = None):
         "user": user,
         "password": os.environ.get("SMTP_PASSWORD"),
         "sender": os.environ.get("SENDER_EMAIL", "noreply@matchtrack.de"),
+        "sender_name": "MatchTracker Online",
         "use_tls": True
     }
 
@@ -55,9 +58,10 @@ def send_email(to_email: str, subject: str, body: str, db: Session = None, custo
     if not cfg["user"]:
         raise ValueError("SMTP Benutzername ist nicht konfiguriert.")
 
+    from email.utils import formataddr
     msg = MIMEText(body)
     msg['Subject'] = subject
-    msg['From'] = cfg["sender"]
+    msg['From'] = formataddr((cfg.get("sender_name", "MatchTracker Online"), cfg["sender"]))
     msg['To'] = to_email
 
     try:
@@ -162,7 +166,7 @@ Dein MatchTracker System
 
             # Must stay in sync with the frontend's NEXT_PUBLIC_VAPID_PUBLIC_KEY,
             # otherwise the push service rejects the request with 403.
-            vapid_private_key = os.getenv("VAPID_PRIVATE_KEY", "AMI9ABKmCQ_dgj3Qomgbi4mZUIQhAkN-d-UVgLCVsec")
+            vapid_private_key = os.getenv("VAPID_PRIVATE_KEY", "qz_LesuSmow4pOL1lyQBTB0M50NMqtS9IBkJtCiI0z8")
             vapid_claims = {"sub": "mailto:admin@matchtrack.de"}
 
             try:
@@ -338,6 +342,7 @@ Dein MatchTracker Team
 def send_email_html(to_email: str, subject: str, html_body: str, text_body: str = None, db: Session = None):
     from email.mime.multipart import MIMEMultipart
     from email.mime.text import MIMEText
+    from email.utils import formataddr
 
     cfg = get_smtp_config(db)
     if not cfg["enabled"] or not cfg["server"] or not cfg["user"]:
@@ -346,7 +351,7 @@ def send_email_html(to_email: str, subject: str, html_body: str, text_body: str 
 
     msg = MIMEMultipart('alternative')
     msg['Subject'] = subject
-    msg['From'] = cfg["sender"]
+    msg['From'] = formataddr((cfg.get("sender_name", "MatchTracker Online"), cfg["sender"]))
     msg['To'] = to_email
 
     if text_body:
@@ -393,7 +398,7 @@ def send_web_push(user_ids: list[str], title: str, body: str, url: str = "/organ
 
         print(f"[WEB-PUSH] Found {len(push_subs)} active PushSubscription(s) for user_ids {user_ids}")
 
-        vapid_private_key = os.getenv("VAPID_PRIVATE_KEY", "AMI9ABKmCQ_dgj3Qomgbi4mZUIQhAkN-d-UVgLCVsec")
+        vapid_private_key = os.getenv("VAPID_PRIVATE_KEY", "qz_LesuSmow4pOL1lyQBTB0M50NMqtS9IBkJtCiI0z8")
         vapid_claims = {"sub": "mailto:admin@matchtrack.de"}
 
         payload = json.dumps({
@@ -513,7 +518,7 @@ def notify_event_attendees_invitation(events: list, creator: User, db: Session):
         series_info = f"<p style='margin: 4px 0 0 0; font-size: 12px; color: #38bdf8; font-weight: 600;'>🔁 Wöchentliche Terminserie mit insgesamt {len(events)} Terminen.</p>"
 
     for attendee in attendee_users:
-        if not attendee.email or attendee.id == creator.id:
+        if not attendee.email:
             continue
 
         attendee_name = f"{attendee.first_name} {attendee.last_name}".strip() if (attendee.first_name or attendee.last_name) else attendee.username
@@ -630,6 +635,185 @@ Dein MatchTracker Team
             print(f"[EMAIL-INVITATION] Sent invitation email to {attendee.email} for event '{first_event.title}'.")
         except Exception as mail_err:
             print(f"[EMAIL-INVITATION] ⚠️ Failed to send email to {attendee.email}: {mail_err}")
+
+
+def notify_event_attendees_update(events: list, creator: User, db: Session):
+    """
+    Sends Web Push and HTML E-Mail invitations to all explicitly assigned attendees / trainers of the event.
+    """
+    if not events:
+        return
+
+    first_event = events[0]
+    attendee_users = list(first_event.attendees or [])
+    
+    # If no attendees relation or empty, also check attendee_ids if needed
+    if not attendee_users and hasattr(first_event, 'attendee_ids') and first_event.attendee_ids:
+        attendee_users = db.query(User).filter(User.id.in_(first_event.attendee_ids)).all()
+
+    if not attendee_users:
+        return
+
+    creator_name = f"{creator.first_name} {creator.last_name}".strip() if (creator.first_name or creator.last_name) else creator.username
+    event_type_label = get_event_type_label(first_event.event_type)
+    date_str = first_event.start_time.strftime("%d.%m.%Y um %H:%M")
+    end_time_str = first_event.end_time.strftime("%H:%M")
+    location_str = first_event.location or "Sportplatz / Vereinsheim"
+
+    count_str = f" ({len(events)} Termine)" if len(events) > 1 else ""
+    push_title = f"📅 Aktualisierung: {first_event.title}{count_str}"
+    push_body = f"{creator_name} hat einen Termin aktualisiert: {event_type_label} am {date_str} Uhr ({location_str})."
+
+    # 1. Send Web Push
+    target_user_ids = [u.id for u in attendee_users if u.id != creator.id]
+    if target_user_ids:
+        sent_push = send_web_push(target_user_ids, title=push_title, body=push_body, url="/organizer", db=db)
+        print(f"[PUSH-UPDATE] Sent invitation push for '{first_event.title}' to {sent_push} device(s).")
+
+    # 2. Send HTML E-Mail to each attendee with an email address
+    subject = f"📅 Aktualisierung: {first_event.title} am {date_str} Uhr"
+
+    notes_section = ""
+    if first_event.notes:
+        notes_section = f"""
+        <div style="margin-top: 15px; padding: 12px; background-color: #18181b; border: 1px solid #27272a; border-radius: 8px;">
+            <p style="margin: 0 0 4px 0; font-size: 11px; font-weight: 700; color: #a1a1aa; text-transform: uppercase;">Beschreibung / Notizen:</p>
+            <p style="margin: 0; font-size: 13px; color: #e4e4e7; line-height: 1.5; white-space: pre-line;">{first_event.notes}</p>
+        </div>
+        """
+
+    url_row = ""
+    if first_event.external_url:
+        url_row = f"""
+        <tr>
+          <td style="color: #a1a1aa; font-weight: 600;">🔗 Link / Info:</td>
+          <td><a href="{first_event.external_url}" target="_blank" style="color: #818cf8; text-decoration: underline; word-break: break-all;">{first_event.external_url}</a></td>
+        </tr>
+        """
+
+    series_info = ""
+    if len(events) > 1:
+        series_info = f"<p style='margin: 4px 0 0 0; font-size: 12px; color: #38bdf8; font-weight: 600;'>🔁 Wöchentliche Terminserie mit insgesamt {len(events)} Terminen.</p>"
+
+    for attendee in attendee_users:
+        if not attendee.email:
+            continue
+
+        attendee_name = f"{attendee.first_name} {attendee.last_name}".strip() if (attendee.first_name or attendee.last_name) else attendee.username
+
+        body_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Termin-Aktualisierung</title>
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #09090b; margin: 0; padding: 0; color: #f4f4f5;">
+          <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #09090b; padding: 30px 15px;">
+            <tr>
+              <td align="center">
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; background-color: #121215; border: 1px solid #27272a; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+                  
+                  <!-- Header -->
+                  <tr>
+                    <td style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); padding: 25px 30px; border-bottom: 1px solid #3730a3;">
+                      <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                        <tr>
+                          <td>
+                            <h1 style="margin: 0; font-size: 20px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">MatchTracker Online</h1>
+                            <p style="margin: 4px 0 0 0; font-size: 12px; color: #a5b4fc; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Termin-Aktualisierung &bull; Organizer</p>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+
+                  <!-- Main Content -->
+                  <tr>
+                    <td style="padding: 30px;">
+                      <p style="margin: 0 0 16px 0; font-size: 15px; color: #e4e4e7; line-height: 1.5;">
+                        Hallo <strong>{attendee_name}</strong>,<br>
+                        <strong>{creator_name}</strong> hat einen Termin im Vereins-Organizer aktualisiert, zu dem du eingeladen bist:
+                      </p>
+
+                      <!-- Event Card -->
+                      <div style="background-color: #18181b; border: 1px solid #27272a; border-left: 4px solid #6366f1; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+                        <span style="display: inline-block; background-color: #312e81; color: #c7d2fe; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 6px; margin-bottom: 10px; text-transform: uppercase;">
+                          {event_type_label}
+                        </span>
+                        <h2 style="margin: 0 0 10px 0; font-size: 18px; font-weight: 800; color: #ffffff;">{first_event.title}</h2>
+                        
+                        <table width="100%" border="0" cellspacing="0" cellpadding="4" style="font-size: 13px; color: #d4d4d8;">
+                          <tr>
+                            <td width="30%" style="color: #a1a1aa; font-weight: 600;">📅 Datum:</td>
+                            <td style="font-weight: 700; color: #ffffff;">{date_str} - {end_time_str} Uhr</td>
+                          </tr>
+                          <tr>
+                            <td style="color: #a1a1aa; font-weight: 600;">📍 Ort:</td>
+                            <td>{location_str}</td>
+                          </tr>
+                          <tr>
+                            <td style="color: #a1a1aa; font-weight: 600;">👤 Erstellt von:</td>
+                            <td>{creator_name}</td>
+                          </tr>
+                          {url_row}
+                        </table>
+
+                        {notes_section}
+                        {series_info}
+                      </div>
+
+                      <!-- CTA Button -->
+                      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 25px;">
+                        <tr>
+                          <td align="center">
+                            <a href="https://matchtrack.de/organizer" target="_blank" style="display: inline-block; background-color: #4f46e5; color: #ffffff; font-size: 13px; font-weight: 800; text-decoration: none; padding: 12px 28px; border-radius: 10px; text-transform: uppercase; letter-spacing: 0.5px;">
+                              📅 Im Organizer ansehen
+                            </a>
+                          </td>
+                        </tr>
+                      </table>
+
+                    </td>
+                  </tr>
+
+                  <!-- Footer -->
+                  <tr>
+                    <td style="background-color: #09090b; padding: 18px 30px; border-top: 1px solid #27272a; text-align: center; font-size: 11px; color: #71717a;">
+                      <p style="margin: 0 0 4px 0;">Du erhältst diese E-Mail, weil du als Teilnehmer für diesen Termin im MatchTrack Organizer eingetragen wurdest.</p>
+                      <p style="margin: 0; font-weight: 700; color: #52525b;">MatchTracker Online &bull; Vereinsorganisation & Videoanalyse</p>
+                    </td>
+                  </tr>
+
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
+        """
+
+        text_body = f"""Hallo {attendee_name},
+
+{creator_name} hat einen Termin aktualisiert, zu dem du eingeladen bist:
+
+Titel: {first_event.title}
+Typ: {event_type_label}
+Datum: {date_str} - {end_time_str} Uhr
+Ort: {location_str}
+{f'Link / Info: {first_event.external_url}' if first_event.external_url else ''}
+{f'Beschreibung / Notizen: {first_event.notes}' if first_event.notes else ''}
+
+Zum Organizer: https://matchtrack.de/organizer
+
+Dein MatchTracker Team
+"""
+        try:
+            send_email_html(attendee.email, subject, body_html, text_body=text_body, db=db)
+            print(f"[EMAIL-UPDATE] Sent invitation email to {attendee.email} for event '{first_event.title}'.")
+        except Exception as mail_err:
+            print(f"[EMAIL-UPDATE] ⚠️ Failed to send email to {attendee.email}: {mail_err}")
+
 
 
 def notify_team_new_event(events: list, creator: User, db: Session):

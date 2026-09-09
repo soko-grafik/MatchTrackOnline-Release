@@ -63,6 +63,7 @@ export default function AdminSettingsPage() {
     smtp_user: "",
     smtp_password: "",
     smtp_sender_email: "noreply@matchtrack.de",
+    smtp_sender_name: "MatchTrack",
     smtp_use_tls: true,
     ftp_enabled: false,
     ftp_host: "",
@@ -572,6 +573,17 @@ export default function AdminSettingsPage() {
                     value={settings.smtp_sender_email || ''}
                     onChange={(e) => handleChange('smtp_sender_email', e.target.value)}
                     placeholder="noreply@matchtrack.de"
+                    className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-xs text-white focus:border-primary focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-zinc-400 block mb-1">Absender Name</label>
+                  <input
+                    type="text"
+                    value={settings.smtp_sender_name || ''}
+                    onChange={(e) => handleChange('smtp_sender_name', e.target.value)}
+                    placeholder="MatchTrack"
                     className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-xs text-white focus:border-primary focus:outline-none"
                   />
                 </div>

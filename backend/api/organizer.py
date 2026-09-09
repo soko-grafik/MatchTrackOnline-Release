@@ -342,10 +342,10 @@ def update_event(
     db.commit()
     db.refresh(event_obj)
 
-    if notify_att and new_attendee_ids:
+    if notify_att and event_obj.attendees:
         try:
-            from services.notification_service import notify_event_attendees_invitation
-            notify_event_attendees_invitation([event_obj], current_user, db)
+            from services.notification_service import notify_event_attendees_update
+            notify_event_attendees_update([event_obj], current_user, db)
         except Exception as notif_err:
             print(f"Error triggering event invitation update: {notif_err}")
 
@@ -588,7 +588,7 @@ def unsubscribe_push(
 import os
 import json
 
-VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY", "AMI9ABKmCQ_dgj3Qomgbi4mZUIQhAkN-d-UVgLCVsec")
+VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY", "qz_LesuSmow4pOL1lyQBTB0M50NMqtS9IBkJtCiI0z8")
 VAPID_CLAIMS = {"sub": "mailto:admin@matchtrack.de"}
 
 

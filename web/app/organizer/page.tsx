@@ -613,7 +613,7 @@ export default function OrganizerPage() {
         reg = await navigator.serviceWorker.ready;
       }
 
-      const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BAq3GldEwstlCSYVCqJPBAs55IkeqDamlfRm16QKBnRJ49XoK5cgfD-CkV96PR-1d-caI4ryLfjvM3C20N8gmmE';
+      const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BJRJPWpyBVCrT5g5RYO9PJ--SYJK6WgDdB8LYcW2pRCOghv5Q3z1Vaohtxj-yFpMxHEjYgGszfejaxyxlLR3ixw';
 
       let convertedKey: Uint8Array | string = vapidKey;
       try {

@@ -86,6 +86,7 @@ class SystemSettingsOut(BaseModel):
     smtp_user: Optional[str] = ""
     smtp_password: Optional[str] = ""
     smtp_sender_email: Optional[str] = "noreply@matchtrack.de"
+    smtp_sender_name: Optional[str] = "MatchTracker Online"
     smtp_use_tls: Optional[bool] = True
 
     ftp_enabled: Optional[bool] = False
@@ -131,6 +132,7 @@ class SystemSettingsUpdate(BaseModel):
     smtp_user: Optional[str] = None
     smtp_password: Optional[str] = None
     smtp_sender_email: Optional[str] = None
+    smtp_sender_name: Optional[str] = None
     smtp_use_tls: Optional[bool] = None
 
     ftp_enabled: Optional[bool] = None
@@ -217,6 +219,7 @@ class TestEmailRequest(BaseModel):
     smtp_user: Optional[str] = None
     smtp_password: Optional[str] = None
     smtp_sender_email: Optional[str] = None
+    smtp_sender_name: Optional[str] = None
     smtp_use_tls: Optional[bool] = None
 
 @router.post("/test-email")
