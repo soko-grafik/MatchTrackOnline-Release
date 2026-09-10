@@ -266,6 +266,7 @@ class TrainingExercise(Base):
     title = Column(String(255), index=True, nullable=False)
     description = Column(String(5000), nullable=True)
     coaching_points = Column(String(2000), nullable=True)
+    provocation_rules = Column(String(2000), nullable=True)
     age_group = Column(String(50), nullable=False, default="Alle")  # e.g., U7-U9, U10-U13, U14-U19, Senioren, Alle
     focus_area = Column(String(100), nullable=False, default="Passspiel")  # e.g., Koordination, Passspiel, Torschuss, Taktik, Athletik, Umschaltspiel, Zweikampf
     min_players = Column(Integer, default=4, nullable=False)

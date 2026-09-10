@@ -89,6 +89,7 @@ export default function TrainingPage() {
     title: '',
     description: '',
     coaching_points: '',
+    provocation_rules: '',
     age_group: 'U10-U13',
     focus_area: 'Passspiel',
     min_players: 6,
@@ -216,6 +217,7 @@ export default function TrainingPage() {
       title: '',
       description: '',
       coaching_points: '',
+      provocation_rules: '',
       age_group: 'U10-U13',
       focus_area: 'Passspiel',
       min_players: 6,
@@ -235,6 +237,7 @@ export default function TrainingPage() {
       title: ex.title || '',
       description: ex.description || '',
       coaching_points: ex.coaching_points || '',
+      provocation_rules: ex.provocation_rules || '',
       age_group: ex.age_group || 'U10-U13',
       focus_area: ex.focus_area || 'Passspiel',
       min_players: ex.min_players || 6,
@@ -867,8 +870,8 @@ export default function TrainingPage() {
 
         {/* Modal: Übung anlegen / bearbeiten */}
         {isExerciseModalOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 backdrop-blur-md overflow-y-auto">
-            <div className="w-[95vw] max-w-7xl rounded-2xl border border-zinc-800 bg-zinc-950 p-6 sm:p-8 shadow-2xl space-y-6 max-h-[92vh] overflow-y-auto">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-2 sm:p-4 backdrop-blur-md overflow-y-auto">
+            <div className="w-[98vw] max-w-[1700px] rounded-2xl border border-zinc-800 bg-zinc-950 p-5 sm:p-7 shadow-2xl space-y-6 max-h-[96vh] overflow-y-auto">
               <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
                 <div className="flex items-center gap-3">
                   <h3 className="text-xl font-bold text-white">
@@ -909,7 +912,7 @@ export default function TrainingPage() {
 
 
               <form onSubmit={handleSaveExercise} className="space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                   <div>
                     <label className="text-xs font-bold text-zinc-400 block mb-1.5">Titel der Übung</label>
                     <input
@@ -918,7 +921,7 @@ export default function TrainingPage() {
                       value={exerciseForm.title}
                       onChange={(e) => setExerciseForm({ ...exerciseForm, title: e.target.value })}
                       placeholder="z. B. 4-gegen-2 Freilaufspiel"
-                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2.5 text-xs text-white focus:border-primary focus:outline-none"
+                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs text-white focus:border-primary focus:outline-none"
                     />
                   </div>
 
@@ -927,7 +930,7 @@ export default function TrainingPage() {
                     <select
                       value={exerciseForm.age_group}
                       onChange={(e) => setExerciseForm({ ...exerciseForm, age_group: e.target.value })}
-                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2.5 text-xs text-white focus:border-primary focus:outline-none"
+                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs text-white focus:border-primary focus:outline-none"
                     >
                       <option value="U7-U9">U7 - U9</option>
                       <option value="U10-U13">U10 - U13</option>
@@ -959,12 +962,12 @@ export default function TrainingPage() {
                           value={newFocusInput}
                           onChange={(e) => setNewFocusInput(e.target.value)}
                           placeholder="Neuen Schwerpunkt..."
-                          className="w-full rounded-xl border border-primary bg-zinc-900 px-3 py-2 text-xs text-white focus:outline-none"
+                          className="w-full rounded-xl border border-primary bg-zinc-900 px-3 py-1.5 text-xs text-white focus:outline-none"
                         />
                         <button
                           type="button"
                           onClick={handleAddCustomFocusArea}
-                          className="px-3 py-2 rounded-xl bg-primary text-white text-xs font-bold shrink-0"
+                          className="px-3 py-1.5 rounded-xl bg-primary text-white text-xs font-bold shrink-0"
                         >
                           +
                         </button>
@@ -980,7 +983,7 @@ export default function TrainingPage() {
                       <select
                         value={exerciseForm.focus_area}
                         onChange={(e) => setExerciseForm({ ...exerciseForm, focus_area: e.target.value })}
-                        className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2.5 text-xs text-white focus:border-primary focus:outline-none"
+                        className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs text-white focus:border-primary focus:outline-none"
                       >
                         {focusAreas.map((fa) => (
                           <option key={fa} value={fa}>{fa}</option>
@@ -989,14 +992,14 @@ export default function TrainingPage() {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-2">
                     <div>
                       <label className="text-xs font-bold text-zinc-400 block mb-1.5">Min. Spieler</label>
                       <input
                         type="number"
                         value={exerciseForm.min_players}
                         onChange={(e) => setExerciseForm({ ...exerciseForm, min_players: parseInt(e.target.value) || 2 })}
-                        className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2.5 text-xs text-white focus:border-primary focus:outline-none"
+                        className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs text-white focus:border-primary focus:outline-none"
                       />
                     </div>
                     <div>
@@ -1005,19 +1008,30 @@ export default function TrainingPage() {
                         type="number"
                         value={exerciseForm.duration_minutes}
                         onChange={(e) => setExerciseForm({ ...exerciseForm, duration_minutes: parseInt(e.target.value) || 10 })}
-                        className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2.5 text-xs text-white focus:border-primary focus:outline-none"
+                        className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs text-white focus:border-primary focus:outline-none"
                       />
                     </div>
                   </div>
 
-                  <div className="sm:col-span-2">
+                  <div className="md:col-span-2">
                     <label className="text-xs font-bold text-zinc-400 block mb-1.5">Coaching-Punkte</label>
                     <input
                       type="text"
                       value={exerciseForm.coaching_points}
                       onChange={(e) => setExerciseForm({ ...exerciseForm, coaching_points: e.target.value })}
                       placeholder="z. B. Sauberes Passspiel, offene Stellung, Kommunikation"
-                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2.5 text-xs text-white focus:border-primary focus:outline-none"
+                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs text-white focus:border-primary focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="text-xs font-bold text-zinc-400 block mb-1.5">Provokationsregeln</label>
+                    <input
+                      type="text"
+                      value={exerciseForm.provocation_rules}
+                      onChange={(e) => setExerciseForm({ ...exerciseForm, provocation_rules: e.target.value })}
+                      placeholder="z. B. Max 2 Kontakte, Tore zählen doppelt nach Seitenwechsel"
+                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs text-white focus:border-primary focus:outline-none"
                     />
                   </div>
                 </div>
@@ -1025,11 +1039,11 @@ export default function TrainingPage() {
                 <div>
                   <label className="text-xs font-bold text-zinc-400 block mb-1.5">Ablauf & Beschreibung</label>
                   <textarea
-                    rows={4}
+                    rows={3}
                     value={exerciseForm.description}
                     onChange={(e) => setExerciseForm({ ...exerciseForm, description: e.target.value })}
                     placeholder="Detaillierte Ablaufbeschreibung..."
-                    className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2.5 text-xs text-white focus:border-primary focus:outline-none"
+                    className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs text-white focus:border-primary focus:outline-none"
                   />
                 </div>
 

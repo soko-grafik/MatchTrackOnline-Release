@@ -17,6 +17,7 @@ class ExerciseCreate(BaseModel):
     title: str
     description: Optional[str] = None
     coaching_points: Optional[str] = None
+    provocation_rules: Optional[str] = None
     age_group: str = "Alle"
     focus_area: str = "Passspiel"
     min_players: int = 4
@@ -31,6 +32,7 @@ class ExerciseResponse(BaseModel):
     title: str
     description: Optional[str]
     coaching_points: Optional[str]
+    provocation_rules: Optional[str]
     age_group: str
     focus_area: str
     min_players: int

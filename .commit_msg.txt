@@ -1,11 +1,11 @@
-release: Add smtp_sender_name to TestEmailRequest (dev: f89dc816)
+release: feat: add 15x25m minifield with green_empty_near and 40x25m field with green_empty_far backgrounds (dev: 187e5f07)
 
 Letzte Änderungen:
-* Add smtp_sender_name to TestEmailRequest (f89dc816)
-* remove stitching (d5343d4f)
-* Add configurable SMTP sender name (e3f83b00)
-* Send event emails to creator as well but skip push notifications (9a04859e)
-* Fix event update notifications and add notify_event_attendees_update function (c3a30865)
-* Fix Android push notification badge icon (da5cdd0c)
+* feat: add 15x25m minifield with green_empty_near and 40x25m field with green_empty_far backgrounds (187e5f07)
+* update svg (65e65710)
+* ui: make exercise modal much wider and optimize form layout (a2c5e05f)
+* fix: reduce soccer ball icon size by 50% (a44ecd4c)
+* feat: add ft-graphics pitches with landscape and portrait orientation (767afa80)
+* feat: use ft-graphics style for goalkeeper (75f9d602)
 
-Build-Zeitstempel: 2026-09-09 13:48:43
+Build-Zeitstempel: 2026-09-10 11:45:07

@@ -15,14 +15,19 @@ import {
   RotateCw,
   Sparkles,
   Disc,
-  Shield
+  Shield,
+  Maximize,
+  Minimize,
+  UserX,
+  Smartphone,
+  Monitor
 } from 'lucide-react';
 
 import { useToast } from '@/contexts/ToastContext';
 
 interface ElementItem {
   id: string;
-  type: 'pitch' | 'cone' | 'disc' | 'player' | 'goalkeeper' | 'ball' | 'goal' | 'line' | 'text';
+  type: 'pitch' | 'cone' | 'disc' | 'player' | 'goalkeeper' | 'dummy' | 'ball' | 'goal' | 'line' | 'text';
   subType?: string; // e.g. goal type ('mini', 'youth', 'full') or line type ('pass', 'run', 'dribble')
   x: number;
   y: number;
@@ -49,8 +54,14 @@ export default function ExerciseSketchEditor({
 }: ExerciseSketchEditorProps) {
   const { toast, confirm: confirmModal } = useToast();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [pitchType, setPitchType] = useState<'full' | 'half' | 'field_15x25' | 'field_35x25' | 'blank'>(
-    initialData?.pitchType || initialData?.pitch_type || 'full'
+  const [pitchType, setPitchType] = useState<
+    'full' | 'half' | 'field_15x25' | 'field_35x25' | 'field_40x25' | 'blank' |
+    'green_full' | 'green_empty_near' | 'green_empty_far' | 'futsal_full' | 'futsal_empty'
+  >(
+    initialData?.pitchType || initialData?.pitch_type || 'green_full'
+  );
+  const [orientation, setOrientation] = useState<'landscape' | 'portrait'>(
+    initialData?.orientation || 'landscape'
   );
 
   const [activeTool, setActiveTool] = useState<string>('select');
@@ -84,6 +95,144 @@ export default function ExerciseSketchEditor({
     reader.readAsDataURL(file);
   };
 
+  // Fullscreen and Icons State
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [loadedImages, setLoadedImages] = useState<Record<string, HTMLImageElement>>({});
+
+  const [playerSvgText, setPlayerSvgText] = useState<string | null>(null);
+  const tintedPlayersRef = useRef<Record<string, HTMLImageElement>>({});
+
+  useEffect(() => {
+    const ballImg = new Image();
+    ballImg.src = '/icons/ball.svg';
+    ballImg.onload = () => {
+      setLoadedImages(prev => ({ ...prev, ball: ballImg }));
+    };
+
+    const goalImg = new Image();
+    goalImg.src = '/icons/goal.svg';
+    goalImg.onload = () => {
+      setLoadedImages(prev => ({ ...prev, goal: goalImg }));
+    };
+
+    fetch('/icons/player.svg')
+      .then(res => res.text())
+      .then(text => setPlayerSvgText(text))
+      .catch(err => console.error('Fehler beim Laden der Spieler SVG', err));
+
+    fetch('/icons/cone.svg')
+      .then(res => res.text())
+      .then(text => setConeSvgText(text))
+      .catch(err => console.error('Fehler beim Laden der Hütchen SVG', err));
+
+    fetch('/icons/dummy.svg')
+      .then(res => res.text())
+      .then(text => setDummySvgText(text))
+      .catch(err => console.error('Fehler beim Laden der Dummy SVG', err));
+
+    fetch('/icons/goalkeeper.svg')
+      .then(res => res.text())
+      .then(text => setGoalkeeperSvgText(text))
+      .catch(err => console.error('Fehler beim Laden der Torwart SVG', err));
+
+    const pitchFiles = [
+      { id: 'green_full', src: '/icons/pitches/green_full.svg' },
+      { id: 'green_empty_near', src: '/icons/pitches/green_empty_near.svg' },
+      { id: 'green_empty_far', src: '/icons/pitches/green_empty_far.svg' },
+      { id: 'futsal_full', src: '/icons/pitches/futsal_full.svg' },
+      { id: 'futsal_empty', src: '/icons/pitches/futsal_empty.svg' }
+    ];
+
+    pitchFiles.forEach(({ id, src }) => {
+      const img = new Image();
+      img.src = src;
+      img.onload = () => {
+        setLoadedImages(prev => ({ ...prev, [id]: img }));
+      };
+    });
+  }, []);
+
+  const [coneSvgText, setConeSvgText] = useState<string | null>(null);
+  const tintedConesRef = useRef<Record<string, HTMLImageElement>>({});
+
+  const [dummySvgText, setDummySvgText] = useState<string | null>(null);
+  const tintedDummiesRef = useRef<Record<string, HTMLImageElement>>({});
+
+  const [goalkeeperSvgText, setGoalkeeperSvgText] = useState<string | null>(null);
+  const tintedGoalkeepersRef = useRef<Record<string, HTMLImageElement>>({});
+
+  const getGoalkeeperImage = (color: string) => {
+    if (tintedGoalkeepersRef.current[color]) return tintedGoalkeepersRef.current[color];
+    if (!goalkeeperSvgText) return null;
+
+    const coloredSvg = goalkeeperSvgText.replace(/#9E2A6A/gi, color);
+    const blob = new Blob([coloredSvg], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+
+    const img = new Image();
+    img.src = url;
+    img.onload = () => {
+      tintedGoalkeepersRef.current[color] = img;
+      drawCanvas();
+    };
+    tintedGoalkeepersRef.current[color] = img;
+    return img;
+  };
+
+  const getDummyImage = (color: string) => {
+    if (tintedDummiesRef.current[color]) return tintedDummiesRef.current[color];
+    if (!dummySvgText) return null;
+
+    const coloredSvg = dummySvgText.replace(/#EE7110/gi, color);
+    const blob = new Blob([coloredSvg], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+
+    const img = new Image();
+    img.src = url;
+    img.onload = () => {
+      tintedDummiesRef.current[color] = img;
+      drawCanvas();
+    };
+    tintedDummiesRef.current[color] = img;
+    return img;
+  };
+
+  const getConeImage = (color: string) => {
+    if (tintedConesRef.current[color]) return tintedConesRef.current[color];
+    if (!coneSvgText) return null;
+
+    const coloredSvg = coneSvgText.replace(/#EE7110/gi, color);
+    const blob = new Blob([coloredSvg], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+
+    const img = new Image();
+    img.src = url;
+    img.onload = () => {
+      tintedConesRef.current[color] = img;
+      drawCanvas();
+    };
+    tintedConesRef.current[color] = img;
+    return img;
+  };
+
+  const getPlayerImage = (color: string) => {
+    if (tintedPlayersRef.current[color]) return tintedPlayersRef.current[color];
+    if (!playerSvgText) return null;
+
+    const coloredSvg = playerSvgText.replace(/#0068B4/gi, color);
+    const blob = new Blob([coloredSvg], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    
+    const img = new Image();
+    img.src = url;
+    img.onload = () => {
+       tintedPlayersRef.current[color] = img;
+       drawCanvas(); // Re-render when loaded
+    };
+    tintedPlayersRef.current[color] = img; 
+    return img;
+  };
+
   // Update state when initialData changes or loads
 
   useEffect(() => {
@@ -91,19 +240,41 @@ export default function ExerciseSketchEditor({
       if (initialData.pitchType || initialData.pitch_type) {
         setPitchType(initialData.pitchType || initialData.pitch_type);
       }
+      if (initialData.orientation) {
+        setOrientation(initialData.orientation);
+      }
       if (Array.isArray(initialData.elements)) {
         setElements(initialData.elements);
       }
     }
   }, [initialData]);
 
-  // Redraw canvas on elements / pitch / tracing background change
+  // Redraw canvas on elements / pitch / orientation / tracing background change
   useEffect(() => {
     drawCanvas();
-  }, [pitchType, elements, selectedElementId, backgroundImage, bgOpacity]);
+  }, [pitchType, orientation, elements, selectedElementId, backgroundImage, bgOpacity, loadedImages]);
 
 
   const drawPitch = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
+    // Check if current pitch is one of the new SVG pitches
+    if (['green_full', 'green_empty_near', 'green_empty_far', 'futsal_full', 'futsal_empty'].includes(pitchType)) {
+      const img = loadedImages[pitchType];
+      if (img && img.complete) {
+        ctx.save();
+        if (orientation === 'landscape') {
+          // The SVG is native portrait (viewBox 0 0 751 751 or aspect), rotate 90 deg for landscape view
+          ctx.translate(width / 2, height / 2);
+          ctx.rotate((-90 * Math.PI) / 180);
+          ctx.drawImage(img, -height / 2, -width / 2, height, width);
+        } else {
+          // Portrait
+          ctx.drawImage(img, 0, 0, width, height);
+        }
+        ctx.restore();
+        return;
+      }
+    }
+
     // Background
     if (pitchType === 'blank') {
       ctx.fillStyle = '#18181b'; // zinc-900
@@ -160,82 +331,126 @@ export default function ExerciseSketchEditor({
       ctx.arc(width / 2, height - padding, 70, Math.PI, 0);
       ctx.stroke();
     } else if (pitchType === 'field_15x25') {
-      // 15x25 Spielfeld nur mit Randlinien & Eckfahnen-Markierungen
-      const fieldW = width - padding * 4;
-      const fieldH = height - padding * 2.5;
+      // 15x25 Spielfeld mit Hintergrund green_empty_near.svg
+      const bgImg = loadedImages['green_empty_near'];
+      if (bgImg && bgImg.complete) {
+        ctx.save();
+        if (orientation === 'landscape') {
+          ctx.translate(width / 2, height / 2);
+          ctx.rotate((-90 * Math.PI) / 180);
+          ctx.drawImage(bgImg, -height / 2, -width / 2, height, width);
+        } else {
+          ctx.drawImage(bgImg, 0, 0, width, height);
+        }
+        ctx.restore();
+      }
+
+      // Spielfeld-Begrenzung & Beschriftung
+      const fieldW = orientation === 'landscape' ? width - padding * 4 : width - padding * 2.5;
+      const fieldH = orientation === 'landscape' ? height - padding * 2.5 : height - padding * 4;
       const startX = (width - fieldW) / 2;
       const startY = (height - fieldH) / 2;
 
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3;
       ctx.strokeRect(startX, startY, fieldW, fieldH);
+
+      // Eckmarkierungen / Fahnen-Linien
+      const cornerSize = 12;
+      ctx.beginPath();
+      // Top-Left
+      ctx.moveTo(startX, startY + cornerSize); ctx.lineTo(startX + cornerSize, startY);
+      // Top-Right
+      ctx.moveTo(startX + fieldW - cornerSize, startY); ctx.lineTo(startX + fieldW, startY + cornerSize);
+      // Bottom-Left
+      ctx.moveTo(startX, startY + fieldH - cornerSize); ctx.lineTo(startX + cornerSize, startY + fieldH);
+      // Bottom-Right
+      ctx.moveTo(startX + fieldW - cornerSize, startY + fieldH); ctx.lineTo(startX + fieldW, startY + fieldH - cornerSize);
+      ctx.stroke();
 
       // Beschriftung 15m x 25m
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-      ctx.font = 'bold 12px sans-serif';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.font = 'bold 13px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('15m × 25m Minifeld', width / 2, startY + 20);
-    } else if (pitchType === 'field_35x25') {
-      // 35x25 Spielfeld mit Mittellinie
-      const fieldW = width - padding * 3;
-      const fieldH = height - padding * 2.2;
+      ctx.shadowColor = '#000000';
+      ctx.shadowBlur = 4;
+      ctx.fillText('15m × 25m Minifeld', width / 2, startY + 22);
+      ctx.shadowBlur = 0;
+    } else if (pitchType === 'field_40x25' || pitchType === 'field_35x25') {
+      // 40x25 bzw. 35x25 Spielfeld mit Hintergrund green_empty_far.svg
+      const bgImg = loadedImages['green_empty_far'];
+      if (bgImg && bgImg.complete) {
+        ctx.save();
+        if (orientation === 'landscape') {
+          ctx.translate(width / 2, height / 2);
+          ctx.rotate((-90 * Math.PI) / 180);
+          ctx.drawImage(bgImg, -height / 2, -width / 2, height, width);
+        } else {
+          ctx.drawImage(bgImg, 0, 0, width, height);
+        }
+        ctx.restore();
+      }
+
+      const fieldW = orientation === 'landscape' ? width - padding * 3 : width - padding * 2.2;
+      const fieldH = orientation === 'landscape' ? height - padding * 2.2 : height - padding * 3;
       const startX = (width - fieldW) / 2;
       const startY = (height - fieldH) / 2;
 
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3;
       ctx.strokeRect(startX, startY, fieldW, fieldH);
 
-      // Gestrichelte / Durchgehende Mittellinie
-      const centerX = width / 2;
+      // Mittellinie
       ctx.beginPath();
-      ctx.moveTo(centerX, startY);
-      ctx.lineTo(centerX, startY + fieldH);
+      if (orientation === 'landscape') {
+        const centerX = width / 2;
+        ctx.moveTo(centerX, startY);
+        ctx.lineTo(centerX, startY + fieldH);
+      } else {
+        const centerY = height / 2;
+        ctx.moveTo(startX, centerY);
+        ctx.lineTo(startX + fieldW, centerY);
+      }
       ctx.stroke();
 
-      // Beschriftung 35m x 25m
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-      ctx.font = 'bold 12px sans-serif';
+      // Beschriftung
+      const label = pitchType === 'field_40x25' ? '40m × 25m Feld' : '35m × 25m Feld';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.font = 'bold 13px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('35m × 25m Feld', width / 2, startY + 20);
+      ctx.shadowColor = '#000000';
+      ctx.shadowBlur = 4;
+      ctx.fillText(label, width / 2, startY + 22);
+      ctx.shadowBlur = 0;
     }
-
   };
 
-  const drawSoccerBall = (ctx: CanvasRenderingContext2D, x: number, y: number, radius: number = 10) => {
+  const drawSoccerBall = (ctx: CanvasRenderingContext2D, el: ElementItem) => {
     ctx.save();
-    ctx.translate(x, y);
+    ctx.translate(el.x, el.y);
+    if (el.rotation) ctx.rotate((el.rotation * Math.PI) / 180);
 
-    // Ball Base Circle (White)
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.arc(0, 0, radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
+    const scale = (el.size ? el.size / 100 : 1.0);
+    const radius = 5.5 * scale;
 
-    // Center Pentagon (Black)
-    ctx.fillStyle = '#000000';
-    ctx.beginPath();
-    const pRadius = radius * 0.4;
-    for (let i = 0; i < 5; i++) {
-      const angle = (i * 2 * Math.PI) / 5 - Math.PI / 2;
-      const px = pRadius * Math.cos(angle);
-      const py = pRadius * Math.sin(angle);
-      if (i === 0) ctx.moveTo(px, py);
-      else ctx.lineTo(px, py);
-    }
-    ctx.closePath();
-    ctx.fill();
-
-    // Connecting lines to outer rim
-    for (let i = 0; i < 5; i++) {
-      const angle = (i * 2 * Math.PI) / 5 - Math.PI / 2;
-      const px = pRadius * Math.cos(angle);
-      const py = pRadius * Math.sin(angle);
-      const rx = radius * Math.cos(angle);
-      const ry = radius * Math.sin(angle);
+    if (loadedImages.ball) {
+      // Draw ball image centered (half size of previous ~26px -> ~13px)
+      const imgSize = radius * 2.4;
+      ctx.drawImage(loadedImages.ball, -imgSize / 2, -imgSize / 2, imgSize, imgSize);
+    } else {
+      // Fallback ball
+      ctx.fillStyle = '#ffffff';
       ctx.beginPath();
-      ctx.moveTo(px, py);
-      ctx.lineTo(rx, ry);
+      ctx.arc(0, 0, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 1.2;
       ctx.stroke();
+
+      ctx.fillStyle = '#000000';
+      ctx.beginPath();
+      ctx.arc(0, 0, radius * 0.4, 0, Math.PI * 2);
+      ctx.fill();
     }
 
     ctx.restore();
@@ -248,48 +463,106 @@ export default function ExerciseSketchEditor({
       ctx.rotate((el.rotation * Math.PI) / 180);
     }
 
-    // Default Proportions per Type (breiter & realistischere Tiefe)
     let baseWidth = 60;
-    let baseDepth = 15;
+    let baseDepth = 25;
 
     if (el.subType === 'mini') {
       baseWidth = 32;
-      baseDepth = 10;
+      baseDepth = 15;
     } else if (el.subType === 'youth') {
       baseWidth = 48;
-      baseDepth = 13;
+      baseDepth = 20;
     }
 
     const scale = el.size ? el.size / 100 : 1.0;
     const gWidth = (el.customWidth || baseWidth) * scale;
     const gDepth = (el.customDepth || baseDepth) * scale;
 
-    // Goal Frame & Net Fill
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-    ctx.strokeStyle = el.color || '#ffffff';
-    ctx.lineWidth = 2.5;
+    if (loadedImages.goal) {
+      // The image is a 2D/3D perspective, we draw it scaled
+      ctx.drawImage(loadedImages.goal, -gWidth / 2, -gDepth / 2, gWidth, gDepth);
+    } else {
+      // Fallback
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+      ctx.strokeStyle = el.color || '#ffffff';
+      ctx.lineWidth = 2.5;
 
-    // Draw Main Net Box
-    ctx.fillRect(-gWidth / 2, -gDepth / 2, gWidth, gDepth);
-    ctx.strokeRect(-gWidth / 2, -gDepth / 2, gWidth, gDepth);
+      ctx.fillRect(-gWidth / 2, -gDepth / 2, gWidth, gDepth);
+      ctx.strokeRect(-gWidth / 2, -gDepth / 2, gWidth, gDepth);
 
-    // Front Goal Line (Dickere Torlinie vorne)
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(-gWidth / 2, gDepth / 2);
-    ctx.lineTo(gWidth / 2, gDepth / 2);
-    ctx.stroke();
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(-gWidth / 2, gDepth / 2);
+      ctx.lineTo(gWidth / 2, gDepth / 2);
+      ctx.stroke();
 
-    // Goal Net Mesh Lines
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    const stepX = gWidth / 4;
-    for (let i = 1; i < 4; i++) {
-      ctx.moveTo(-gWidth / 2 + stepX * i, -gDepth / 2);
-      ctx.lineTo(-gWidth / 2 + stepX * i, gDepth / 2);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      const stepX = gWidth / 4;
+      for (let i = 1; i < 4; i++) {
+        ctx.moveTo(-gWidth / 2 + stepX * i, -gDepth / 2);
+        ctx.lineTo(-gWidth / 2 + stepX * i, gDepth / 2);
+      }
+      ctx.stroke();
     }
-    ctx.stroke();
+
+    ctx.restore();
+  };
+
+  const drawCone = (ctx: CanvasRenderingContext2D, el: ElementItem) => {
+    ctx.save();
+    ctx.translate(el.x, el.y);
+    if (el.rotation) ctx.rotate((el.rotation * Math.PI) / 180);
+
+    const scale = (el.size ? el.size / 100 : 1.0);
+    const mainColor = el.color || '#ef4444';
+    const img = getConeImage(mainColor);
+
+    if (img && img.complete) {
+      // SVG viewBox is 9.1 x 5.8
+      const w = 18 * scale;
+      const h = (18 * 5.8 / 9.1) * scale;
+      ctx.drawImage(img, -w / 2, -h / 2, w, h);
+    } else {
+      // Fallback
+      ctx.fillStyle = mainColor;
+      ctx.beginPath();
+      ctx.moveTo(0, -12 * scale);
+      ctx.lineTo(-10 * scale, 10 * scale);
+      ctx.lineTo(10 * scale, 10 * scale);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  };
+
+  const drawDummy = (ctx: CanvasRenderingContext2D, el: ElementItem) => {
+    ctx.save();
+    ctx.translate(el.x, el.y);
+    if (el.rotation) ctx.rotate((el.rotation * Math.PI) / 180);
+
+    const scale = (el.size ? el.size / 100 : 1.0);
+    const mainColor = el.color || '#eab308';
+    const img = getDummyImage(mainColor);
+
+    if (img && img.complete) {
+      // SVG viewBox is 18.7 x 51.3
+      const w = 18 * scale;
+      const h = (18 * 51.3 / 18.7) * scale;
+      ctx.drawImage(img, -w / 2, -h / 2, w, h);
+    } else {
+      // Fallback
+      ctx.fillStyle = mainColor;
+      ctx.fillRect(-6 * scale, -18 * scale, 12 * scale, 36 * scale);
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(-6 * scale, -18 * scale, 12 * scale, 36 * scale);
+    }
 
     ctx.restore();
   };
@@ -340,44 +613,39 @@ export default function ExerciseSketchEditor({
     ctx.scale(scale, scale);
 
     const mainColor = el.color || '#3b82f6';
+    const img = getPlayerImage(mainColor);
 
-    // Head
-    ctx.fillStyle = '#fde047';
-    ctx.beginPath();
-    ctx.arc(0, -12, 6, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 1.2;
-    ctx.stroke();
+    if (img && img.complete) {
+      // The original SVG is 33.1x53.2
+      // We'll map the size down to a nice icon size
+      const imgW = 22; 
+      const imgH = 22 * (53.2 / 33.1);
+      ctx.drawImage(img, -imgW / 2, -imgH / 2, imgW, imgH);
+    } else {
+      // Fallback
+      ctx.fillStyle = '#fde047';
+      ctx.beginPath();
+      ctx.arc(0, -12, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
 
-    // Jersey / Shirt Body
-    ctx.fillStyle = mainColor;
-    ctx.beginPath();
-    ctx.moveTo(-7, -5);
-    ctx.lineTo(-14, -2);
-    ctx.lineTo(-11, 6);
-    ctx.lineTo(-7, 4);
-    ctx.lineTo(-7, 13);
-    ctx.lineTo(7, 13);
-    ctx.lineTo(7, 4);
-    ctx.lineTo(11, 6);
-    ctx.lineTo(14, -2);
-    ctx.lineTo(7, -5);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 1.8;
-    ctx.stroke();
-
-    // Collar
-    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(-3, -5);
-    ctx.lineTo(0, -2);
-    ctx.lineTo(3, -5);
-    ctx.stroke();
+      ctx.fillStyle = mainColor;
+      ctx.beginPath();
+      ctx.moveTo(-7, -5);
+      ctx.lineTo(-14, -2);
+      ctx.lineTo(-11, 6);
+      ctx.lineTo(-7, 4);
+      ctx.lineTo(-7, 13);
+      ctx.lineTo(7, 13);
+      ctx.lineTo(7, 4);
+      ctx.lineTo(11, 6);
+      ctx.lineTo(14, -2);
+      ctx.lineTo(7, -5);
+      ctx.closePath();
+      ctx.fill();
+    }
 
     // Player Number / Label inside jersey
     if (el.label) {
@@ -402,53 +670,63 @@ export default function ExerciseSketchEditor({
     ctx.scale(scale, scale);
 
     const mainColor = el.color || '#eab308'; // Default yellow/neon or selected
+    const img = getGoalkeeperImage(mainColor);
 
-    // Head
-    ctx.fillStyle = '#fde047';
-    ctx.beginPath();
-    ctx.arc(0, -13, 6, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 1.2;
-    ctx.stroke();
+    if (img && img.complete) {
+      // SVG viewBox is 27.2 x 51.1
+      const imgW = 20;
+      const imgH = 20 * (51.1 / 27.2);
+      ctx.drawImage(img, -imgW / 2, -imgH / 2, imgW, imgH);
+    } else {
+      // Fallback Head
+      ctx.fillStyle = '#fde047';
+      ctx.beginPath();
+      ctx.arc(0, -13, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
 
-    // GK Long-Sleeve Shirt
-    ctx.fillStyle = mainColor;
-    ctx.beginPath();
-    ctx.moveTo(-7, -6);
-    ctx.lineTo(-16, -1);
-    ctx.lineTo(-14, 7);
-    ctx.lineTo(-7, 5);
-    ctx.lineTo(-7, 14);
-    ctx.lineTo(7, 14);
-    ctx.lineTo(7, 5);
-    ctx.lineTo(14, 7);
-    ctx.lineTo(16, -1);
-    ctx.lineTo(7, -6);
-    ctx.closePath();
-    ctx.fill();
+      // GK Long-Sleeve Shirt
+      ctx.fillStyle = mainColor;
+      ctx.beginPath();
+      ctx.moveTo(-7, -6);
+      ctx.lineTo(-16, -1);
+      ctx.lineTo(-14, 7);
+      ctx.lineTo(-7, 5);
+      ctx.lineTo(-7, 14);
+      ctx.lineTo(7, 14);
+      ctx.lineTo(7, 5);
+      ctx.lineTo(14, 7);
+      ctx.lineTo(16, -1);
+      ctx.lineTo(7, -6);
+      ctx.closePath();
+      ctx.fill();
 
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 1.8;
-    ctx.stroke();
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 1.8;
+      ctx.stroke();
 
-    // Goalkeeper Gloves
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.arc(-15, 3, 3.5, 0, Math.PI * 2);
-    ctx.arc(15, 3, 3.5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 1;
-    ctx.stroke();
+      // Goalkeeper Gloves
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(-15, 3, 3.5, 0, Math.PI * 2);
+      ctx.arc(15, 3, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
 
     // Label or "TW"
     const labelText = el.label || 'TW';
-    ctx.fillStyle = '#000000';
+    ctx.fillStyle = '#ffffff';
     ctx.font = 'extrabold 8px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(labelText, 0, 4);
+    ctx.shadowColor = '#000000';
+    ctx.shadowBlur = 3;
+    ctx.fillText(labelText, 0, 3);
 
     ctx.restore();
   };
@@ -483,17 +761,8 @@ export default function ExerciseSketchEditor({
       }
 
       if (el.type === 'cone') {
-        // Cone / Hütchen (Triangle)
-        ctx.fillStyle = el.color || '#ef4444';
-        ctx.beginPath();
-        ctx.moveTo(el.x, el.y - 12);
-        ctx.lineTo(el.x - 10, el.y + 10);
-        ctx.lineTo(el.x + 10, el.y + 10);
-        ctx.closePath();
-        ctx.fill();
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
+        // Cone / Hütchen (SVG)
+        drawCone(ctx, el);
       } else if (el.type === 'disc') {
         // Markierteller mit Loch
         drawDisc(ctx, el);
@@ -503,9 +772,12 @@ export default function ExerciseSketchEditor({
       } else if (el.type === 'goalkeeper') {
         // Goalkeeper Icon (TW mit Handschuhen)
         drawGoalkeeperIcon(ctx, el);
+      } else if (el.type === 'dummy') {
+        // Freistoß-Dummy / Dummys
+        drawDummy(ctx, el);
       } else if (el.type === 'ball') {
         // Real Soccer Ball Graphics
-        drawSoccerBall(ctx, el.x, el.y, 11);
+        drawSoccerBall(ctx, el);
       } else if (el.type === 'goal') {
         // Rotatable Goal Element (Mini / Youth / Full)
         drawGoal(ctx, el);
@@ -553,8 +825,8 @@ export default function ExerciseSketchEditor({
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+    const y = (e.clientY - rect.top) * (canvas.height / rect.height);
 
     if (activeTool === 'select') {
       // Find clicked element
@@ -577,11 +849,12 @@ export default function ExerciseSketchEditor({
       // Add point element (cone, player, ball, goal, text)
       const newEl: ElementItem = {
         id: `el_${Date.now()}`,
-        type: activeTool === 'cone' ? 'cone' : activeTool === 'disc' ? 'disc' : activeTool === 'player' ? 'player' : activeTool === 'goalkeeper' ? 'goalkeeper' : activeTool === 'ball' ? 'ball' : activeTool === 'goal' ? 'goal' : 'text',
+        type: activeTool === 'cone' ? 'cone' : activeTool === 'disc' ? 'disc' : activeTool === 'player' ? 'player' : activeTool === 'goalkeeper' ? 'goalkeeper' : activeTool === 'dummy' ? 'dummy' : activeTool === 'ball' ? 'ball' : activeTool === 'goal' ? 'goal' : 'text',
         subType: activeTool === 'goal' ? selectedGoalType : undefined,
         x,
         y,
         rotation: 0,
+        size: activeTool === 'disc' ? 40 : 100,
         color: activeTool === 'goalkeeper' ? (selectedColor === '#ef4444' ? '#eab308' : selectedColor) : selectedColor,
         label: activeTool === 'player' ? (textInput || '1') : activeTool === 'goalkeeper' ? (textInput || 'TW') : activeTool === 'text' ? (textInput || 'Station A') : undefined
       };
@@ -594,8 +867,8 @@ export default function ExerciseSketchEditor({
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+    const y = (e.clientY - rect.top) * (canvas.height / rect.height);
 
     // Handle Dragging selected element
     if (isDragging && selectedElementId && activeTool === 'select') {
@@ -651,8 +924,8 @@ export default function ExerciseSketchEditor({
       const canvas = canvasRef.current;
       if (!canvas) return;
       const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
+      const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const y = (e.clientY - rect.top) * (canvas.height / rect.height);
 
       const newEl: ElementItem = {
         id: `el_${Date.now()}`,
@@ -723,33 +996,71 @@ export default function ExerciseSketchEditor({
     if (!canvas) return;
     const thumbnailDataUrl = canvas.toDataURL('image/png');
     if (onSave) {
-      onSave({ elements, pitchType }, thumbnailDataUrl);
+      onSave({ elements, pitchType, orientation }, thumbnailDataUrl);
     }
   };
 
   return (
-    <div className="flex flex-col rounded-2xl border border-zinc-800 bg-zinc-950 p-4 gap-4">
+    <div className={`flex flex-col bg-zinc-950 p-4 gap-4 ${isFullscreen ? 'fixed inset-0 z-[9999] rounded-none border-none' : 'rounded-2xl border border-zinc-800'}`}>
       {/* Top Controls Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 pb-3">
         {/* Pitch Selection */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Feld:</span>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider mr-1">Feld:</span>
+          
+          <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider ml-1 mr-0.5">Außen:</span>
           {[
-            { id: 'full', label: 'Ganzes Feld' },
-            { id: 'half', label: 'Halbfeld' },
-            { id: 'field_35x25', label: '35x25m Feld' },
-            { id: 'field_15x25', label: '15x25m Feld' },
-            { id: 'blank', label: 'Leer' }
+            { id: 'green_full', label: 'Vollfeld' },
+            { id: 'field_15x25', label: '15×25m Minifeld' },
+            { id: 'field_40x25', label: '40×25m Feld' },
+            { id: 'green_empty_near', label: 'Torraum Nah' },
+            { id: 'green_empty_far', label: 'Strafraum Fern' }
           ].map((item) => (
-
             <button
               key={item.id}
               type="button"
               onClick={() => setPitchType(item.id as any)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
                 pitchType === item.id
-                  ? 'bg-primary text-white'
-                  : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-white'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                  : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-white border border-zinc-800'
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+
+          <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider ml-2 mr-0.5">Halle:</span>
+          {[
+            { id: 'futsal_full', label: 'Futsal Vollfeld' },
+            { id: 'futsal_empty', label: 'Futsal Leer' }
+          ].map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setPitchType(item.id as any)}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                pitchType === item.id
+                  ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30'
+                  : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-white border border-zinc-800'
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+
+          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider ml-2 mr-0.5">Weitere:</span>
+          {[
+            { id: 'blank', label: 'Taktiktafel (Dunkel)' }
+          ].map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setPitchType(item.id as any)}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                pitchType === item.id
+                  ? 'bg-primary text-white shadow-md shadow-primary/30'
+                  : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-white border border-zinc-800'
               }`}
             >
               {item.label}
@@ -810,6 +1121,32 @@ export default function ExerciseSketchEditor({
               </button>
             </>
           )}
+          <button
+            type="button"
+            onClick={() => setOrientation(orientation === 'landscape' ? 'portrait' : 'landscape')}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white text-xs font-bold transition-all shadow-sm"
+            title={orientation === 'landscape' ? 'Zu Hochformat wechseln' : 'Zu Querformat wechseln'}
+          >
+            {orientation === 'landscape' ? (
+              <>
+                <Monitor className="w-3.5 h-3.5 text-primary" />
+                <span>Querformat</span>
+              </>
+            ) : (
+              <>
+                <Smartphone className="w-3.5 h-3.5 text-primary" />
+                <span>Hochformat</span>
+              </>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white text-xs font-bold transition-all"
+            title={isFullscreen ? 'Vollbild beenden' : 'Vollbildmodus'}
+          >
+            {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />} {isFullscreen ? 'Normal' : 'Vollbild'}
+          </button>
           <button
             type="button"
             onClick={handleClearAll}
@@ -879,6 +1216,7 @@ export default function ExerciseSketchEditor({
             { id: 'disc', label: 'Markierteller (Loch)', icon: Disc },
             { id: 'player', label: 'Feldspieler (Trikot)', icon: Users },
             { id: 'goalkeeper', label: 'Torwart (TW)', icon: Shield },
+            { id: 'dummy', label: 'Freistoß-Dummy', icon: UserX },
             { id: 'ball', label: 'Fußball (Real)', icon: Circle },
             { id: 'goal', label: 'Tor (Drehbar)', icon: Grid },
             { id: 'pass', label: 'Passweg (---)', icon: ArrowRight },
@@ -953,12 +1291,12 @@ export default function ExerciseSketchEditor({
         <div className="flex-1 w-full overflow-hidden flex items-center justify-center bg-zinc-900/50 rounded-xl border border-zinc-800/80 p-2">
           <canvas
             ref={canvasRef}
-            width={720}
-            height={480}
+            width={orientation === 'landscape' ? 720 : 480}
+            height={orientation === 'landscape' ? 480 : 720}
             onMouseDown={handleCanvasMouseDown}
             onMouseMove={handleCanvasMouseMove}
             onMouseUp={handleCanvasMouseUp}
-            className="w-full max-w-[720px] aspect-[3/2] rounded-lg shadow-2xl cursor-crosshair touch-none"
+            className={`w-full ${orientation === 'landscape' ? 'aspect-[3/2] max-w-[720px]' : 'aspect-[2/3] max-w-[480px]'} rounded-lg shadow-2xl cursor-crosshair touch-none ${isFullscreen ? 'max-w-full max-h-[80vh] w-auto h-auto' : ''}`}
           />
         </div>
       </div>

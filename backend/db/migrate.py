@@ -116,6 +116,9 @@ MIGRATION_COLUMNS = [
     ("system_settings", "legal_register_info", "VARCHAR(255) DEFAULT ''"),
     ("system_settings", "updated_at", "DATETIME"),
 
+    # Table: training_exercises
+    ("training_exercises", "provocation_rules", "VARCHAR(2000)"),
+
     # Table: training_sessions
     ("training_sessions", "is_shared", "BOOLEAN DEFAULT 0"),
     ("training_sessions", "methodology", "VARCHAR(50) DEFAULT 'Trainingsphilosophie Deutschland'"),
