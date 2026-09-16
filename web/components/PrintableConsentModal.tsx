@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Printer, 
   Download, 
@@ -32,23 +33,34 @@ export default function PrintableConsentModal({
   const printRef = useRef<HTMLDivElement>(null);
   const [legalData, setLegalData] = useState<any>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
+      document.body.classList.add('printable-consent-modal-open');
       getPublicLegalPages()
         .then((data) => setLegalData(data))
         .catch((err) => console.error("Fehler beim Laden der Vereinsdaten für die Einwilligung:", err));
+      return () => {
+        document.body.classList.remove('printable-consent-modal-open');
+      };
     }
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
   const clubName = legalData?.club_name || '';
   const contactEmail = legalData?.contact_email || '';
   const address = legalData?.address || '';
 
   const handlePrint = () => {
-    window.print();
+    setTimeout(() => {
+      window.print();
+    }, 50);
   };
 
   const handleDownloadPdf = async () => {
@@ -60,6 +72,8 @@ export default function PrintableConsentModal({
       const cleanClubName = (clubName || 'Verein').replace(/[^a-zA-Z0-9_-]/g, '_');
       const filename = `Einwilligung_Videoaufnahmen_${cleanClubName}.pdf`;
 
+      printRef.current.classList.add('force-a4-render');
+
       const opt = {
         margin: [6, 6, 6, 6] as [number, number, number, number],
         filename: filename,
@@ -69,7 +83,8 @@ export default function PrintableConsentModal({
           useCORS: true,
           allowTaint: true,
           backgroundColor: '#ffffff',
-          logging: false
+          logging: false,
+          windowWidth: 1024
         },
         jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const },
         pagebreak: { mode: ['avoid-all', 'css'] }
@@ -81,54 +96,104 @@ export default function PrintableConsentModal({
       console.error('Fehler beim PDF Export:', err);
       toast.error('PDF-Download fehlgeschlagen. Bitte nutze "Drucken / Als PDF speichern".');
     } finally {
+      if (printRef.current) {
+        printRef.current.classList.remove('force-a4-render');
+      }
       setIsGeneratingPdf(false);
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-[200] flex flex-col bg-black/85 p-3 sm:p-6 backdrop-blur-md overflow-y-auto print:p-0 print:bg-white print:static">
+  const modalContent = (
+    <div
+      id="printable-consent-modal-portal"
+      className="fixed inset-0 z-[200] flex flex-col bg-black/85 p-3 sm:p-6 backdrop-blur-md overflow-y-auto print:p-0 print:m-0 print:bg-white print:static print:overflow-visible print:backdrop-blur-none"
+    >
       {/* Print Styles */}
-      <style jsx global>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         @page {
           size: A4 portrait;
           margin: 8mm;
         }
         @media print {
           html, body {
+            width: 210mm !important;
+            min-width: 210mm !important;
             height: auto !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            background: #ffffff !important;
-          }
-          body * {
-            visibility: hidden !important;
-          }
-          #printable-consent-sheet-area, #printable-consent-sheet-area * {
-            visibility: visible !important;
-          }
-          #printable-consent-sheet-area {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 100% !important;
+            min-height: 100% !important;
             margin: 0 !important;
             padding: 0 !important;
             background: #ffffff !important;
             color: #0f172a !important;
+            overflow: visible !important;
+            color-scheme: light !important;
+            -webkit-text-size-adjust: 100% !important;
+          }
+
+          body:has(#printable-consent-modal-portal) > *:not(#printable-consent-modal-portal),
+          body.printable-consent-modal-open > *:not(#printable-consent-modal-portal) {
+            display: none !important;
+          }
+
+          #printable-consent-modal-portal {
+            display: block !important;
+            position: static !important;
+            width: 210mm !important;
+            min-width: 210mm !important;
+            max-width: 210mm !important;
+            height: auto !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+            color: #0f172a !important;
+            overflow: visible !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+          }
+
+          .print-hide-actions {
+            display: none !important;
+          }
+
+          .print-scroll-wrapper {
+            display: block !important;
+            position: static !important;
+            width: 210mm !important;
+            min-width: 210mm !important;
+            max-width: 210mm !important;
+            height: auto !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: visible !important;
+          }
+
+          #printable-consent-sheet-area {
+            display: block !important;
+            position: static !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            box-sizing: border-box !important;
+            background: #ffffff !important;
+            color: #0f172a !important;
             box-shadow: none !important;
             border: none !important;
+            border-radius: 0 !important;
+            overflow: visible !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
+            color-scheme: light !important;
           }
+
           .print-avoid-break {
             page-break-inside: avoid !important;
             break-inside: avoid !important;
           }
         }
-      `}</style>
+      ` }} />
 
       {/* Top Action Bar (hidden when printing) */}
-      <div className="w-full max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-3 bg-zinc-900 border border-zinc-800 p-4 rounded-2xl mb-4 shrink-0 shadow-2xl print:hidden">
+      <div className="print-hide-actions w-full max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-3 bg-zinc-900 border border-zinc-800 p-4 rounded-2xl mb-4 shrink-0 shadow-2xl print:hidden">
         <div>
           <div className="flex items-center gap-2">
             <h3 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
@@ -140,7 +205,7 @@ export default function PrintableConsentModal({
             </span>
           </div>
           <p className="text-xs text-zinc-400 mt-0.5">
-            Druckfertige Vorlage für Erziehungsberechtigte bei Videoaufnahmen im Jugendfußball
+            Druckfertiges Formular zur Unterschrift der Spieler / Erziehungsberechtigten
           </p>
         </div>
 
@@ -148,7 +213,7 @@ export default function PrintableConsentModal({
           <button
             onClick={handlePrint}
             className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-primary text-white text-xs font-bold shadow-lg shadow-primary/20 hover:bg-primary-hover transition-all"
-            title="Drucken oder als PDF speichern"
+            title="Öffnet das Druckmenü des Browsers (Speichern als PDF oder Direktdruck)"
           >
             <Printer className="w-4 h-4" />
             <span>Drucken / Als PDF speichern</span>
@@ -158,11 +223,12 @@ export default function PrintableConsentModal({
             onClick={handleDownloadPdf}
             disabled={isGeneratingPdf}
             className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-zinc-800 text-zinc-200 text-xs font-bold border border-zinc-700 hover:bg-zinc-700 hover:text-white transition-all disabled:opacity-50"
+            title="Erstellt die PDF-Datei direkt im Browser"
           >
             {isGeneratingPdf ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
-                <span>Generiere PDF...</span>
+                <span>Erstelle PDF...</span>
               </>
             ) : (
               <>
@@ -182,11 +248,11 @@ export default function PrintableConsentModal({
       </div>
 
       {/* Sheet Container */}
-      <div className="flex-1 w-full max-w-4xl mx-auto overflow-y-auto pb-8 print:p-0 print:m-0 print:overflow-visible">
+      <div className="print-scroll-wrapper flex-1 w-full max-w-4xl mx-auto overflow-y-auto pb-8 print:p-0 print:m-0 print:overflow-visible print:max-w-none print:w-full">
         <div
           id="printable-consent-sheet-area"
           ref={printRef}
-          className="bg-white text-slate-900 p-8 rounded-xl shadow-2xl border border-slate-300 text-left font-sans space-y-3.5 w-full max-w-[210mm] mx-auto box-border border-t-8 border-t-emerald-600 print:border-none print:shadow-none print:p-0 print:rounded-none"
+          className="bg-white text-slate-900 p-8 rounded-xl shadow-2xl border border-slate-300 text-left font-sans space-y-3.5 w-full max-w-[210mm] mx-auto box-border border-t-8 border-t-emerald-600 print:border-none print:shadow-none print:p-0 print:rounded-none print:max-w-none print:w-full print:m-0"
         >
           {/* Document Header */}
           <div className="border-b-2 border-slate-300 pb-3 flex items-start justify-between gap-4">
@@ -382,4 +448,6 @@ export default function PrintableConsentModal({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

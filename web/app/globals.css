@@ -77,3 +77,167 @@ html:not(.dark) img[alt*="logo"] {
   filter: brightness(0.15) contrast(1.2);
 }
 
+/* Global Print Styles for MatchTrack Modals */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 6mm;
+  }
+
+  html, body {
+    width: 210mm !important;
+    min-width: 210mm !important;
+    height: auto !important;
+    min-height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    overflow: visible !important;
+    color-scheme: light !important;
+    -webkit-text-size-adjust: 100% !important;
+  }
+
+  /* Hide entire page tree when a printable modal portal is open */
+  body:has(#printable-training-modal-portal) > *:not(#printable-training-modal-portal),
+  body.printable-training-modal-open > *:not(#printable-training-modal-portal),
+  body:has(#printable-consent-modal-portal) > *:not(#printable-consent-modal-portal),
+  body.printable-consent-modal-open > *:not(#printable-consent-modal-portal) {
+    display: none !important;
+  }
+
+  #printable-training-modal-portal,
+  #printable-consent-modal-portal {
+    display: block !important;
+    position: static !important;
+    width: 210mm !important;
+    min-width: 210mm !important;
+    max-width: 210mm !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    overflow: visible !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .print-hide-actions {
+    display: none !important;
+  }
+
+  .print-scroll-wrapper {
+    display: block !important;
+    position: static !important;
+    width: 210mm !important;
+    min-width: 210mm !important;
+    max-width: 210mm !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  #printable-training-plan-area,
+  #printable-consent-sheet-area {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-scheme: light !important;
+  }
+
+  .print-avoid-break {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .print-desktop-grid {
+    display: grid !important;
+    grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+  }
+
+  .print-col-7 {
+    grid-column: span 7 / span 7 !important;
+  }
+
+  .print-col-5 {
+    grid-column: span 5 / span 5 !important;
+    border-top: none !important;
+    border-left: 1px solid #e2e8f0 !important;
+    padding-top: 0 !important;
+    padding-left: 0.75rem !important;
+  }
+
+  .print-col-12 {
+    grid-column: span 12 / span 12 !important;
+  }
+
+  .print-row-layout {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: flex-start !important;
+  }
+
+  .print-sketch-box {
+    width: 18rem !important;
+    min-width: 18rem !important;
+    max-width: 18rem !important;
+    flex-shrink: 0 !important;
+  }
+}
+
+/* Force A4 desktop dimensions during client-side PDF export (html2canvas) */
+.force-a4-render {
+  width: 794px !important;
+  max-width: 794px !important;
+  min-width: 794px !important;
+  box-sizing: border-box !important;
+}
+
+.force-a4-render .print-desktop-grid {
+  display: grid !important;
+  grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+}
+
+.force-a4-render .print-col-7 {
+  grid-column: span 7 / span 7 !important;
+}
+
+.force-a4-render .print-col-5 {
+  grid-column: span 5 / span 5 !important;
+  border-top: none !important;
+  border-left: 1px solid #e2e8f0 !important;
+  padding-top: 0 !important;
+  padding-left: 0.75rem !important;
+}
+
+.force-a4-render .print-col-12 {
+  grid-column: span 12 / span 12 !important;
+}
+
+.force-a4-render .print-row-layout {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: flex-start !important;
+}
+
+.force-a4-render .print-sketch-box {
+  width: 18rem !important;
+  min-width: 18rem !important;
+  max-width: 18rem !important;
+  flex-shrink: 0 !important;
+}
+

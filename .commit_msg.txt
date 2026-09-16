@@ -1,11 +1,11 @@
-release: feat: add 15x25m minifield with green_empty_near and 40x25m field with green_empty_far backgrounds (dev: 187e5f07)
+release: fix(print): harmonize mobile print and pdf export with desktop DIN A4 layout (dev: 856e6f6b)
 
 Letzte Änderungen:
-* feat: add 15x25m minifield with green_empty_near and 40x25m field with green_empty_far backgrounds (187e5f07)
-* update svg (65e65710)
-* ui: make exercise modal much wider and optimize form layout (a2c5e05f)
-* fix: reduce soccer ball icon size by 50% (a44ecd4c)
-* feat: add ft-graphics pitches with landscape and portrait orientation (767afa80)
-* feat: use ft-graphics style for goalkeeper (75f9d602)
+* fix(print): harmonize mobile print and pdf export with desktop DIN A4 layout (856e6f6b)
+* feat(admin): add system and client logs tab with filters and irrelevance classification (5908e347)
+* remove (955e1e36)
+* fix(sketch-editor): preload and immediately render FT-Graphics icons without requiring canvas click (fa940d8e)
+* feat(training): display sketch editor by default in exercise modal (d2e29c99)
+* feat(training): allow editing exercises directly via popup from training plan overview (7bba5efa)
 
-Build-Zeitstempel: 2026-09-10 11:45:07
+Build-Zeitstempel: 2026-09-16 13:23:50

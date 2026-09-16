@@ -1,18 +1,18 @@
 # 📋 MatchTrack Online - Versions-Changelog
 
-## Release: 2026-09-10 11:45:07 (Dev Commit: `187e5f07`)
+## Release: 2026-09-16 13:23:50 (Dev Commit: `856e6f6b`)
 
 ### 🚀 Letzte Änderungen aus dem Entwicklungs-Repository:
-* feat: add 15x25m minifield with green_empty_near and 40x25m field with green_empty_far backgrounds (187e5f07 - 2026-09-10)
-* update svg (65e65710 - 2026-09-10)
-* ui: make exercise modal much wider and optimize form layout (a2c5e05f - 2026-09-10)
-* fix: reduce soccer ball icon size by 50% (a44ecd4c - 2026-09-10)
-* feat: add ft-graphics pitches with landscape and portrait orientation (767afa80 - 2026-09-10)
-* feat: use ft-graphics style for goalkeeper (75f9d602 - 2026-09-10)
-* feat: add dummy element to sketch editor (2bc876db - 2026-09-10)
-* feat: use ft-graphics style for cones (84812f2f - 2026-09-10)
-* feat: use ft-graphics style for goals (565c9791 - 2026-09-10)
-* chore: update ball svg to ft-graphics style (ce6ac892 - 2026-09-10)
+* fix(print): harmonize mobile print and pdf export with desktop DIN A4 layout (856e6f6b - 2026-09-16)
+* feat(admin): add system and client logs tab with filters and irrelevance classification (5908e347 - 2026-09-15)
+* remove (955e1e36 - 2026-09-15)
+* fix(sketch-editor): preload and immediately render FT-Graphics icons without requiring canvas click (fa940d8e - 2026-09-15)
+* feat(training): display sketch editor by default in exercise modal (d2e29c99 - 2026-09-15)
+* feat(training): allow editing exercises directly via popup from training plan overview (7bba5efa - 2026-09-15)
+* feat(training): sort training plan print sections pedagogically and optimize A4 page space utilization (04f1dc6f - 2026-09-15)
+* fix(print): resolve blank print preview in Windows print dialog for training plans and consent modals (85e8a9e6 - 2026-09-15)
+* update training page popup width (e5112ff3 - 2026-09-10)
+* feat: add right properties sidebar for element options and copy/paste functionality (6b969a9d - 2026-09-10)
 
 ---
 *Automatisch generiert durch die MatchTrack Release Pipeline.*

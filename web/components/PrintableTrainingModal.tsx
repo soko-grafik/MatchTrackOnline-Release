@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Printer, 
   Download, 
@@ -34,13 +35,23 @@ export default function PrintableTrainingModal({
   const { toast } = useToast();
   const printRef = useRef<HTMLDivElement>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    document.body.classList.add('printable-training-modal-open');
+    return () => {
+      document.body.classList.remove('printable-training-modal-open');
+    };
+  }, []);
 
   // Determine if single exercise mode or full session mode
   const isSingleExercise = !!exercise && !session;
   const currentItem = session || exercise;
 
-  if (!currentItem) return null;
+  if (!currentItem || !mounted) return null;
 
+  // Group exercises by section (for session mode)
   // Group exercises by section (for session mode)
   const grouped: { [key: string]: any[] } = {};
   if (session) {
@@ -50,6 +61,37 @@ export default function PrintableTrainingModal({
       grouped[sec].push(exItem);
     });
   }
+
+  // Priority ranking for pedagogical order:
+  // 1. Aktivierung -> 2. Spielblock 1 -> 3. Zwischenblock (Übung) -> 4. Spielblock 2
+  const getSectionRank = (name: string): number => {
+    const lower = (name || '').toLowerCase().trim();
+    if (lower.includes('aktivierung') || lower.includes('aufwärm')) return 1;
+    if (lower.includes('spielblock 1') || lower.includes('spielblock1')) return 2;
+    if (lower.includes('zwischenblock') || lower.includes('übung')) return 3;
+    if (lower.includes('spielblock 2') || lower.includes('spielblock2')) return 4;
+    if (lower.includes('hauptteil')) return 5;
+    if (lower.includes('schlussteil') || lower.includes('abschluss')) return 6;
+    if (lower.includes('auslauf')) return 7;
+    return 10;
+  };
+
+  const formatSectionTitle = (name: string): string => {
+    const lower = (name || '').toLowerCase().trim();
+    if (lower.includes('aktivierung')) return '1. Aktivierung';
+    if (lower.includes('spielblock 1') || lower.includes('spielblock1')) return '2. Spielblock 1';
+    if (lower.includes('zwischenblock') || lower.includes('übung')) return '3. Zwischenblock (Übung)';
+    if (lower.includes('spielblock 2') || lower.includes('spielblock2')) return '4. Spielblock 2';
+    return name;
+  };
+
+  // Sorted list of sections from top to bottom
+  const sortedSections = Object.entries(grouped).sort(([secA], [secB]) => {
+    const rankA = getSectionRank(secA);
+    const rankB = getSectionRank(secB);
+    if (rankA !== rankB) return rankA - rankB;
+    return secA.localeCompare(secB, 'de');
+  });
 
   // Calculate total duration (for session mode)
   const totalDuration = session
@@ -81,7 +123,9 @@ export default function PrintableTrainingModal({
   }
 
   const handleNativePrint = () => {
-    window.print();
+    setTimeout(() => {
+      window.print();
+    }, 50);
   };
 
   const handleDownloadPDF = async () => {
@@ -93,8 +137,11 @@ export default function PrintableTrainingModal({
       const titleStr = isSingleExercise ? (exercise.title || 'Uebung') : (session.title || 'Trainingsplan');
       const safeFilename = `${titleStr.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
 
+      // Enforce desktop A4 layout during html2canvas capture
+      printRef.current.classList.add('force-a4-render');
+
       const opt = {
-        margin: [6, 6, 6, 6] as [number, number, number, number],
+        margin: [5, 5, 5, 5] as [number, number, number, number],
         filename: safeFilename,
         image: { type: 'jpeg' as const, quality: 0.98 },
         html2canvas: { 
@@ -102,7 +149,8 @@ export default function PrintableTrainingModal({
           useCORS: true, 
           allowTaint: true, 
           backgroundColor: '#ffffff',
-          logging: false
+          logging: false,
+          windowWidth: 1024
         },
         jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const },
         pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
@@ -114,56 +162,139 @@ export default function PrintableTrainingModal({
       console.error('PDF Export Error:', err);
       toast.error('Fehler beim automatischen PDF-Download. Bitte nutze "Drucken / Als PDF speichern".');
     } finally {
+      if (printRef.current) {
+        printRef.current.classList.remove('force-a4-render');
+      }
       setIsGeneratingPdf(false);
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-[200] flex flex-col bg-black/85 p-3 sm:p-6 backdrop-blur-md overflow-y-auto print:p-0 print:bg-white print:static">
+  const modalContent = (
+    <div 
+      id="printable-training-modal-portal"
+      className="fixed inset-0 z-[200] flex flex-col bg-black/85 p-3 sm:p-6 backdrop-blur-md overflow-y-auto print:p-0 print:m-0 print:bg-white print:static print:overflow-visible print:backdrop-blur-none"
+    >
       {/* Print Stylesheet */}
-      <style jsx global>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         @page {
           size: A4 portrait;
-          margin: 8mm;
+          margin: 6mm;
         }
         @media print {
           html, body {
+            width: 210mm !important;
+            min-width: 210mm !important;
             height: auto !important;
             min-height: 100% !important;
             margin: 0 !important;
             padding: 0 !important;
             background: #ffffff !important;
+            color: #0f172a !important;
             overflow: visible !important;
+            color-scheme: light !important;
+            -webkit-text-size-adjust: 100% !important;
           }
-          body * {
-            visibility: hidden !important;
+
+          /* Hide all other direct children of body so only this portal is printed */
+          body:has(#printable-training-modal-portal) > *:not(#printable-training-modal-portal),
+          body.printable-training-modal-open > *:not(#printable-training-modal-portal) {
+            display: none !important;
           }
-          #printable-training-plan-area, #printable-training-plan-area * {
-            visibility: visible !important;
-          }
-          #printable-training-plan-area {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 100% !important;
+
+          #printable-training-modal-portal {
+            display: block !important;
+            position: static !important;
+            width: 210mm !important;
+            min-width: 210mm !important;
+            max-width: 210mm !important;
+            height: auto !important;
             margin: 0 !important;
             padding: 0 !important;
             background: #ffffff !important;
             color: #0f172a !important;
+            overflow: visible !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+          }
+
+          .print-hide-actions {
+            display: none !important;
+          }
+
+          .print-scroll-wrapper {
+            display: block !important;
+            position: static !important;
+            width: 210mm !important;
+            min-width: 210mm !important;
+            max-width: 210mm !important;
+            height: auto !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: visible !important;
+          }
+
+          #printable-training-plan-area {
+            display: block !important;
+            position: static !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            box-sizing: border-box !important;
+            background: #ffffff !important;
+            color: #0f172a !important;
             box-shadow: none !important;
             border: none !important;
+            border-radius: 0 !important;
+            overflow: visible !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
+            color-scheme: light !important;
           }
+
           .print-avoid-break {
             page-break-inside: avoid !important;
             break-inside: avoid !important;
           }
+
+          .print-desktop-grid {
+            display: grid !important;
+            grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+          }
+
+          .print-col-7 {
+            grid-column: span 7 / span 7 !important;
+          }
+
+          .print-col-5 {
+            grid-column: span 5 / span 5 !important;
+            border-top: none !important;
+            border-left: 1px solid #e2e8f0 !important;
+            padding-top: 0 !important;
+            padding-left: 0.75rem !important;
+          }
+
+          .print-col-12 {
+            grid-column: span 12 / span 12 !important;
+          }
+
+          .print-row-layout {
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: flex-start !important;
+          }
+
+          .print-sketch-box {
+            width: 18rem !important;
+            min-width: 18rem !important;
+            max-width: 18rem !important;
+            flex-shrink: 0 !important;
+          }
         }
-      `}</style>
+      ` }} />
 
       {/* Top Action Bar (hidden in Print) */}
-      <div className="w-full max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-3 bg-zinc-900 border border-zinc-800 p-4 rounded-2xl mb-4 shrink-0 shadow-2xl print:hidden">
+      <div className="print-hide-actions w-full max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-3 bg-zinc-900 border border-zinc-800 p-4 rounded-2xl mb-4 shrink-0 shadow-2xl print:hidden">
         <div>
           <div className="flex items-center gap-2">
             <h3 className="text-sm sm:text-base font-bold text-white">
@@ -217,11 +348,11 @@ export default function PrintableTrainingModal({
       </div>
 
       {/* Printable Sheet View Container */}
-      <div className="flex-1 w-full max-w-4xl mx-auto overflow-y-auto pb-8 print:p-0 print:m-0 print:overflow-visible">
+      <div className="print-scroll-wrapper flex-1 w-full max-w-4xl mx-auto overflow-y-auto pb-8 print:p-0 print:m-0 print:overflow-visible print:max-w-none print:w-full">
         <div
           id="printable-training-plan-area"
           ref={printRef}
-          className="bg-white text-slate-900 p-6 sm:p-8 rounded-xl shadow-2xl border border-slate-300 text-left font-sans space-y-4 w-full max-w-[210mm] mx-auto box-border border-t-8 border-t-emerald-600 print:border-none print:shadow-none print:p-0 print:rounded-none"
+          className="bg-white text-slate-900 p-6 sm:p-8 rounded-xl shadow-2xl border border-slate-300 text-left font-sans space-y-4 w-full max-w-[210mm] mx-auto box-border border-t-8 border-t-emerald-600 print:border-none print:shadow-none print:p-0 print:rounded-none print:max-w-none print:w-full print:m-0"
         >
           {/* ============================================================ */}
           {/* MODE A: FULL TRAINING PLAN SESSION */}
@@ -279,9 +410,9 @@ export default function PrintableTrainingModal({
 
               {/* Summary / Notes & Material Checklist Card */}
               {(session.notes || aggregatedMaterials.length > 0) && (
-                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 bg-slate-50 border border-slate-200 rounded-xl p-3 print-avoid-break">
+                <div className="grid grid-cols-1 sm:grid-cols-12 print-desktop-grid gap-3 bg-slate-50 border border-slate-200 rounded-xl p-3 print-avoid-break">
                   {session.notes && (
-                    <div className={aggregatedMaterials.length > 0 ? "sm:col-span-7 space-y-1" : "sm:col-span-12 space-y-1"}>
+                    <div className={aggregatedMaterials.length > 0 ? "sm:col-span-7 print-col-7 space-y-1" : "sm:col-span-12 print-col-12 space-y-1"}>
                       <span className="text-[10px] font-black uppercase tracking-wider text-slate-700 flex items-center gap-1">
                         <Bookmark className="w-3 h-3 text-emerald-600" /> Trainingsschwerpunkt & Bemerkungen
                       </span>
@@ -292,7 +423,7 @@ export default function PrintableTrainingModal({
                   )}
 
                   {aggregatedMaterials.length > 0 && (
-                    <div className={session.notes ? "sm:col-span-5 space-y-1 border-t sm:border-t-0 sm:border-l border-slate-200 pt-2 sm:pt-0 sm:pl-3" : "sm:col-span-12 space-y-1"}>
+                    <div className={session.notes ? "sm:col-span-5 print-col-5 space-y-1 border-t sm:border-t-0 sm:border-l border-slate-200 pt-2 sm:pt-0 sm:pl-3" : "sm:col-span-12 print-col-12 space-y-1"}>
                       <span className="text-[10px] font-black uppercase tracking-wider text-slate-700 flex items-center gap-1">
                         <Dumbbell className="w-3 h-3 text-emerald-600" /> Benötigtes Material (Packliste)
                       </span>
@@ -309,28 +440,28 @@ export default function PrintableTrainingModal({
               )}
 
               {/* Training Sections & Exercises */}
-              <div className="space-y-4 pt-1">
-                {Object.entries(grouped).map(([secName, exList]) => {
+              <div className="space-y-4 pt-1 print:space-y-3 print:pt-0">
+                {sortedSections.map(([secName, exList]) => {
                   const secDuration = exList.reduce((acc, item) => {
                     const exDetail = exercisesList.find(x => x.id === item.exercise_id) || item.exercise;
                     return acc + (item.duration_override || exDetail?.duration_minutes || 15);
                   }, 0);
 
                   return (
-                    <div key={secName} className="space-y-2.5">
+                    <div key={secName} className="space-y-2.5 print:space-y-2">
                       {/* Section Title Banner */}
-                      <div className="bg-emerald-800 text-white px-3 py-1.5 rounded-lg flex items-center justify-between shadow-xs print-avoid-break">
-                        <h2 className="text-xs font-black uppercase tracking-wider m-0 flex items-center gap-2">
+                      <div className="bg-emerald-800 text-white px-3 py-1.5 print:px-2.5 print:py-1 rounded-lg print:rounded-md flex items-center justify-between shadow-xs print-avoid-break">
+                        <h2 className="text-xs print:text-[11px] font-black uppercase tracking-wider m-0 flex items-center gap-2">
                           <Layers className="w-3.5 h-3.5 text-emerald-300" />
-                          <span>{secName}</span>
+                          <span>{formatSectionTitle(secName)}</span>
                         </h2>
-                        <span className="text-xs font-bold text-emerald-200">
+                        <span className="text-xs print:text-[11px] font-bold text-emerald-200">
                           {secDuration} Minuten
                         </span>
                       </div>
 
                       {/* Exercise Cards */}
-                      <div className="space-y-3">
+                      <div className="space-y-3 print:space-y-2">
                         {exList.map((exItem: any, idx: number) => {
                           const exDetail = exercisesList.find(x => x.id === exItem.exercise_id) || exItem.exercise || {};
                           const title = exDetail.title || exItem.title || 'Übung';
@@ -350,20 +481,20 @@ export default function PrintableTrainingModal({
                           return (
                             <div 
                               key={exItem.id || idx} 
-                              className="border border-slate-300 rounded-xl p-3 bg-white shadow-xs space-y-2 print-avoid-break hover:border-slate-400 transition-colors"
+                              className="border border-slate-300 rounded-xl print:rounded-lg p-3 print:p-2.5 bg-white shadow-xs space-y-2 print:space-y-1.5 print-avoid-break hover:border-slate-400 transition-colors w-full"
                             >
                               {/* Exercise Header */}
-                              <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
+                              <div className="flex items-center justify-between border-b border-slate-200 pb-1.5 print:pb-1">
                                 <div className="flex items-center gap-2">
-                                  <span className="w-5 h-5 rounded-full bg-emerald-700 text-white text-[11px] font-black flex items-center justify-center shrink-0">
+                                  <span className="w-5 h-5 rounded-full bg-emerald-700 text-white text-[11px] print:text-[10px] font-black flex items-center justify-center shrink-0">
                                     {idx + 1}
                                   </span>
-                                  <h3 className="text-xs font-bold text-slate-900 m-0">
+                                  <h3 className="text-xs print:text-[11px] font-bold text-slate-900 m-0">
                                     {title}
                                   </h3>
                                 </div>
 
-                                <div className="flex items-center gap-2 text-[10px] font-bold text-slate-600">
+                                <div className="flex items-center gap-2 text-[10px] print:text-[9.5px] font-bold text-slate-600">
                                   {focus && (
                                     <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 font-black">
                                       {focus}
@@ -379,30 +510,30 @@ export default function PrintableTrainingModal({
                               </div>
 
                               {/* Content: Left Text details / Right Diagram */}
-                              <div className="flex flex-col sm:flex-row items-start gap-3.5">
-                                <div className="flex-1 text-[11px] text-slate-800 leading-normal space-y-2">
+                              <div className="flex flex-col sm:flex-row print-row-layout items-start gap-3.5 print:gap-3 w-full">
+                                <div className="flex-1 text-[11px] print:text-[10px] text-slate-800 leading-normal print:leading-snug space-y-2 print:space-y-1.5 min-w-0">
                                   {description && (
                                     <div>
                                       <strong className="text-slate-900 block font-bold mb-0.5">Ablauf & Organisation:</strong>
-                                      <p className="text-slate-700 m-0 whitespace-pre-line leading-relaxed">
+                                      <p className="text-slate-700 m-0 whitespace-pre-line leading-relaxed print:leading-snug">
                                         {description}
                                       </p>
                                     </div>
                                   )}
 
                                   {coaching && (
-                                    <div className="bg-emerald-50/80 border border-emerald-200 rounded-lg p-2 text-slate-900">
+                                    <div className="bg-emerald-50/80 border border-emerald-200 rounded-lg print:rounded p-2 print:p-1.5 text-slate-900">
                                       <strong className="text-emerald-900 font-bold block mb-0.5 flex items-center gap-1">
                                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Coaching-Punkte:
                                       </strong>
-                                      <p className="text-slate-800 m-0 whitespace-pre-line text-[10.5px]">
+                                      <p className="text-slate-800 m-0 whitespace-pre-line text-[10.5px] print:text-[9.5px] leading-relaxed print:leading-snug">
                                         {coaching}
                                       </p>
                                     </div>
                                   )}
 
                                   {materials && Array.isArray(materials) && materials.length > 0 && (
-                                    <div className="text-[10px] text-slate-500">
+                                    <div className="text-[10px] print:text-[9px] text-slate-500">
                                       <strong className="text-slate-700">Material: </strong>
                                       <span>{materials.join(', ')}</span>
                                     </div>
@@ -410,14 +541,14 @@ export default function PrintableTrainingModal({
                                 </div>
 
                                 {imageSrc && (
-                                  <div className="w-full sm:w-56 shrink-0 border border-slate-300 rounded-lg overflow-hidden bg-white p-1 shadow-2xs text-center">
+                                  <div className="w-full sm:w-60 print-sketch-box border border-slate-300 rounded-lg overflow-hidden bg-white p-1.5 shadow-2xs text-center">
                                     <img
                                       src={imageSrc}
                                       alt={title}
                                       crossOrigin="anonymous"
-                                      className="w-full h-auto max-h-40 object-contain mx-auto block"
+                                      className="w-full h-auto max-h-48 print:max-h-44 object-contain mx-auto block"
                                     />
-                                    <span className="text-[9px] font-bold text-slate-400 block mt-1 tracking-wider uppercase">
+                                    <span className="text-[9px] print:text-[8px] font-bold text-slate-400 block mt-0.5 tracking-wider uppercase">
                                       FT-Graphics Taktik-Skizze
                                     </span>
                                   </div>
@@ -433,8 +564,8 @@ export default function PrintableTrainingModal({
               </div>
 
               {/* Hand-written Trainer Notes on Pitch Box */}
-              <div className="border border-dashed border-slate-300 rounded-xl p-3.5 space-y-2 print-avoid-break bg-slate-50/60 mt-4">
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+              <div className="border border-dashed border-slate-300 rounded-xl print:rounded-lg p-3.5 print:p-2.5 space-y-2 print:space-y-1.5 print-avoid-break bg-slate-50/60 mt-4 print:mt-2 w-full">
+                <span className="text-[10px] print:text-[9px] font-black uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
                   ✍️ Notizen & Beobachtungen auf dem Platz (Für Nachbesprechung & nächste Einheit)
                 </span>
                 <div className="space-y-2.5 pt-1">
@@ -450,7 +581,7 @@ export default function PrintableTrainingModal({
           {/* MODE B: SINGLE EXERCISE PRINT */}
           {/* ============================================================ */}
           {isSingleExercise && exercise && (
-            <div className="space-y-4">
+            <div className="space-y-4 print:space-y-2.5">
               {/* Header */}
               <div className="border-b-2 border-slate-300 pb-3 flex items-start justify-between gap-4">
                 <div className="space-y-1">
@@ -488,7 +619,7 @@ export default function PrintableTrainingModal({
                     src={exercise.thumbnail_path.startsWith('data:') || exercise.thumbnail_path.startsWith('http') ? exercise.thumbnail_path : getMediaUrl(exercise.thumbnail_path)}
                     alt={exercise.title}
                     crossOrigin="anonymous"
-                    className="w-full h-auto max-h-72 object-contain mx-auto block"
+                    className="w-full h-auto max-h-72 print:max-h-56 object-contain mx-auto block"
                   />
                   <span className="text-[10px] font-bold text-slate-400 block mt-1 tracking-wider uppercase">
                     FT-Graphics Taktik-Skizze
@@ -513,9 +644,9 @@ export default function PrintableTrainingModal({
               )}
 
               {/* Content sections */}
-              <div className="space-y-3">
+              <div className="space-y-3 print:space-y-2">
                 {exercise.description && (
-                  <div className="border border-slate-200 rounded-xl p-4 bg-white print-avoid-break">
+                  <div className="border border-slate-200 rounded-xl p-4 print:p-2.5 bg-white print-avoid-break">
                     <h3 className="text-xs font-black uppercase tracking-wider text-slate-900 mb-1.5">
                       Ablauf & Spielregeln
                     </h3>
@@ -526,7 +657,7 @@ export default function PrintableTrainingModal({
                 )}
 
                 {exercise.coaching_points && (
-                  <div className="bg-emerald-50/90 border border-emerald-300 rounded-xl p-4 print-avoid-break">
+                  <div className="bg-emerald-50/90 border border-emerald-300 rounded-xl p-4 print:p-2.5 print-avoid-break">
                     <h3 className="text-xs font-black uppercase tracking-wider text-emerald-950 mb-1.5 flex items-center gap-1.5">
                       <CheckCircle2 className="w-4 h-4 text-emerald-700" />
                       Coaching-Punkte & Schwerpunkte
@@ -539,7 +670,7 @@ export default function PrintableTrainingModal({
               </div>
 
               {/* Handwritten space */}
-              <div className="border border-dashed border-slate-300 rounded-xl p-3.5 space-y-2 print-avoid-break bg-slate-50/60 mt-4">
+              <div className="border border-dashed border-slate-300 rounded-xl p-3.5 space-y-2 print-avoid-break bg-slate-50/60 mt-4 print:mt-2">
                 <span className="text-[10px] font-black uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
                   ✍️ Eigene Trainingsnotizen / Variationen
                 </span>
@@ -560,4 +691,6 @@ export default function PrintableTrainingModal({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

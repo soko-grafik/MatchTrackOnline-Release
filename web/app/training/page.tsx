@@ -82,7 +82,7 @@ export default function TrainingPage() {
   const [modalExerciseSearch, setModalExerciseSearch] = useState('');
   const [printingSession, setPrintingSession] = useState<any | null>(null);
   const [printingExercise, setPrintingExercise] = useState<any | null>(null);
-  const [showSketchEditor, setShowSketchEditor] = useState(false);
+  const [showSketchEditor, setShowSketchEditor] = useState(true);
 
   // Exercise Form
   const [exerciseForm, setExerciseForm] = useState({
@@ -227,7 +227,7 @@ export default function TrainingPage() {
       diagram_data: null,
       thumbnail_path: ''
     });
-    setShowSketchEditor(false);
+    setShowSketchEditor(true);
     setIsExerciseModalOpen(true);
   };
 
@@ -247,7 +247,7 @@ export default function TrainingPage() {
       diagram_data: ex.diagram_data || null,
       thumbnail_path: ex.thumbnail_path || ''
     });
-    setShowSketchEditor(false);
+    setShowSketchEditor(true);
     setIsExerciseModalOpen(true);
   };
 
@@ -354,7 +354,7 @@ export default function TrainingPage() {
 
   const handleCreateSession = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Calculate total duration of assigned exercises
     const currentTotalDuration = sessionForm.assignedExercises.reduce((acc, item) => {
       const exDetail = exercises.find(x => x.id === item.exercise_id);
@@ -827,10 +827,38 @@ export default function TrainingPage() {
                                   grouped[sec].push(exItem);
                                 });
 
-                                return Object.entries(grouped).map(([secName, exList]) => (
+                                const getSecRank = (name: string): number => {
+                                  const lower = (name || '').toLowerCase().trim();
+                                  if (lower.includes('aktivierung') || lower.includes('aufwärm')) return 1;
+                                  if (lower.includes('spielblock 1') || lower.includes('spielblock1')) return 2;
+                                  if (lower.includes('zwischenblock') || lower.includes('übung')) return 3;
+                                  if (lower.includes('spielblock 2') || lower.includes('spielblock2')) return 4;
+                                  if (lower.includes('hauptteil')) return 5;
+                                  if (lower.includes('schlussteil') || lower.includes('abschluss')) return 6;
+                                  if (lower.includes('auslauf')) return 7;
+                                  return 10;
+                                };
+
+                                const formatSecTitle = (name: string): string => {
+                                  const lower = (name || '').toLowerCase().trim();
+                                  if (lower.includes('aktivierung')) return '1. Aktivierung';
+                                  if (lower.includes('spielblock 1') || lower.includes('spielblock1')) return '2. Spielblock 1';
+                                  if (lower.includes('zwischenblock') || lower.includes('übung')) return '3. Zwischenblock (Übung)';
+                                  if (lower.includes('spielblock 2') || lower.includes('spielblock2')) return '4. Spielblock 2';
+                                  return name;
+                                };
+
+                                const sortedSecs = Object.entries(grouped).sort(([secA], [secB]) => {
+                                  const rankA = getSecRank(secA);
+                                  const rankB = getSecRank(secB);
+                                  if (rankA !== rankB) return rankA - rankB;
+                                  return secA.localeCompare(secB, 'de');
+                                });
+
+                                return sortedSecs.map(([secName, exList]) => (
                                   <div key={secName} className="space-y-1.5">
                                     <span className="text-[10px] font-bold text-primary uppercase tracking-wider bg-primary/10 px-2 py-0.5 rounded border border-primary/20 inline-block">
-                                      {secName}
+                                      {formatSecTitle(secName)}
                                     </span>
                                     <div className="space-y-1">
                                       {exList.map((exItem: any, idx: number) => {
@@ -839,15 +867,45 @@ export default function TrainingPage() {
                                         const exFocus = exDetail?.focus_area || exItem.focus_area || '';
                                         const exDuration = exDetail?.duration_minutes || exItem.duration_minutes || 15;
                                         return (
-                                          <div key={exItem.id || idx} className="p-2.5 rounded-xl bg-zinc-950/60 border border-zinc-800/80 flex items-center justify-between">
-                                            <div className="flex items-center gap-2.5">
+                                          <div key={exItem.id || idx} className="p-2.5 rounded-xl bg-zinc-950/60 border border-zinc-800/80 flex items-center justify-between group/item hover:border-zinc-700 transition-all">
+                                            <div className="flex items-center gap-2.5 min-w-0">
                                               <span className="w-5 h-5 rounded-full bg-zinc-800 text-zinc-300 font-bold text-[10px] flex items-center justify-center shrink-0">
                                                 {idx + 1}
                                               </span>
-                                              <div>
-                                                <h4 className="font-bold text-xs text-white leading-tight">{exTitle}</h4>
+                                              <div className="truncate">
+                                                <h4
+                                                  onClick={() => exDetail && openEditExerciseModal(exDetail)}
+                                                  className="font-bold text-xs text-white leading-tight truncate hover:text-primary cursor-pointer transition-colors"
+                                                  title="Übung im Popup bearbeiten"
+                                                >
+                                                  {exTitle}
+                                                </h4>
                                                 <span className="text-[10px] text-zinc-500">{exFocus} · {exDuration} Min</span>
                                               </div>
+                                            </div>
+
+                                            <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                                              {exDetail && (
+                                                <button
+                                                  type="button"
+                                                  onClick={() => setPrintingExercise(exDetail)}
+                                                  className="p-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800 hover:border-zinc-700 transition-all text-xs"
+                                                  title="Übung drucken / PDF Vorschau"
+                                                >
+                                                  <Printer className="w-3.5 h-3.5 text-emerald-400" />
+                                                </button>
+                                              )}
+                                              {canEdit && exDetail && (
+                                                <button
+                                                  type="button"
+                                                  onClick={() => openEditExerciseModal(exDetail)}
+                                                  className="px-2 py-1 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 hover:border-zinc-700 transition-all text-[11px] font-bold flex items-center gap-1"
+                                                  title="Übung direkt im Popup bearbeiten"
+                                                >
+                                                  <Pencil className="w-3.5 h-3.5 text-primary" />
+                                                  <span className="hidden sm:inline">Bearbeiten</span>
+                                                </button>
+                                              )}
                                             </div>
                                           </div>
                                         );
@@ -871,13 +929,13 @@ export default function TrainingPage() {
         {/* Modal: Übung anlegen / bearbeiten */}
         {isExerciseModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-2 sm:p-4 backdrop-blur-md overflow-y-auto">
-            <div className="w-[98vw] max-w-[1700px] rounded-2xl border border-zinc-800 bg-zinc-950 p-5 sm:p-7 shadow-2xl space-y-6 max-h-[96vh] overflow-y-auto">
+            <div className="w-[98vw] rounded-2xl border border-zinc-800 bg-zinc-950 p-5 sm:p-7 shadow-2xl space-y-6 max-h-[96vh] overflow-y-auto">
               <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
                 <div className="flex items-center gap-3">
                   <h3 className="text-xl font-bold text-white">
                     {editingExerciseId ? 'Übung bearbeiten' : 'Neue Übung in Wissensdatenbank eintragen'}
                   </h3>
-                  
+
                   {/* Camera / Scan Card Button */}
                   <input
                     ref={scanInputRef}
@@ -1054,9 +1112,9 @@ export default function TrainingPage() {
                     <button
                       type="button"
                       onClick={() => setShowSketchEditor(!showSketchEditor)}
-                      className="text-xs font-bold text-primary hover:underline bg-primary/10 px-3 py-1.5 rounded-lg border border-primary/20"
+                      className="text-xs font-bold text-primary hover:underline bg-primary/10 px-3 py-1.5 rounded-lg border border-primary/20 flex items-center gap-1.5 transition-colors"
                     >
-                      {showSketchEditor ? 'Skizzen-Editor verbergen' : 'Skizze im Editor zeichnen / anpassen'}
+                      {showSketchEditor ? '▲ Skizzen-Editor einklappen' : '▼ Skizzen-Editor ausklappen'}
                     </button>
                   </div>
 
@@ -1064,12 +1122,12 @@ export default function TrainingPage() {
                     <ExerciseSketchEditor
                       initialData={exerciseForm.diagram_data}
                       onSave={(diagramData, thumbnailDataUrl) => {
-                        setExerciseForm({
-                          ...exerciseForm,
+                        setExerciseForm((prev) => ({
+                          ...prev,
                           diagram_data: diagramData,
                           thumbnail_path: thumbnailDataUrl
-                        });
-                        setShowSketchEditor(false);
+                        }));
+                        toast.success('Skizze erfolgreich übernommen');
                       }}
                     />
                   )}

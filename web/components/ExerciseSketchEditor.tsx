@@ -20,14 +20,23 @@ import {
   Minimize,
   UserX,
   Smartphone,
-  Monitor
+  Monitor,
+  CircleDot,
+  AlignJustify,
+  Copy,
+  ClipboardPaste,
+  Settings2,
+  Palette,
+  ZoomIn,
+  ZoomOut,
+  X
 } from 'lucide-react';
 
 import { useToast } from '@/contexts/ToastContext';
 
 interface ElementItem {
   id: string;
-  type: 'pitch' | 'cone' | 'disc' | 'player' | 'goalkeeper' | 'dummy' | 'ball' | 'goal' | 'line' | 'text';
+  type: 'pitch' | 'cone' | 'disc' | 'ring' | 'ladder' | 'player' | 'goalkeeper' | 'dummy' | 'ball' | 'goal' | 'line' | 'text';
   subType?: string; // e.g. goal type ('mini', 'youth', 'full') or line type ('pass', 'run', 'dribble')
   x: number;
   y: number;
@@ -45,6 +54,71 @@ interface ExerciseSketchEditorProps {
   initialData?: any;
   onSave?: (diagramData: any, thumbnailDataUrl: string) => void;
   onCancel?: () => void;
+}
+
+// Module-level caches for SVGs, preloaded images, and tinted icons across editor mounts
+const globalSvgTexts: Record<string, string> = {};
+const globalLoadedImages: Record<string, HTMLImageElement> = {};
+const globalTintedCache: Record<string, HTMLImageElement> = {};
+
+let preloadPromise: Promise<void> | null = null;
+
+export function preloadEditorAssets(): Promise<void> {
+  if (preloadPromise) return preloadPromise;
+  if (typeof window === 'undefined') return Promise.resolve();
+
+  preloadPromise = (async () => {
+    const svgs = [
+      { id: 'player', src: '/icons/player.svg' },
+      { id: 'cone', src: '/icons/cone.svg' },
+      { id: 'dummy', src: '/icons/dummy.svg' },
+      { id: 'goalkeeper', src: '/icons/goalkeeper.svg' },
+      { id: 'ring', src: '/icons/ring.svg' },
+      { id: 'ladder', src: '/icons/ladder.svg' }
+    ];
+
+    const images = [
+      { id: 'ball', src: '/icons/ball.svg' },
+      { id: 'goal', src: '/icons/goal.svg' },
+      { id: 'green_full', src: '/icons/pitches/green_full.svg' },
+      { id: 'green_empty_near', src: '/icons/pitches/green_empty_near.svg' },
+      { id: 'green_empty_far', src: '/icons/pitches/green_empty_far.svg' },
+      { id: 'futsal_full', src: '/icons/pitches/futsal_full.svg' },
+      { id: 'futsal_empty', src: '/icons/pitches/futsal_empty.svg' }
+    ];
+
+    await Promise.all([
+      ...svgs.map(async ({ id, src }) => {
+        if (globalSvgTexts[id]) return;
+        try {
+          const res = await fetch(src);
+          if (res.ok) {
+            globalSvgTexts[id] = await res.text();
+          }
+        } catch (err) {
+          console.error(`Fehler beim Preloaden von SVG ${id}:`, err);
+        }
+      }),
+      ...images.map(({ id, src }) => {
+        if (globalLoadedImages[id] && globalLoadedImages[id].complete) return Promise.resolve();
+        return new Promise<void>((resolve) => {
+          const img = new Image();
+          img.onload = () => {
+            globalLoadedImages[id] = img;
+            resolve();
+          };
+          img.onerror = () => resolve();
+          img.src = src;
+        });
+      })
+    ]);
+  })();
+
+  return preloadPromise;
+}
+
+if (typeof window !== 'undefined') {
+  preloadEditorAssets();
 }
 
 export default function ExerciseSketchEditor({
@@ -97,144 +171,63 @@ export default function ExerciseSketchEditor({
 
   // Fullscreen and Icons State
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [loadedImages, setLoadedImages] = useState<Record<string, HTMLImageElement>>({});
+  const [loadedImages, setLoadedImages] = useState<Record<string, HTMLImageElement>>(() => ({ ...globalLoadedImages }));
 
-  const [playerSvgText, setPlayerSvgText] = useState<string | null>(null);
-  const tintedPlayersRef = useRef<Record<string, HTMLImageElement>>({});
+  const [playerSvgText, setPlayerSvgText] = useState<string | null>(() => globalSvgTexts.player || null);
+  const [coneSvgText, setConeSvgText] = useState<string | null>(() => globalSvgTexts.cone || null);
+  const [dummySvgText, setDummySvgText] = useState<string | null>(() => globalSvgTexts.dummy || null);
+  const [goalkeeperSvgText, setGoalkeeperSvgText] = useState<string | null>(() => globalSvgTexts.goalkeeper || null);
+  const [ringSvgText, setRingSvgText] = useState<string | null>(() => globalSvgTexts.ring || null);
+  const [ladderSvgText, setLadderSvgText] = useState<string | null>(() => globalSvgTexts.ladder || null);
+
+  const drawCanvasRef = useRef<() => void>(() => {});
 
   useEffect(() => {
-    const ballImg = new Image();
-    ballImg.src = '/icons/ball.svg';
-    ballImg.onload = () => {
-      setLoadedImages(prev => ({ ...prev, ball: ballImg }));
-    };
-
-    const goalImg = new Image();
-    goalImg.src = '/icons/goal.svg';
-    goalImg.onload = () => {
-      setLoadedImages(prev => ({ ...prev, goal: goalImg }));
-    };
-
-    fetch('/icons/player.svg')
-      .then(res => res.text())
-      .then(text => setPlayerSvgText(text))
-      .catch(err => console.error('Fehler beim Laden der Spieler SVG', err));
-
-    fetch('/icons/cone.svg')
-      .then(res => res.text())
-      .then(text => setConeSvgText(text))
-      .catch(err => console.error('Fehler beim Laden der Hütchen SVG', err));
-
-    fetch('/icons/dummy.svg')
-      .then(res => res.text())
-      .then(text => setDummySvgText(text))
-      .catch(err => console.error('Fehler beim Laden der Dummy SVG', err));
-
-    fetch('/icons/goalkeeper.svg')
-      .then(res => res.text())
-      .then(text => setGoalkeeperSvgText(text))
-      .catch(err => console.error('Fehler beim Laden der Torwart SVG', err));
-
-    const pitchFiles = [
-      { id: 'green_full', src: '/icons/pitches/green_full.svg' },
-      { id: 'green_empty_near', src: '/icons/pitches/green_empty_near.svg' },
-      { id: 'green_empty_far', src: '/icons/pitches/green_empty_far.svg' },
-      { id: 'futsal_full', src: '/icons/pitches/futsal_full.svg' },
-      { id: 'futsal_empty', src: '/icons/pitches/futsal_empty.svg' }
-    ];
-
-    pitchFiles.forEach(({ id, src }) => {
-      const img = new Image();
-      img.src = src;
-      img.onload = () => {
-        setLoadedImages(prev => ({ ...prev, [id]: img }));
-      };
+    preloadEditorAssets().then(() => {
+      setLoadedImages((prev) => ({ ...prev, ...globalLoadedImages }));
+      if (globalSvgTexts.player) setPlayerSvgText(globalSvgTexts.player);
+      if (globalSvgTexts.cone) setConeSvgText(globalSvgTexts.cone);
+      if (globalSvgTexts.dummy) setDummySvgText(globalSvgTexts.dummy);
+      if (globalSvgTexts.goalkeeper) setGoalkeeperSvgText(globalSvgTexts.goalkeeper);
+      if (globalSvgTexts.ring) setRingSvgText(globalSvgTexts.ring);
+      if (globalSvgTexts.ladder) setLadderSvgText(globalSvgTexts.ladder);
     });
   }, []);
 
-  const [coneSvgText, setConeSvgText] = useState<string | null>(null);
-  const tintedConesRef = useRef<Record<string, HTMLImageElement>>({});
+  const getTintedImage = (
+    type: 'player' | 'cone' | 'dummy' | 'goalkeeper' | 'ring' | 'ladder',
+    svgText: string | null,
+    targetHex: string,
+    replaceColorHex: string
+  ): HTMLImageElement | null => {
+    const cacheKey = `${type}_${targetHex.toLowerCase()}`;
+    if (globalTintedCache[cacheKey]) {
+      return globalTintedCache[cacheKey];
+    }
+    const rawSvg = svgText || globalSvgTexts[type];
+    if (!rawSvg) return null;
 
-  const [dummySvgText, setDummySvgText] = useState<string | null>(null);
-  const tintedDummiesRef = useRef<Record<string, HTMLImageElement>>({});
-
-  const [goalkeeperSvgText, setGoalkeeperSvgText] = useState<string | null>(null);
-  const tintedGoalkeepersRef = useRef<Record<string, HTMLImageElement>>({});
-
-  const getGoalkeeperImage = (color: string) => {
-    if (tintedGoalkeepersRef.current[color]) return tintedGoalkeepersRef.current[color];
-    if (!goalkeeperSvgText) return null;
-
-    const coloredSvg = goalkeeperSvgText.replace(/#9E2A6A/gi, color);
-    const blob = new Blob([coloredSvg], { type: 'image/svg+xml' });
-    const url = URL.createObjectURL(blob);
+    const coloredSvg = rawSvg.replace(new RegExp(replaceColorHex, 'gi'), targetHex);
+    const dataUri = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(coloredSvg)}`;
 
     const img = new Image();
-    img.src = url;
     img.onload = () => {
-      tintedGoalkeepersRef.current[color] = img;
-      drawCanvas();
+      globalTintedCache[cacheKey] = img;
+      drawCanvasRef.current();
     };
-    tintedGoalkeepersRef.current[color] = img;
+    img.src = dataUri;
+    globalTintedCache[cacheKey] = img;
     return img;
   };
 
-  const getDummyImage = (color: string) => {
-    if (tintedDummiesRef.current[color]) return tintedDummiesRef.current[color];
-    if (!dummySvgText) return null;
-
-    const coloredSvg = dummySvgText.replace(/#EE7110/gi, color);
-    const blob = new Blob([coloredSvg], { type: 'image/svg+xml' });
-    const url = URL.createObjectURL(blob);
-
-    const img = new Image();
-    img.src = url;
-    img.onload = () => {
-      tintedDummiesRef.current[color] = img;
-      drawCanvas();
-    };
-    tintedDummiesRef.current[color] = img;
-    return img;
-  };
-
-  const getConeImage = (color: string) => {
-    if (tintedConesRef.current[color]) return tintedConesRef.current[color];
-    if (!coneSvgText) return null;
-
-    const coloredSvg = coneSvgText.replace(/#EE7110/gi, color);
-    const blob = new Blob([coloredSvg], { type: 'image/svg+xml' });
-    const url = URL.createObjectURL(blob);
-
-    const img = new Image();
-    img.src = url;
-    img.onload = () => {
-      tintedConesRef.current[color] = img;
-      drawCanvas();
-    };
-    tintedConesRef.current[color] = img;
-    return img;
-  };
-
-  const getPlayerImage = (color: string) => {
-    if (tintedPlayersRef.current[color]) return tintedPlayersRef.current[color];
-    if (!playerSvgText) return null;
-
-    const coloredSvg = playerSvgText.replace(/#0068B4/gi, color);
-    const blob = new Blob([coloredSvg], { type: 'image/svg+xml' });
-    const url = URL.createObjectURL(blob);
-    
-    const img = new Image();
-    img.src = url;
-    img.onload = () => {
-       tintedPlayersRef.current[color] = img;
-       drawCanvas(); // Re-render when loaded
-    };
-    tintedPlayersRef.current[color] = img; 
-    return img;
-  };
+  const getRingImage = (color: string) => getTintedImage('ring', ringSvgText, color, '#EE7110');
+  const getLadderImage = (color: string) => getTintedImage('ladder', ladderSvgText, color, '#EE7110');
+  const getGoalkeeperImage = (color: string) => getTintedImage('goalkeeper', goalkeeperSvgText, color, '#9E2A6A');
+  const getDummyImage = (color: string) => getTintedImage('dummy', dummySvgText, color, '#EE7110');
+  const getConeImage = (color: string) => getTintedImage('cone', coneSvgText, color, '#EE7110');
+  const getPlayerImage = (color: string) => getTintedImage('player', playerSvgText, color, '#0068B4');
 
   // Update state when initialData changes or loads
-
   useEffect(() => {
     if (initialData) {
       if (initialData.pitchType || initialData.pitch_type) {
@@ -249,17 +242,43 @@ export default function ExerciseSketchEditor({
     }
   }, [initialData]);
 
-  // Redraw canvas on elements / pitch / orientation / tracing background change
+  // Pre-warm tinted assets for all elements in the current sketch
+  useEffect(() => {
+    elements.forEach((el) => {
+      if (el.type === 'player') getPlayerImage(el.color || '#3b82f6');
+      else if (el.type === 'goalkeeper') getGoalkeeperImage(el.color || '#eab308');
+      else if (el.type === 'cone') getConeImage(el.color || '#ef4444');
+      else if (el.type === 'dummy') getDummyImage(el.color || '#eab308');
+      else if (el.type === 'ring') getRingImage(el.color || '#eab308');
+      else if (el.type === 'ladder') getLadderImage(el.color || '#eab308');
+    });
+  }, [elements, playerSvgText, coneSvgText, dummySvgText, goalkeeperSvgText, ringSvgText, ladderSvgText]);
+
+  // Redraw canvas on elements / pitch / orientation / tracing background change or asset load
   useEffect(() => {
     drawCanvas();
-  }, [pitchType, orientation, elements, selectedElementId, backgroundImage, bgOpacity, loadedImages]);
+  }, [
+    pitchType,
+    orientation,
+    elements,
+    selectedElementId,
+    backgroundImage,
+    bgOpacity,
+    loadedImages,
+    playerSvgText,
+    coneSvgText,
+    dummySvgText,
+    goalkeeperSvgText,
+    ringSvgText,
+    ladderSvgText
+  ]);
 
 
   const drawPitch = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
     // Check if current pitch is one of the new SVG pitches
     if (['green_full', 'green_empty_near', 'green_empty_far', 'futsal_full', 'futsal_empty'].includes(pitchType)) {
-      const img = loadedImages[pitchType];
-      if (img && img.complete) {
+      const img = loadedImages[pitchType] || globalLoadedImages[pitchType];
+      if (img && img.complete && img.naturalWidth > 0) {
         ctx.save();
         if (orientation === 'landscape') {
           // The SVG is native portrait (viewBox 0 0 751 751 or aspect), rotate 90 deg for landscape view
@@ -332,8 +351,8 @@ export default function ExerciseSketchEditor({
       ctx.stroke();
     } else if (pitchType === 'field_15x25') {
       // 15x25 Spielfeld mit Hintergrund green_empty_near.svg
-      const bgImg = loadedImages['green_empty_near'];
-      if (bgImg && bgImg.complete) {
+      const bgImg = loadedImages['green_empty_near'] || globalLoadedImages['green_empty_near'];
+      if (bgImg && bgImg.complete && bgImg.naturalWidth > 0) {
         ctx.save();
         if (orientation === 'landscape') {
           ctx.translate(width / 2, height / 2);
@@ -378,8 +397,8 @@ export default function ExerciseSketchEditor({
       ctx.shadowBlur = 0;
     } else if (pitchType === 'field_40x25' || pitchType === 'field_35x25') {
       // 40x25 bzw. 35x25 Spielfeld mit Hintergrund green_empty_far.svg
-      const bgImg = loadedImages['green_empty_far'];
-      if (bgImg && bgImg.complete) {
+      const bgImg = loadedImages['green_empty_far'] || globalLoadedImages['green_empty_far'];
+      if (bgImg && bgImg.complete && bgImg.naturalWidth > 0) {
         ctx.save();
         if (orientation === 'landscape') {
           ctx.translate(width / 2, height / 2);
@@ -432,11 +451,12 @@ export default function ExerciseSketchEditor({
 
     const scale = (el.size ? el.size / 100 : 1.0);
     const radius = 5.5 * scale;
+    const ballImg = loadedImages.ball || globalLoadedImages.ball;
 
-    if (loadedImages.ball) {
+    if (ballImg && ballImg.complete && ballImg.naturalWidth > 0) {
       // Draw ball image centered (half size of previous ~26px -> ~13px)
       const imgSize = radius * 2.4;
-      ctx.drawImage(loadedImages.ball, -imgSize / 2, -imgSize / 2, imgSize, imgSize);
+      ctx.drawImage(ballImg, -imgSize / 2, -imgSize / 2, imgSize, imgSize);
     } else {
       // Fallback ball
       ctx.fillStyle = '#ffffff';
@@ -477,10 +497,11 @@ export default function ExerciseSketchEditor({
     const scale = el.size ? el.size / 100 : 1.0;
     const gWidth = (el.customWidth || baseWidth) * scale;
     const gDepth = (el.customDepth || baseDepth) * scale;
+    const goalImg = loadedImages.goal || globalLoadedImages.goal;
 
-    if (loadedImages.goal) {
+    if (goalImg && goalImg.complete && goalImg.naturalWidth > 0) {
       // The image is a 2D/3D perspective, we draw it scaled
-      ctx.drawImage(loadedImages.goal, -gWidth / 2, -gDepth / 2, gWidth, gDepth);
+      ctx.drawImage(goalImg, -gWidth / 2, -gDepth / 2, gWidth, gDepth);
     } else {
       // Fallback
       ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
@@ -519,7 +540,7 @@ export default function ExerciseSketchEditor({
     const mainColor = el.color || '#ef4444';
     const img = getConeImage(mainColor);
 
-    if (img && img.complete) {
+    if (img && img.complete && img.naturalWidth > 0) {
       // SVG viewBox is 9.1 x 5.8
       const w = 18 * scale;
       const h = (18 * 5.8 / 9.1) * scale;
@@ -550,7 +571,7 @@ export default function ExerciseSketchEditor({
     const mainColor = el.color || '#eab308';
     const img = getDummyImage(mainColor);
 
-    if (img && img.complete) {
+    if (img && img.complete && img.naturalWidth > 0) {
       // SVG viewBox is 18.7 x 51.3
       const w = 18 * scale;
       const h = (18 * 51.3 / 18.7) * scale;
@@ -562,6 +583,56 @@ export default function ExerciseSketchEditor({
       ctx.strokeStyle = '#000000';
       ctx.lineWidth = 1.5;
       ctx.strokeRect(-6 * scale, -18 * scale, 12 * scale, 36 * scale);
+    }
+
+    ctx.restore();
+  };
+
+  const drawRing = (ctx: CanvasRenderingContext2D, el: ElementItem) => {
+    ctx.save();
+    ctx.translate(el.x, el.y);
+    if (el.rotation) ctx.rotate((el.rotation * Math.PI) / 180);
+
+    const scale = (el.size ? el.size / 100 : 1.0);
+    const mainColor = el.color || '#eab308';
+    const img = getRingImage(mainColor);
+
+    if (img && img.complete && img.naturalWidth > 0) {
+      // SVG viewBox is 23.5 x 13
+      const w = 24 * scale;
+      const h = (24 * 13 / 23.5) * scale;
+      ctx.drawImage(img, -w / 2, -h / 2, w, h);
+    } else {
+      // Fallback
+      ctx.strokeStyle = mainColor;
+      ctx.lineWidth = 3 * scale;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 11 * scale, 6 * scale, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  };
+
+  const drawLadder = (ctx: CanvasRenderingContext2D, el: ElementItem) => {
+    ctx.save();
+    ctx.translate(el.x, el.y);
+    if (el.rotation) ctx.rotate((el.rotation * Math.PI) / 180);
+
+    const scale = el.size ? el.size / 100 : 1.0;
+    const mainColor = el.color || '#eab308';
+    const img = getLadderImage(mainColor);
+
+    if (img && img.complete && img.naturalWidth > 0) {
+      // SVG viewBox is 92.6 x 14.6
+      const w = 100 * scale;
+      const h = (100 * 14.6 / 92.6) * scale;
+      ctx.drawImage(img, -w / 2, -h / 2, w, h);
+    } else {
+      // Fallback
+      ctx.strokeStyle = mainColor;
+      ctx.lineWidth = 2 * scale;
+      ctx.strokeRect(-50 * scale, -7.5 * scale, 100 * scale, 15 * scale);
     }
 
     ctx.restore();
@@ -615,7 +686,7 @@ export default function ExerciseSketchEditor({
     const mainColor = el.color || '#3b82f6';
     const img = getPlayerImage(mainColor);
 
-    if (img && img.complete) {
+    if (img && img.complete && img.naturalWidth > 0) {
       // The original SVG is 33.1x53.2
       // We'll map the size down to a nice icon size
       const imgW = 22; 
@@ -672,7 +743,7 @@ export default function ExerciseSketchEditor({
     const mainColor = el.color || '#eab308'; // Default yellow/neon or selected
     const img = getGoalkeeperImage(mainColor);
 
-    if (img && img.complete) {
+    if (img && img.complete && img.naturalWidth > 0) {
       // SVG viewBox is 27.2 x 51.1
       const imgW = 20;
       const imgH = 20 * (51.1 / 27.2);
@@ -766,6 +837,12 @@ export default function ExerciseSketchEditor({
       } else if (el.type === 'disc') {
         // Markierteller mit Loch
         drawDisc(ctx, el);
+      } else if (el.type === 'ring') {
+        // Koordinationsring / Ring
+        drawRing(ctx, el);
+      } else if (el.type === 'ladder') {
+        // Koordinationsleiter
+        drawLadder(ctx, el);
       } else if (el.type === 'player') {
         // Player (Trikot Icon)
         drawPlayerIcon(ctx, el);
@@ -817,6 +894,7 @@ export default function ExerciseSketchEditor({
       ctx.restore();
     });
   };
+  drawCanvasRef.current = drawCanvas;
 
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -849,7 +927,7 @@ export default function ExerciseSketchEditor({
       // Add point element (cone, player, ball, goal, text)
       const newEl: ElementItem = {
         id: `el_${Date.now()}`,
-        type: activeTool === 'cone' ? 'cone' : activeTool === 'disc' ? 'disc' : activeTool === 'player' ? 'player' : activeTool === 'goalkeeper' ? 'goalkeeper' : activeTool === 'dummy' ? 'dummy' : activeTool === 'ball' ? 'ball' : activeTool === 'goal' ? 'goal' : 'text',
+        type: activeTool === 'cone' ? 'cone' : activeTool === 'disc' ? 'disc' : activeTool === 'ring' ? 'ring' : activeTool === 'ladder' ? 'ladder' : activeTool === 'player' ? 'player' : activeTool === 'goalkeeper' ? 'goalkeeper' : activeTool === 'dummy' ? 'dummy' : activeTool === 'ball' ? 'ball' : activeTool === 'goal' ? 'goal' : 'text',
         subType: activeTool === 'goal' ? selectedGoalType : undefined,
         x,
         y,
@@ -943,10 +1021,56 @@ export default function ExerciseSketchEditor({
     }
   };
 
+  // Clipboard state for Copy & Paste
+  const [clipboard, setClipboard] = useState<ElementItem | null>(null);
+
+  const getElementTypeName = (el: ElementItem): string => {
+    switch (el.type) {
+      case 'cone': return 'Hütchen';
+      case 'disc': return 'Markierteller';
+      case 'ring': return 'Koordinationsring';
+      case 'ladder': return 'Koordinationsleiter';
+      case 'player': return `Feldspieler ${el.label ? `#${el.label}` : ''}`;
+      case 'goalkeeper': return `Torwart ${el.label ? `(${el.label})` : '(TW)'}`;
+      case 'dummy': return 'Freistoß-Dummy';
+      case 'ball': return 'Fußball';
+      case 'goal':
+        return el.subType === 'mini' ? 'Mini-Tor' : el.subType === 'youth' ? 'Jugend-Tor' : 'Groß-Tor';
+      case 'line':
+        return el.subType === 'pass' ? 'Passweg' : el.subType === 'dribble' ? 'Dribbling' : 'Laufweg';
+      case 'text': return 'Text';
+      default: return 'Element';
+    }
+  };
+
+  const getElementIconEmoji = (type: string): string => {
+    switch (type) {
+      case 'cone': return '📐';
+      case 'disc': return '🔘';
+      case 'ring': return '⭕';
+      case 'ladder': return '🪜';
+      case 'player': return '🏃';
+      case 'goalkeeper': return '🧤';
+      case 'dummy': return '🧍';
+      case 'ball': return '⚽';
+      case 'goal': return '🥅';
+      case 'line': return '↗️';
+      case 'text': return '🔤';
+      default: return '📍';
+    }
+  };
+
+  const updateSelectedElement = (updates: Partial<ElementItem>) => {
+    if (!selectedElementId) return;
+    setElements((prev) =>
+      prev.map((el) => (el.id === selectedElementId ? { ...el, ...updates } : el))
+    );
+  };
+
   const handleRotateSelected = () => {
     if (!selectedElementId) return;
-    setElements(
-      elements.map((el) => {
+    setElements((prev) =>
+      prev.map((el) => {
         if (el.id === selectedElementId) {
           const currentRot = el.rotation || 0;
           return { ...el, rotation: (currentRot + 90) % 360 };
@@ -958,8 +1082,8 @@ export default function ExerciseSketchEditor({
 
   const handleResizeSelected = (delta: number) => {
     if (!selectedElementId) return;
-    setElements(
-      elements.map((el) => {
+    setElements((prev) =>
+      prev.map((el) => {
         if (el.id === selectedElementId) {
           const currentSize = el.size || 100;
           const newSize = Math.max(40, Math.min(250, currentSize + delta));
@@ -972,9 +1096,110 @@ export default function ExerciseSketchEditor({
 
   const handleDeleteSelected = () => {
     if (!selectedElementId) return;
-    setElements(elements.filter((el) => el.id !== selectedElementId));
+    setElements((prev) => prev.filter((el) => el.id !== selectedElementId));
     setSelectedElementId(null);
+    toast.info('Element gelöscht.');
   };
+
+  const handleCopy = () => {
+    if (!selectedElementId) return;
+    const el = elements.find((item) => item.id === selectedElementId);
+    if (el) {
+      setClipboard({ ...el });
+      toast.info(`"${getElementTypeName(el)}" kopiert.`);
+    }
+  };
+
+  const handlePaste = () => {
+    if (!clipboard) return;
+    const canvas = canvasRef.current;
+    const maxW = canvas?.width || 720;
+    const maxH = canvas?.height || 720;
+
+    let newX = clipboard.x + 25;
+    let newY = clipboard.y + 25;
+    if (newX > maxW - 30) newX = 40;
+    if (newY > maxH - 30) newY = 40;
+
+    const newEl: ElementItem = {
+      ...clipboard,
+      id: `el_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      x: newX,
+      y: newY,
+      x2: clipboard.x2 !== undefined ? clipboard.x2 + 25 : undefined,
+      y2: clipboard.y2 !== undefined ? clipboard.y2 + 25 : undefined
+    };
+
+    setElements((prev) => [...prev, newEl]);
+    setSelectedElementId(newEl.id);
+    setClipboard(newEl);
+    toast.success('Element eingefügt.');
+  };
+
+  const handleDuplicate = () => {
+    if (!selectedElementId) return;
+    const el = elements.find((item) => item.id === selectedElementId);
+    if (!el) return;
+
+    const canvas = canvasRef.current;
+    const maxW = canvas?.width || 720;
+    const maxH = canvas?.height || 720;
+
+    let newX = el.x + 25;
+    let newY = el.y + 25;
+    if (newX > maxW - 30) newX = 40;
+    if (newY > maxH - 30) newY = 40;
+
+    const newEl: ElementItem = {
+      ...el,
+      id: `el_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      x: newX,
+      y: newY,
+      x2: el.x2 !== undefined ? el.x2 + 25 : undefined,
+      y2: el.y2 !== undefined ? el.y2 + 25 : undefined
+    };
+
+    setElements((prev) => [...prev, newEl]);
+    setSelectedElementId(newEl.id);
+    setClipboard(newEl);
+    toast.success('Element dupliziert.');
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+        if (selectedElementId) {
+          e.preventDefault();
+          handleCopy();
+        }
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
+        if (clipboard) {
+          e.preventDefault();
+          handlePaste();
+        }
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
+        if (selectedElementId) {
+          e.preventDefault();
+          handleDuplicate();
+        }
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (selectedElementId) {
+          e.preventDefault();
+          handleDeleteSelected();
+        }
+      } else if (e.key === 'Escape') {
+        setSelectedElementId(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedElementId, clipboard, elements]);
 
   const handleClearAll = async () => {
     const isConfirmed = await confirmModal({
@@ -999,6 +1224,8 @@ export default function ExerciseSketchEditor({
       onSave({ elements, pitchType, orientation }, thumbnailDataUrl);
     }
   };
+
+  const selectedElement = elements.find((el) => el.id === selectedElementId) || null;
 
   return (
     <div className={`flex flex-col bg-zinc-950 p-4 gap-4 ${isFullscreen ? 'fixed inset-0 z-[9999] rounded-none border-none' : 'rounded-2xl border border-zinc-800'}`}>
@@ -1068,59 +1295,8 @@ export default function ExerciseSketchEditor({
           ))}
         </div>
 
-        {/* Color Palette */}
+        {/* View & Canvas Controls */}
         <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Farbe:</span>
-          {['#ef4444', '#3b82f6', '#eab308', '#22c55e', '#ffffff', '#000000'].map((color) => (
-            <button
-              key={color}
-              type="button"
-              onClick={() => setSelectedColor(color)}
-              className={`w-6 h-6 rounded-full border-2 transition-transform ${
-                selectedColor === color ? 'scale-125 border-white' : 'border-transparent'
-              }`}
-              style={{ backgroundColor: color }}
-            />
-          ))}
-        </div>
-
-        {/* Quick Actions */}
-        <div className="flex items-center gap-2">
-          {selectedElementId && (
-            <>
-              <button
-                type="button"
-                onClick={() => handleResizeSelected(20)}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-zinc-800 text-zinc-200 hover:bg-zinc-700 text-xs font-bold transition-all"
-                title="Größe vergrößern"
-              >
-                🔍+ Größer
-              </button>
-              <button
-                type="button"
-                onClick={() => handleResizeSelected(-20)}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-zinc-800 text-zinc-200 hover:bg-zinc-700 text-xs font-bold transition-all"
-                title="Größe verkleinern"
-              >
-                🔍- Kleiner
-              </button>
-              <button
-                type="button"
-                onClick={handleRotateSelected}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 text-xs font-bold transition-all"
-                title="Element um 90° drehen"
-              >
-                <RotateCw className="w-4 h-4" /> 90° Drehen
-              </button>
-              <button
-                type="button"
-                onClick={handleDeleteSelected}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 text-xs font-bold transition-all"
-              >
-                <Trash2 className="w-4 h-4" /> Löschen
-              </button>
-            </>
-          )}
           <button
             type="button"
             onClick={() => setOrientation(orientation === 'landscape' ? 'portrait' : 'landscape')}
@@ -1157,10 +1333,10 @@ export default function ExerciseSketchEditor({
         </div>
       </div>
 
-      {/* Main Workspace (Tools Panel + Canvas) */}
-      <div className="flex flex-col lg:flex-row gap-4 items-start">
+      {/* Main Workspace (Tools Panel + Canvas + Properties Panel) */}
+      <div className="flex flex-col xl:flex-row gap-4 items-start">
         {/* Left Elements / Tools Panel */}
-        <div className="w-full lg:w-60 flex flex-col gap-2 shrink-0">
+        <div className="w-full xl:w-56 flex flex-col gap-2 shrink-0">
           <div className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1 hidden lg:block">
             Werkzeuge & Akteure
           </div>
@@ -1214,6 +1390,8 @@ export default function ExerciseSketchEditor({
             { id: 'select', label: 'Auswählen & Verschieben', icon: Square },
             { id: 'cone', label: 'Hütchen', icon: Square },
             { id: 'disc', label: 'Markierteller (Loch)', icon: Disc },
+            { id: 'ring', label: 'Koordinationsring', icon: CircleDot },
+            { id: 'ladder', label: 'Koordinationsleiter', icon: AlignJustify },
             { id: 'player', label: 'Feldspieler (Trikot)', icon: Users },
             { id: 'goalkeeper', label: 'Torwart (TW)', icon: Shield },
             { id: 'dummy', label: 'Freistoß-Dummy', icon: UserX },
@@ -1289,15 +1467,394 @@ export default function ExerciseSketchEditor({
 
         {/* Right Canvas Area */}
         <div className="flex-1 w-full overflow-hidden flex items-center justify-center bg-zinc-900/50 rounded-xl border border-zinc-800/80 p-2">
-          <canvas
-            ref={canvasRef}
-            width={orientation === 'landscape' ? 720 : 480}
-            height={orientation === 'landscape' ? 480 : 720}
-            onMouseDown={handleCanvasMouseDown}
-            onMouseMove={handleCanvasMouseMove}
-            onMouseUp={handleCanvasMouseUp}
-            className={`w-full ${orientation === 'landscape' ? 'aspect-[3/2] max-w-[720px]' : 'aspect-[2/3] max-w-[480px]'} rounded-lg shadow-2xl cursor-crosshair touch-none ${isFullscreen ? 'max-w-full max-h-[80vh] w-auto h-auto' : ''}`}
-          />
+          {(() => {
+            const isSquarePitch = ['green_full', 'futsal_full', 'futsal_empty'].includes(pitchType);
+            const canvasWidth = isSquarePitch ? 720 : orientation === 'landscape' ? 720 : 480;
+            const canvasHeight = isSquarePitch ? 720 : orientation === 'landscape' ? 480 : 720;
+
+            return (
+              <canvas
+                ref={canvasRef}
+                width={canvasWidth}
+                height={canvasHeight}
+                onMouseDown={handleCanvasMouseDown}
+                onMouseMove={handleCanvasMouseMove}
+                onMouseUp={handleCanvasMouseUp}
+                className={`w-full ${
+                  isSquarePitch
+                    ? 'aspect-square max-w-[720px]'
+                    : orientation === 'landscape'
+                    ? 'aspect-[3/2] max-w-[720px]'
+                    : 'aspect-[2/3] max-w-[480px]'
+                } rounded-lg shadow-2xl cursor-crosshair touch-none ${isFullscreen ? 'max-w-full max-h-[80vh] w-auto h-auto' : ''}`}
+              />
+            );
+          })()}
+        </div>
+
+        {/* Right Properties Panel / Item-Optionen */}
+        <div className="w-full xl:w-72 flex flex-col gap-3.5 shrink-0 bg-zinc-900/90 border border-zinc-800 rounded-2xl p-4 shadow-xl">
+          {/* Header */}
+          <div className="flex items-center justify-between border-b border-zinc-800 pb-2.5">
+            <div className="flex items-center gap-2">
+              <Settings2 className="w-4 h-4 text-primary" />
+              <span className="text-xs font-bold text-white uppercase tracking-wider">
+                {selectedElement ? 'Element-Optionen' : 'Eigenschaften'}
+              </span>
+            </div>
+            {selectedElement && (
+              <button
+                type="button"
+                onClick={() => setSelectedElementId(null)}
+                className="text-zinc-500 hover:text-white p-1 rounded hover:bg-zinc-800 transition-colors"
+                title="Auswahl aufheben (Esc)"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {selectedElement ? (
+            <div className="space-y-3.5">
+              {/* Selected Element Info Badge & Delete */}
+              <div className="flex items-center justify-between bg-zinc-950/70 p-2.5 rounded-xl border border-zinc-800/80">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">{getElementIconEmoji(selectedElement.type)}</span>
+                  <div>
+                    <span className="text-xs font-bold text-white block leading-tight">
+                      {getElementTypeName(selectedElement)}
+                    </span>
+                    <span className="text-[10px] text-zinc-500 font-mono">
+                      X: {Math.round(selectedElement.x)} · Y: {Math.round(selectedElement.y)}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleDeleteSelected}
+                  className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition-all text-xs"
+                  title="Element löschen (Entf)"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Copy / Duplicate / Paste Actions */}
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
+                  Aktionen
+                </span>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={handleDuplicate}
+                    className="flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 text-xs font-bold transition-all"
+                    title="Element duplizieren (Ctrl+D)"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>Duplizieren</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCopy}
+                    className="flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-bold transition-all border border-zinc-700/50"
+                    title="In Zwischenablage kopieren (Ctrl+C)"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>Kopieren</span>
+                  </button>
+                </div>
+                {clipboard && (
+                  <button
+                    type="button"
+                    onClick={handlePaste}
+                    className="w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-bold transition-all"
+                    title="Kopiertes Element einfügen (Ctrl+V)"
+                  >
+                    <ClipboardPaste className="w-3.5 h-3.5" />
+                    <span>Einfügen (Ctrl+V)</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Color Selection */}
+              <div className="space-y-1.5 border-t border-zinc-800 pt-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Palette className="w-3.5 h-3.5 text-primary" /> Farbe
+                  </span>
+                  <span className="text-[10px] text-zinc-500 font-mono">
+                    {selectedElement.color || selectedColor}
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {['#ef4444', '#3b82f6', '#eab308', '#22c55e', '#f97316', '#a855f7', '#ffffff', '#000000'].map((col) => (
+                    <button
+                      key={col}
+                      type="button"
+                      onClick={() => {
+                        setSelectedColor(col);
+                        updateSelectedElement({ color: col });
+                      }}
+                      className={`w-6 h-6 rounded-full border-2 transition-transform ${
+                        (selectedElement.color || selectedColor) === col ? 'scale-125 border-white shadow-md' : 'border-transparent'
+                      }`}
+                      style={{ backgroundColor: col }}
+                    />
+                  ))}
+                  <label
+                    className="relative w-6 h-6 rounded-full border-2 border-dashed border-zinc-600 hover:border-white flex items-center justify-center cursor-pointer transition-all overflow-hidden"
+                    title="Eigene Farbe wählen"
+                  >
+                    <input
+                      type="color"
+                      value={selectedElement.color || selectedColor}
+                      onChange={(e) => {
+                        setSelectedColor(e.target.value);
+                        updateSelectedElement({ color: e.target.value });
+                      }}
+                      className="opacity-0 absolute inset-0 cursor-pointer"
+                    />
+                    <span className="text-[10px] text-zinc-400">+</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Size / Scale */}
+              <div className="space-y-1.5 border-t border-zinc-800 pt-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <ZoomIn className="w-3.5 h-3.5 text-primary" /> Größe
+                  </span>
+                  <span className="text-[11px] font-bold text-white bg-zinc-800 px-2 py-0.5 rounded">
+                    {selectedElement.size || 100}%
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="40"
+                  max="250"
+                  step="5"
+                  value={selectedElement.size || 100}
+                  onChange={(e) => updateSelectedElement({ size: parseInt(e.target.value) })}
+                  className="w-full accent-primary h-1.5 bg-zinc-800 rounded-lg cursor-pointer"
+                />
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => handleResizeSelected(-20)}
+                    className="flex-1 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[11px] font-bold transition-all"
+                  >
+                    -20%
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => updateSelectedElement({ size: 100 })}
+                    className="px-2 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 text-[11px] font-bold transition-all"
+                    title="Auf 100% zurücksetzen"
+                  >
+                    100%
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleResizeSelected(20)}
+                    className="flex-1 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[11px] font-bold transition-all"
+                  >
+                    +20%
+                  </button>
+                </div>
+              </div>
+
+              {/* Rotation */}
+              <div className="space-y-1.5 border-t border-zinc-800 pt-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <RotateCw className="w-3.5 h-3.5 text-primary" /> Drehung
+                  </span>
+                  <span className="text-[11px] font-bold text-white bg-zinc-800 px-2 py-0.5 rounded">
+                    {selectedElement.rotation || 0}°
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRotateSelected}
+                  className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 border border-blue-500/30 text-xs font-bold transition-all"
+                  title="Element um 90° im Uhrzeigersinn drehen"
+                >
+                  <RotateCw className="w-3.5 h-3.5" /> +90° Drehen
+                </button>
+                <div className="grid grid-cols-4 gap-1">
+                  {[0, 90, 180, 270].map((deg) => (
+                    <button
+                      key={deg}
+                      type="button"
+                      onClick={() => updateSelectedElement({ rotation: deg })}
+                      className={`py-1 rounded text-[10px] font-bold transition-all ${
+                        (selectedElement.rotation || 0) === deg
+                          ? 'bg-primary text-white'
+                          : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white'
+                      }`}
+                    >
+                      {deg}°
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Type Specific Options: Goal */}
+              {selectedElement.type === 'goal' && (
+                <div className="space-y-1.5 border-t border-zinc-800 pt-3">
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
+                    Tor-Größe wählen
+                  </label>
+                  <div className="space-y-1">
+                    {[
+                      { id: 'mini', label: '⚽ Mini-Tor' },
+                      { id: 'youth', label: '🥅 Jugend-Tor' },
+                      { id: 'full', label: '🏟️ Groß-Tor' }
+                    ].map((g) => (
+                      <button
+                        key={g.id}
+                        type="button"
+                        onClick={() => updateSelectedElement({ subType: g.id })}
+                        className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                          (selectedElement.subType || 'mini') === g.id
+                            ? 'bg-primary text-white shadow-md'
+                            : 'bg-zinc-950/60 text-zinc-400 hover:bg-zinc-800 hover:text-white border border-zinc-800'
+                        }`}
+                      >
+                        {g.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Type Specific Options: Player / Goalkeeper / Text Label */}
+              {['player', 'goalkeeper', 'text'].includes(selectedElement.type) && (
+                <div className="space-y-1.5 border-t border-zinc-800 pt-3">
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
+                    {selectedElement.type === 'text' ? 'Text' : 'Trikotnummer / Name'}
+                  </label>
+                  <input
+                    type="text"
+                    value={selectedElement.label || ''}
+                    onChange={(e) => updateSelectedElement({ label: e.target.value })}
+                    placeholder={selectedElement.type === 'player' ? 'z. B. 10' : selectedElement.type === 'goalkeeper' ? 'TW' : 'Text eingeben'}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-zinc-500 focus:border-primary focus:outline-none"
+                  />
+                </div>
+              )}
+
+              {/* Type Specific Options: Line Style */}
+              {selectedElement.type === 'line' && (
+                <div className="space-y-1.5 border-t border-zinc-800 pt-3">
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
+                    Linientyp
+                  </label>
+                  <div className="space-y-1">
+                    {[
+                      { id: 'pass', label: 'Passweg (---)' },
+                      { id: 'run', label: 'Laufweg (──)' },
+                      { id: 'dribble', label: 'Dribbling (···)' }
+                    ].map((lt) => (
+                      <button
+                        key={lt.id}
+                        type="button"
+                        onClick={() => updateSelectedElement({ subType: lt.id })}
+                        className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                          (selectedElement.subType || 'pass') === lt.id
+                            ? 'bg-primary text-white shadow-md'
+                            : 'bg-zinc-950/60 text-zinc-400 hover:bg-zinc-800 hover:text-white border border-zinc-800'
+                        }`}
+                      >
+                        {lt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-3.5">
+              {clipboard ? (
+                <div className="p-3 rounded-xl bg-zinc-950/80 border border-emerald-500/30 space-y-2">
+                  <div className="flex items-center justify-between text-xs text-zinc-300 font-bold">
+                    <span>Element in Ablage</span>
+                    <span className="text-[10px] text-emerald-400 font-normal">Kopiert</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handlePaste}
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition-all"
+                  >
+                    <ClipboardPaste className="w-3.5 h-3.5" />
+                    <span>Einfügen (Ctrl+V)</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="p-3.5 rounded-xl bg-zinc-950/60 border border-zinc-800/80 text-center text-zinc-500 space-y-1">
+                  <p className="text-xs font-semibold text-zinc-300">Kein Element ausgewählt</p>
+                  <p className="text-[11px] leading-relaxed text-zinc-400">
+                    Klicke auf ein Element auf dem Spielfeld, um Farbe, Drehung oder Größe anzupassen.
+                  </p>
+                </div>
+              )}
+
+              {/* Default Color for new items */}
+              <div className="space-y-1.5 border-t border-zinc-800 pt-3">
+                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
+                  Standardfarbe für neue Items
+                </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  {['#ef4444', '#3b82f6', '#eab308', '#22c55e', '#f97316', '#a855f7', '#ffffff', '#000000'].map((col) => (
+                    <button
+                      key={col}
+                      type="button"
+                      onClick={() => setSelectedColor(col)}
+                      className={`w-6 h-6 rounded-full border-2 transition-transform ${
+                        selectedColor === col ? 'scale-125 border-white shadow-md' : 'border-transparent'
+                      }`}
+                      style={{ backgroundColor: col }}
+                    />
+                  ))}
+                  <label
+                    className="relative w-6 h-6 rounded-full border-2 border-dashed border-zinc-600 hover:border-white flex items-center justify-center cursor-pointer transition-all overflow-hidden"
+                    title="Eigene Standardfarbe wählen"
+                  >
+                    <input
+                      type="color"
+                      value={selectedColor}
+                      onChange={(e) => setSelectedColor(e.target.value)}
+                      className="opacity-0 absolute inset-0 cursor-pointer"
+                    />
+                    <span className="text-[10px] text-zinc-400">+</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Keyboard Shortcuts Info */}
+              <div className="p-3 rounded-xl bg-zinc-950/50 border border-zinc-800/80 space-y-1.5 text-[11px] text-zinc-400">
+                <span className="font-bold text-zinc-300 block mb-1">Tastatur-Shortcuts:</span>
+                <div className="flex justify-between items-center">
+                  <span>Kopieren:</span>
+                  <kbd className="px-1.5 py-0.5 bg-zinc-800 rounded text-zinc-200 font-mono text-[10px]">Ctrl+C</kbd>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span>Einfügen:</span>
+                  <kbd className="px-1.5 py-0.5 bg-zinc-800 rounded text-zinc-200 font-mono text-[10px]">Ctrl+V</kbd>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span>Duplizieren:</span>
+                  <kbd className="px-1.5 py-0.5 bg-zinc-800 rounded text-zinc-200 font-mono text-[10px]">Ctrl+D</kbd>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span>Löschen:</span>
+                  <kbd className="px-1.5 py-0.5 bg-zinc-800 rounded text-zinc-200 font-mono text-[10px]">Entf</kbd>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

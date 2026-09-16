@@ -256,6 +256,7 @@ class SystemSettings(Base):
     legal_address = Column(String(500), nullable=True, default="")
     legal_representative = Column(String(255), nullable=True, default="")
     legal_register_info = Column(String(255), nullable=True, default="")
+    log_irrelevant_patterns = Column(JSON, default=list, nullable=True)
 
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -584,3 +585,17 @@ class UserActivityLog(Base):
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
     user = relationship("User", backref="activity_logs")
+ 
+
+class SystemLog(Base):
+    __tablename__ = "system_logs"
+
+    id = Column(String(50), primary_key=True, index=True)
+    source = Column(String(20), nullable=False, default="backend", index=True)  # "backend" | "frontend"
+    level = Column(String(20), nullable=False, default="INFO", index=True)      # "DEBUG" | "INFO" | "WARNING" | "ERROR" | "CRITICAL"
+    message = Column(Text, nullable=False)
+    module = Column(String(100), nullable=True, index=True)
+    details = Column(JSON, nullable=True)
+    is_irrelevant = Column(Boolean, default=False, nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+

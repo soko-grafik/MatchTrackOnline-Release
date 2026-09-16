@@ -15,6 +15,7 @@ import { ToastProvider } from "@/contexts/ToastContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import CookieConsentBanner from "@/components/CookieConsentBanner";
+import ClientErrorLogger from "@/components/ClientErrorLogger";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -58,6 +59,7 @@ export default function RootLayout({
       </head>
       <body className={`${inter.className} antialiased`}>
         <ServiceWorkerRegister />
+        <ClientErrorLogger />
         <ThemeProvider>
           <ToastProvider>
             <AuthProvider>

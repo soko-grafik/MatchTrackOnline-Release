@@ -897,3 +897,92 @@ export const getLegalTemplates = async () => {
   return safeJsonParse(response.data);
 };
 
+// ==========================================
+// SYSTEM LOGS (BACKEND & FRONTEND)
+// ==========================================
+
+export interface SystemLogItem {
+  id: string;
+  source: 'backend' | 'frontend';
+  level: 'DEBUG' | 'INFO' | 'WARNING' | 'ERROR' | 'CRITICAL';
+  message: string;
+  module?: string;
+  details?: any;
+  is_irrelevant: boolean;
+  created_at: string;
+}
+
+export interface SystemLogsResponse {
+  total: number;
+  offset: number;
+  limit: number;
+  stats: {
+    total_all: number;
+    backend_count: number;
+    frontend_count: number;
+    error_count: number;
+    warning_count: number;
+    irrelevant_count: number;
+  };
+  logs: SystemLogItem[];
+}
+
+export const getSystemLogs = async (params: {
+  source?: string;
+  level?: string;
+  search?: string;
+  show_irrelevant?: 'false' | 'true' | 'only';
+  limit?: number;
+  offset?: number;
+}): Promise<SystemLogsResponse> => {
+  const response = await api.get('/admin/logs', { params });
+  return safeJsonParse(response.data);
+};
+
+export const sendClientLog = async (data: {
+  level?: string;
+  message: string;
+  module?: string;
+  details?: any;
+}) => {
+  try {
+    const response = await api.post('/admin/logs/client', data);
+    return safeJsonParse(response.data);
+  } catch (err) {
+    return null;
+  }
+};
+
+export const setLogIrrelevant = async (logId: string, isIrrelevant: boolean) => {
+  const response = await api.patch(`/admin/logs/${logId}/irrelevant`, { is_irrelevant: isIrrelevant });
+  return safeJsonParse(response.data);
+};
+
+export const markLogPatternIrrelevant = async (pattern: string, markExisting: boolean = true) => {
+  const response = await api.post('/admin/logs/mark-pattern-irrelevant', { pattern, mark_existing: markExisting });
+  return safeJsonParse(response.data);
+};
+
+export const getLogIrrelevantPatterns = async () => {
+  const response = await api.get('/admin/logs/irrelevant-patterns');
+  return safeJsonParse(response.data);
+};
+
+export const deleteLogIrrelevantPattern = async (pattern: string) => {
+  const response = await api.delete('/admin/logs/irrelevant-pattern', { data: { pattern } });
+  return safeJsonParse(response.data);
+};
+
+export const clearSystemLogs = async (olderThanDays?: number, onlyIrrelevant: boolean = false) => {
+  const response = await api.delete('/admin/logs', {
+    params: { older_than_days: olderThanDays, only_irrelevant: onlyIrrelevant }
+  });
+  return safeJsonParse(response.data);
+};
+
+export const createTestLogs = async () => {
+  const response = await api.post('/admin/logs/test');
+  return safeJsonParse(response.data);
+};
+
+

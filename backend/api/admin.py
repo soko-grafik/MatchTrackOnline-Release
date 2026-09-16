@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from fastapi.responses import Response
 
 from db.session import get_db, BASE_DIR, UPLOAD_DIR
-from models import User, UserRole, Match, VideoChunk, SystemSettings, HeatmapStatus, StitchingStatus, Team, MatchEvent, TacticsBoard, TrainingSession, PlayerEvaluation, UserActivityLog
+from models import User, UserRole, Match, VideoChunk, SystemSettings, HeatmapStatus, StitchingStatus, Team, MatchEvent, TacticsBoard, TrainingSession, PlayerEvaluation, UserActivityLog, SystemLog
 from pydantic import BaseModel
 from .dependencies import require_admin, require_trainer
 from core.security import get_password_hash
@@ -20,6 +20,7 @@ from services.thumbnail_service import generate_thumbnail
 from services.hls_service import generate_hls_playlist
 from services.stitching_service import run_stitching
 from services.backup_service import generate_sql_dump, upload_to_ftp, run_ftp_backup_job
+from services.logger_service import create_system_log, generate_test_logs
 
 router = APIRouter()
 
@@ -1598,3 +1599,241 @@ async def get_user_activity_logs(
             for l in logs
         ]
     }
+
+
+# ==========================================
+# SYSTEM LOGS (BACKEND & FRONTEND)
+# ==========================================
+
+class ClientLogPayload(BaseModel):
+    level: str = "ERROR"
+    message: str
+    module: Optional[str] = "frontend"
+    details: Optional[dict] = None
+
+class SetLogIrrelevantPayload(BaseModel):
+    is_irrelevant: bool
+
+class MarkPatternPayload(BaseModel):
+    pattern: str
+    mark_existing: bool = True
+
+class DeletePatternPayload(BaseModel):
+    pattern: str
+
+
+@router.get("/logs")
+def get_system_logs(
+    source: Optional[str] = None,
+    level: Optional[str] = None,
+    search: Optional[str] = None,
+    show_irrelevant: Optional[str] = "false",
+    limit: int = 100,
+    offset: int = 0,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """Gibt gefilterte System-Logs für Backend und Frontend zurück."""
+    query = db.query(SystemLog)
+
+    if source and source.lower() != "all":
+        query = query.filter(SystemLog.source == source.lower())
+
+    if level and level.upper() != "ALL":
+        query = query.filter(SystemLog.level == level.upper())
+
+    if search and search.strip():
+        term = f"%{search.strip()}%"
+        query = query.filter(
+            (SystemLog.message.ilike(term)) | 
+            (SystemLog.module.ilike(term))
+        )
+
+    if show_irrelevant == "false" or show_irrelevant is False:
+        query = query.filter(SystemLog.is_irrelevant == False)
+    elif show_irrelevant == "only":
+        query = query.filter(SystemLog.is_irrelevant == True)
+
+    total_count = query.count()
+    logs = query.order_by(SystemLog.created_at.desc()).offset(offset).limit(limit).all()
+
+    total_all = db.query(SystemLog).count()
+    backend_count = db.query(SystemLog).filter(SystemLog.source == "backend").count()
+    frontend_count = db.query(SystemLog).filter(SystemLog.source == "frontend").count()
+    error_count = db.query(SystemLog).filter(SystemLog.level.in_(["ERROR", "CRITICAL"])).count()
+    warning_count = db.query(SystemLog).filter(SystemLog.level == "WARNING").count()
+    irrelevant_count = db.query(SystemLog).filter(SystemLog.is_irrelevant == True).count()
+
+    return {
+        "total": total_count,
+        "offset": offset,
+        "limit": limit,
+        "stats": {
+            "total_all": total_all,
+            "backend_count": backend_count,
+            "frontend_count": frontend_count,
+            "error_count": error_count,
+            "warning_count": warning_count,
+            "irrelevant_count": irrelevant_count
+        },
+        "logs": [
+            {
+                "id": l.id,
+                "source": l.source,
+                "level": l.level,
+                "message": l.message,
+                "module": l.module,
+                "details": l.details,
+                "is_irrelevant": l.is_irrelevant,
+                "created_at": l.created_at.isoformat() if l.created_at else None
+            }
+            for l in logs
+        ]
+    }
+
+
+@router.post("/logs/client")
+def create_client_log(
+    payload: ClientLogPayload,
+    db: Session = Depends(get_db)
+):
+    """
+    Nimmt Client- / Frontend-Logs entgegen.
+    Verfügbar für Browser Error-Boundaries und Frontend Runtime-Reporting.
+    """
+    log_entry = create_system_log(
+        db=db,
+        source="frontend",
+        level=payload.level,
+        message=payload.message,
+        module=payload.module or "client",
+        details=payload.details
+    )
+    return {
+        "success": True,
+        "id": log_entry.id,
+        "is_irrelevant": log_entry.is_irrelevant
+    }
+
+
+@router.patch("/logs/{log_id}/irrelevant")
+def set_log_irrelevant(
+    log_id: str,
+    payload: SetLogIrrelevantPayload,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """Schaltet den Irrelevant-Status für einen einzelnen Log-Eintrag um."""
+    log_entry = db.query(SystemLog).filter(SystemLog.id == log_id).first()
+    if not log_entry:
+        raise HTTPException(status_code=404, detail="Log-Eintrag nicht gefunden")
+
+    log_entry.is_irrelevant = payload.is_irrelevant
+    db.commit()
+    return {
+        "success": True,
+        "id": log_entry.id,
+        "is_irrelevant": log_entry.is_irrelevant
+    }
+
+
+@router.post("/logs/mark-pattern-irrelevant")
+def mark_pattern_irrelevant(
+    payload: MarkPatternPayload,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """
+    Speichert ein Textmuster in SystemSettings, damit zukünftige Logs dieses Typs automatisch
+    als irrelevant eingestuft werden, und markiert optional alle bestehenden passenden Logs.
+    """
+    pat = payload.pattern.strip()
+    if not pat:
+        raise HTTPException(status_code=400, detail="Muster darf nicht leer sein")
+
+    settings = db.query(SystemSettings).filter(SystemSettings.id == 1).first()
+    if not settings:
+        settings = SystemSettings(id=1, log_irrelevant_patterns=[])
+        db.add(settings)
+
+    patterns = list(settings.log_irrelevant_patterns or [])
+    if pat not in patterns:
+        patterns.append(pat)
+        settings.log_irrelevant_patterns = patterns
+        db.commit()
+
+    affected_count = 0
+    if payload.mark_existing:
+        term = f"%{pat}%"
+        matching_logs = db.query(SystemLog).filter(
+            SystemLog.message.ilike(term),
+            SystemLog.is_irrelevant == False
+        ).all()
+        affected_count = len(matching_logs)
+        for ml in matching_logs:
+            ml.is_irrelevant = True
+        db.commit()
+
+    return {
+        "success": True,
+        "pattern": pat,
+        "affected_count": affected_count,
+        "patterns": settings.log_irrelevant_patterns
+    }
+
+
+@router.get("/logs/irrelevant-patterns")
+def get_irrelevant_patterns(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """Gibt alle aktiven Ignorier-Muster zurück."""
+    settings = db.query(SystemSettings).filter(SystemSettings.id == 1).first()
+    patterns = (settings.log_irrelevant_patterns or []) if settings else []
+    return {"patterns": patterns}
+
+
+@router.delete("/logs/irrelevant-pattern")
+def delete_irrelevant_pattern(
+    payload: DeletePatternPayload,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """Entfernt ein Ignorier-Muster aus den Systemeinstellungen."""
+    pat = payload.pattern.strip()
+    settings = db.query(SystemSettings).filter(SystemSettings.id == 1).first()
+    if settings and settings.log_irrelevant_patterns:
+        patterns = [p for p in settings.log_irrelevant_patterns if p != pat]
+        settings.log_irrelevant_patterns = patterns
+        db.commit()
+    return {"success": True, "patterns": settings.log_irrelevant_patterns if settings else []}
+
+
+@router.delete("/logs")
+def clear_system_logs(
+    older_than_days: Optional[int] = None,
+    only_irrelevant: bool = False,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """Löscht Logs anhand von Kriterien oder leert das gesamte Log."""
+    query = db.query(SystemLog)
+    if older_than_days is not None and older_than_days > 0:
+        cutoff = datetime.utcnow() - timedelta(days=older_than_days)
+        query = query.filter(SystemLog.created_at < cutoff)
+    if only_irrelevant:
+        query = query.filter(SystemLog.is_irrelevant == True)
+
+    deleted_count = query.delete(synchronize_session=False)
+    db.commit()
+    return {"success": True, "deleted_count": deleted_count}
+
+
+@router.post("/logs/test")
+def create_test_system_logs(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """Erzeugt eine Test-Mustergruppe an Logs für Backend und Frontend zur Überprüfung."""
+    created = generate_test_logs(db)
+    return {"success": True, "count": len(created)}

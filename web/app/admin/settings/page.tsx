@@ -3,7 +3,24 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { getSystemSettings, updateSystemSettings, testSmtpEmail, triggerFtpBackup, testFtpConnection, cleanupOrganizerMatches, getLegalTemplates } from '@/services/api';
+import { useToast } from '@/contexts/ToastContext';
+import {
+  getSystemSettings,
+  updateSystemSettings,
+  testSmtpEmail,
+  triggerFtpBackup,
+  testFtpConnection,
+  cleanupOrganizerMatches,
+  getLegalTemplates,
+  getSystemLogs,
+  setLogIrrelevant,
+  markLogPatternIrrelevant,
+  getLogIrrelevantPatterns,
+  deleteLogIrrelevantPattern,
+  clearSystemLogs,
+  createTestLogs,
+  SystemLogItem
+} from '@/services/api';
 import {
   Settings2,
   Layers,
@@ -31,16 +48,31 @@ import {
   ShieldCheck,
   ExternalLink,
   RotateCcw,
-  Building
+  Building,
+  Filter,
+  Search,
+  Server,
+  ChevronDown,
+  ChevronRight,
+  Info,
+  Ban,
+  Check,
+  Copy,
+  SlidersHorizontal,
+  Terminal,
+  AlertTriangle,
+  ListFilter,
+  Clock
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import PageHeader from '@/components/PageHeader';
 
 export default function AdminSettingsPage() {
   const { user, loading: authLoading } = useAuth();
+  const { toast } = useToast();
   const router = useRouter();
 
-  const [activeTab, setActiveTab] = useState<'modules' | 'storage' | 'smtp' | 'ftp' | 'legal'>('modules');
+  const [activeTab, setActiveTab] = useState<'modules' | 'storage' | 'smtp' | 'ftp' | 'legal' | 'logs'>('modules');
   const [legalSubTab, setLegalSubTab] = useState<'imprint' | 'privacy' | 'terms' | 'club'>('imprint');
 
   const [settings, setSettings] = useState<any>({
@@ -99,6 +131,161 @@ export default function AdminSettingsPage() {
 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  // System Logs State
+  const [logs, setLogs] = useState<SystemLogItem[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logStats, setLogStats] = useState({
+    total_all: 0,
+    backend_count: 0,
+    frontend_count: 0,
+    error_count: 0,
+    warning_count: 0,
+    irrelevant_count: 0
+  });
+  const [logSourceFilter, setLogSourceFilter] = useState<'all' | 'backend' | 'frontend'>('all');
+  const [logLevelFilter, setLogLevelFilter] = useState<string>('all');
+  const [logIrrelevantFilter, setLogIrrelevantFilter] = useState<'false' | 'true' | 'only'>('false');
+  const [logSearch, setLogSearch] = useState('');
+  const [expandedLogIds, setExpandedLogIds] = useState<Record<string, boolean>>({});
+  const [autoRefreshLogs, setAutoRefreshLogs] = useState(false);
+  const [ignorePatterns, setIgnorePatterns] = useState<string[]>([]);
+  const [isPatternModalOpen, setIsPatternModalOpen] = useState(false);
+  const [newPatternText, setNewPatternText] = useState('');
+  const [isClearLogsModalOpen, setIsClearLogsModalOpen] = useState(false);
+  const [clearLogsOption, setClearLogsOption] = useState<'all' | '7days' | '30days' | 'only_irrelevant'>('all');
+  const [clearingLogs, setClearingLogs] = useState(false);
+
+  const fetchLogs = async (silent = false) => {
+    if (!silent) setLogsLoading(true);
+    try {
+      const res = await getSystemLogs({
+        source: logSourceFilter,
+        level: logLevelFilter,
+        search: logSearch,
+        show_irrelevant: logIrrelevantFilter,
+        limit: 150,
+        offset: 0
+      });
+      if (res && res.logs) {
+        setLogs(res.logs);
+        if (res.stats) setLogStats(res.stats);
+      }
+    } catch (err: any) {
+      if (!silent) toast.error('Fehler beim Laden der System-Logs');
+    } finally {
+      if (!silent) setLogsLoading(false);
+    }
+  };
+
+  const fetchIgnorePatterns = async () => {
+    try {
+      const res = await getLogIrrelevantPatterns();
+      if (res && res.patterns) {
+        setIgnorePatterns(res.patterns);
+      }
+    } catch (err) {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'logs') {
+      fetchLogs();
+      fetchIgnorePatterns();
+    }
+  }, [activeTab, logSourceFilter, logLevelFilter, logIrrelevantFilter]);
+
+  // Debounced search
+  useEffect(() => {
+    if (activeTab !== 'logs') return;
+    const timer = setTimeout(() => {
+      fetchLogs(true);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [logSearch]);
+
+  // Auto-refresh interval
+  useEffect(() => {
+    if (!autoRefreshLogs || activeTab !== 'logs') return;
+    const interval = setInterval(() => {
+      fetchLogs(true);
+    }, 6000);
+    return () => clearInterval(interval);
+  }, [autoRefreshLogs, activeTab, logSourceFilter, logLevelFilter, logIrrelevantFilter, logSearch]);
+
+  const handleToggleIrrelevant = async (logId: string, currentStatus: boolean, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    try {
+      await setLogIrrelevant(logId, !currentStatus);
+      setLogs(prev => prev.map(l => l.id === logId ? { ...l, is_irrelevant: !currentStatus } : l));
+      setLogStats(prev => ({
+        ...prev,
+        irrelevant_count: !currentStatus ? prev.irrelevant_count + 1 : Math.max(0, prev.irrelevant_count - 1)
+      }));
+      toast.success(!currentStatus ? 'Meldung als irrelevant eingestuft' : 'Meldung wieder als relevant markiert');
+    } catch (err) {
+      toast.error('Fehler beim Ändern des Relevanz-Status');
+    }
+  };
+
+  const handleMarkPattern = async (pattern: string) => {
+    if (!pattern.trim()) return;
+    try {
+      const res = await markLogPatternIrrelevant(pattern.trim(), true);
+      toast.success(`Muster "${pattern.trim()}" wird jetzt ignoriert (${res.affected_count} bestehende Logs markiert)`);
+      setNewPatternText('');
+      fetchLogs();
+      fetchIgnorePatterns();
+    } catch (err) {
+      toast.error('Fehler beim Speichern des Ignorier-Musters');
+    }
+  };
+
+  const handleDeletePattern = async (pattern: string) => {
+    try {
+      await deleteLogIrrelevantPattern(pattern);
+      setIgnorePatterns(prev => prev.filter(p => p !== pattern));
+      toast.info(`Muster "${pattern}" entfernt`);
+    } catch (err) {
+      toast.error('Fehler beim Entfernen des Musters');
+    }
+  };
+
+  const handleCreateTestLogs = async () => {
+    try {
+      await createTestLogs();
+      toast.success('Test-Logs für Backend & Frontend erzeugt');
+      fetchLogs();
+    } catch (err) {
+      toast.error('Fehler beim Erzeugen der Test-Logs');
+    }
+  };
+
+  const handleExecuteClearLogs = async () => {
+    setClearingLogs(true);
+    try {
+      let days: number | undefined = undefined;
+      let onlyIrrelevant = false;
+
+      if (clearLogsOption === '7days') days = 7;
+      else if (clearLogsOption === '30days') days = 30;
+      else if (clearLogsOption === 'only_irrelevant') onlyIrrelevant = true;
+
+      const res = await clearSystemLogs(days, onlyIrrelevant);
+      toast.success(`${res.deleted_count} Log-Einträge gelöscht`);
+      setIsClearLogsModalOpen(false);
+      fetchLogs();
+    } catch (err) {
+      toast.error('Fehler beim Löschen der Logs');
+    } finally {
+      setClearingLogs(false);
+    }
+  };
+
+  const toggleExpandLog = (id: string) => {
+    setExpandedLogIds(prev => ({ ...prev, [id]: !prev[id] }));
+  };
 
   useEffect(() => {
     if (!authLoading && (!user || user.role.toUpperCase() !== 'ADMIN')) {
@@ -260,14 +447,26 @@ export default function AdminSettingsPage() {
                      EINSTELLUNGEN GESPEICHERT
                    </div>
                  )}
-                 <button
-                  type="submit"
-                  disabled={saving}
-                  className="flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-xs font-bold uppercase tracking-wider text-white shadow-xl transition-all hover:bg-primary-hover active:scale-95 disabled:opacity-50"
-                >
-                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                  <span>Einstellungen Speichern</span>
-                </button>
+                 {activeTab === 'logs' ? (
+                   <button
+                     type="button"
+                     onClick={() => fetchLogs()}
+                     disabled={logsLoading}
+                     className="flex items-center gap-2 rounded-xl bg-cyan-600 px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-xl transition-all hover:bg-cyan-500 active:scale-95 disabled:opacity-50"
+                   >
+                     <RefreshCw className={`h-4 w-4 ${logsLoading ? 'animate-spin' : ''}`} />
+                     <span>Logs Aktualisieren</span>
+                   </button>
+                 ) : (
+                   <button
+                     type="submit"
+                     disabled={saving}
+                     className="flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-xs font-bold uppercase tracking-wider text-white shadow-xl transition-all hover:bg-primary-hover active:scale-95 disabled:opacity-50"
+                   >
+                     {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                     <span>Einstellungen Speichern</span>
+                   </button>
+                 )}
               </div>
             }
           />
@@ -288,6 +487,7 @@ export default function AdminSettingsPage() {
               { id: 'smtp', label: 'E-Mail & SMTP', icon: <Send className="w-4 h-4 text-purple-400" /> },
               { id: 'ftp', label: 'FTP Backup & Sync', icon: <Database className="w-4 h-4 text-amber-400" /> },
               { id: 'legal', label: 'Rechtstexte & DSGVO', icon: <Scale className="w-4 h-4 text-rose-400" /> },
+              { id: 'logs', label: 'System-Logs', icon: <FileText className="w-4 h-4 text-cyan-400" /> },
             ].map((tab) => (
               <button
                 type="button"
@@ -952,6 +1152,654 @@ export default function AdminSettingsPage() {
                         placeholder="Musterstraße 1&#10;12345 Musterstadt&#10;Deutschland"
                         className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-xs text-white focus:border-primary focus:outline-none"
                       />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Tab 6: System-Logs (Backend & Frontend) */}
+          {activeTab === 'logs' && (
+            <div className="space-y-6">
+              {/* Stats Overview */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                <div className="bg-zinc-900 border border-zinc-800/80 rounded-2xl p-4 flex flex-col justify-between">
+                  <div className="flex items-center justify-between text-zinc-400 text-xs font-semibold">
+                    <span>Gesamt</span>
+                    <Terminal className="w-4 h-4 text-zinc-500" />
+                  </div>
+                  <div className="text-2xl font-black text-white mt-2">
+                    {logStats.total_all}
+                  </div>
+                  <div className="text-[10px] text-zinc-500 mt-1">Registrierte Einträge</div>
+                </div>
+
+                <div
+                  onClick={() => setLogLevelFilter(logLevelFilter === 'ERROR' ? 'all' : 'ERROR')}
+                  className={`border rounded-2xl p-4 flex flex-col justify-between cursor-pointer transition-all ${
+                    logLevelFilter === 'ERROR'
+                      ? 'bg-red-500/10 border-red-500 ring-1 ring-red-500'
+                      : 'bg-zinc-900 border-zinc-800/80 hover:border-red-500/40'
+                  }`}
+                >
+                  <div className="flex items-center justify-between text-red-400 text-xs font-semibold">
+                    <span>Fehler</span>
+                    <AlertCircle className="w-4 h-4 text-red-500" />
+                  </div>
+                  <div className="text-2xl font-black text-red-400 mt-2">
+                    {logStats.error_count}
+                  </div>
+                  <div className="text-[10px] text-red-500/80 mt-1">Kritisch & Errors</div>
+                </div>
+
+                <div
+                  onClick={() => setLogLevelFilter(logLevelFilter === 'WARNING' ? 'all' : 'WARNING')}
+                  className={`border rounded-2xl p-4 flex flex-col justify-between cursor-pointer transition-all ${
+                    logLevelFilter === 'WARNING'
+                      ? 'bg-amber-500/10 border-amber-500 ring-1 ring-amber-500'
+                      : 'bg-zinc-900 border-zinc-800/80 hover:border-amber-500/40'
+                  }`}
+                >
+                  <div className="flex items-center justify-between text-amber-400 text-xs font-semibold">
+                    <span>Warnungen</span>
+                    <AlertTriangle className="w-4 h-4 text-amber-500" />
+                  </div>
+                  <div className="text-2xl font-black text-amber-400 mt-2">
+                    {logStats.warning_count}
+                  </div>
+                  <div className="text-[10px] text-amber-500/80 mt-1">Überprüfenswert</div>
+                </div>
+
+                <div
+                  onClick={() => setLogSourceFilter(logSourceFilter === 'backend' ? 'all' : 'backend')}
+                  className={`border rounded-2xl p-4 flex flex-col justify-between cursor-pointer transition-all ${
+                    logSourceFilter === 'backend'
+                      ? 'bg-cyan-500/10 border-cyan-500 ring-1 ring-cyan-500'
+                      : 'bg-zinc-900 border-zinc-800/80 hover:border-cyan-500/40'
+                  }`}
+                >
+                  <div className="flex items-center justify-between text-cyan-400 text-xs font-semibold">
+                    <span>Backend</span>
+                    <Server className="w-4 h-4 text-cyan-500" />
+                  </div>
+                  <div className="text-2xl font-black text-cyan-400 mt-2">
+                    {logStats.backend_count}
+                  </div>
+                  <div className="text-[10px] text-cyan-500/80 mt-1">Server & APIs</div>
+                </div>
+
+                <div
+                  onClick={() => setLogSourceFilter(logSourceFilter === 'frontend' ? 'all' : 'frontend')}
+                  className={`border rounded-2xl p-4 flex flex-col justify-between cursor-pointer transition-all ${
+                    logSourceFilter === 'frontend'
+                      ? 'bg-purple-500/10 border-purple-500 ring-1 ring-purple-500'
+                      : 'bg-zinc-900 border-zinc-800/80 hover:border-purple-500/40'
+                  }`}
+                >
+                  <div className="flex items-center justify-between text-purple-400 text-xs font-semibold">
+                    <span>Frontend</span>
+                    <Monitor className="w-4 h-4 text-purple-500" />
+                  </div>
+                  <div className="text-2xl font-black text-purple-400 mt-2">
+                    {logStats.frontend_count}
+                  </div>
+                  <div className="text-[10px] text-purple-500/80 mt-1">Browser & UI</div>
+                </div>
+
+                <div
+                  onClick={() => setLogIrrelevantFilter(logIrrelevantFilter === 'only' ? 'false' : 'only')}
+                  className={`border rounded-2xl p-4 flex flex-col justify-between cursor-pointer transition-all ${
+                    logIrrelevantFilter === 'only'
+                      ? 'bg-zinc-800 border-zinc-600 ring-1 ring-zinc-500'
+                      : 'bg-zinc-900 border-zinc-800/80 hover:border-zinc-700'
+                  }`}
+                >
+                  <div className="flex items-center justify-between text-zinc-400 text-xs font-semibold">
+                    <span>Irrelevant</span>
+                    <Ban className="w-4 h-4 text-zinc-500" />
+                  </div>
+                  <div className="text-2xl font-black text-zinc-300 mt-2">
+                    {logStats.irrelevant_count}
+                  </div>
+                  <div className="text-[10px] text-zinc-500 mt-1">Stummgeschaltet</div>
+                </div>
+              </div>
+
+              {/* Main Log Management Card */}
+              <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 md:p-8 space-y-6">
+                {/* Top Title & Quick Actions */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-800 pb-5">
+                  <div>
+                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                      <FileText className="w-5 h-5 text-cyan-400" />
+                      System- und Anwendungs-Logs
+                    </h3>
+                    <p className="text-xs text-zinc-400 mt-1">
+                      Kombinierte Fehler- und Statusmeldungen aus Backend-Diensten und Frontend-Client.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setAutoRefreshLogs(!autoRefreshLogs)}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+                        autoRefreshLogs
+                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                          : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:text-white'
+                      }`}
+                    >
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>{autoRefreshLogs ? 'Auto-Refresh (An)' : 'Auto-Refresh (Aus)'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => fetchLogs()}
+                      disabled={logsLoading}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold text-white border border-zinc-700 transition-all disabled:opacity-50"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${logsLoading ? 'animate-spin' : ''}`} />
+                      <span>Neu laden</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleCreateTestLogs}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-600/10 hover:bg-cyan-600/20 text-xs font-semibold text-cyan-400 border border-cyan-500/30 transition-all"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Test-Logs</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsPatternModalOpen(true)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-600/10 hover:bg-purple-600/20 text-xs font-semibold text-purple-400 border border-purple-500/30 transition-all"
+                    >
+                      <SlidersHorizontal className="w-3.5 h-3.5" />
+                      <span>Irrelevanz-Filter ({ignorePatterns.length})</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsClearLogsModalOpen(true)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-600/10 hover:bg-red-600/20 text-xs font-semibold text-red-400 border border-red-500/30 transition-all"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Leeren</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Filter Control Bar */}
+                <div className="bg-zinc-950 border border-zinc-800/80 rounded-2xl p-4 space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    {/* Source Filter */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Quelle:</span>
+                      <div className="flex items-center gap-1 bg-zinc-900 p-1 rounded-xl border border-zinc-800">
+                        <button
+                          type="button"
+                          onClick={() => setLogSourceFilter('all')}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                            logSourceFilter === 'all' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-400 hover:text-white'
+                          }`}
+                        >
+                          Alle
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setLogSourceFilter('backend')}
+                          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                            logSourceFilter === 'backend' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow' : 'text-zinc-400 hover:text-white'
+                          }`}
+                        >
+                          <Server className="w-3 h-3" />
+                          Backend
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setLogSourceFilter('frontend')}
+                          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                            logSourceFilter === 'frontend' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow' : 'text-zinc-400 hover:text-white'
+                          }`}
+                        >
+                          <Monitor className="w-3 h-3" />
+                          Frontend
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Level Filter */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Level:</span>
+                      <div className="flex flex-wrap items-center gap-1 bg-zinc-900 p-1 rounded-xl border border-zinc-800">
+                        {['all', 'ERROR', 'WARNING', 'INFO', 'DEBUG'].map((lvl) => (
+                          <button
+                            type="button"
+                            key={lvl}
+                            onClick={() => setLogLevelFilter(lvl)}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                              logLevelFilter === lvl
+                                ? lvl === 'ERROR'
+                                  ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                                  : lvl === 'WARNING'
+                                  ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                                  : lvl === 'INFO'
+                                  ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                                  : 'bg-zinc-800 text-white'
+                                : 'text-zinc-400 hover:text-white'
+                            }`}
+                          >
+                            {lvl === 'all' ? 'Alle' : lvl}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Irrelevance Mode Filter */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Ansicht:</span>
+                      <div className="flex items-center gap-1 bg-zinc-900 p-1 rounded-xl border border-zinc-800">
+                        <button
+                          type="button"
+                          onClick={() => setLogIrrelevantFilter('false')}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                            logIrrelevantFilter === 'false' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-zinc-400 hover:text-white'
+                          }`}
+                        >
+                          Nur Relevante
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setLogIrrelevantFilter('true')}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                            logIrrelevantFilter === 'true' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-white'
+                          }`}
+                        >
+                          Alle
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setLogIrrelevantFilter('only')}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                            logIrrelevantFilter === 'only' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' : 'text-zinc-400 hover:text-white'
+                          }`}
+                        >
+                          Nur Irrelevante
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Search Bar */}
+                  <div className="relative">
+                    <Search className="w-4 h-4 text-zinc-400 absolute left-3.5 top-3" />
+                    <input
+                      type="text"
+                      value={logSearch}
+                      onChange={(e) => setLogSearch(e.target.value)}
+                      placeholder="Suchbegriff in Meldung, Modul oder Stacktrace filtern..."
+                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 pl-10 pr-10 py-2.5 text-xs text-white placeholder:text-zinc-500 focus:border-primary focus:outline-none font-sans"
+                    />
+                    {logSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setLogSearch('')}
+                        className="absolute right-3 top-2.5 text-xs text-zinc-400 hover:text-white"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Log Stream List */}
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-950 overflow-hidden font-mono text-xs">
+                  {/* Table Header */}
+                  <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-zinc-900/90 border-b border-zinc-800 text-zinc-400 font-bold uppercase text-[11px] tracking-wider">
+                    <div className="col-span-3 sm:col-span-2">Zeitstempel</div>
+                    <div className="col-span-2 sm:col-span-1">Quelle</div>
+                    <div className="col-span-2 sm:col-span-1">Level</div>
+                    <div className="col-span-5 sm:col-span-2 hidden md:block">Modul</div>
+                    <div className="col-span-5 sm:col-span-6 md:col-span-4">Nachricht</div>
+                    <div className="col-span-2 text-right">Aktionen</div>
+                  </div>
+
+                  {/* Logs Listing */}
+                  {logsLoading && logs.length === 0 ? (
+                    <div className="py-16 text-center text-zinc-500 flex flex-col items-center gap-3 font-sans">
+                      <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                      <span>Logs werden geladen...</span>
+                    </div>
+                  ) : logs.length === 0 ? (
+                    <div className="py-16 text-center text-zinc-500 space-y-2 font-sans">
+                      <CheckCircle2 className="w-8 h-8 text-zinc-600 mx-auto" />
+                      <div className="font-bold text-zinc-400">Keine Logs für diesen Filter gefunden</div>
+                      <p className="text-[11px] text-zinc-600 max-w-sm mx-auto">
+                        Es liegen aktuell keine Einträge vor, die den gewählten Kriterien entsprechen.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-zinc-800/60 max-h-[700px] overflow-y-auto">
+                      {logs.map((item) => {
+                        const isExpanded = !!expandedLogIds[item.id];
+                        const dateStr = item.created_at
+                          ? new Date(item.created_at).toLocaleString('de-DE', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              second: '2-digit'
+                            })
+                          : '-';
+
+                        const isError = item.level === 'ERROR' || item.level === 'CRITICAL';
+                        const isWarn = item.level === 'WARNING';
+                        const isInfo = item.level === 'INFO';
+
+                        return (
+                          <div
+                            key={item.id}
+                            className={`transition-colors hover:bg-zinc-900/50 ${
+                              item.is_irrelevant ? 'opacity-50 bg-zinc-950/40' : ''
+                            }`}
+                          >
+                            <div
+                              onClick={() => toggleExpandLog(item.id)}
+                              className="grid grid-cols-12 gap-2 px-4 py-3 items-center cursor-pointer select-none"
+                            >
+                              {/* Timestamp */}
+                              <div className="col-span-3 sm:col-span-2 text-zinc-400 text-[11px] truncate flex items-center gap-1.5">
+                                {isExpanded ? (
+                                  <ChevronDown className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                                ) : (
+                                  <ChevronRight className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                                )}
+                                <span>{dateStr}</span>
+                              </div>
+
+                              {/* Source */}
+                              <div className="col-span-2 sm:col-span-1">
+                                <span
+                                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                    item.source === 'frontend'
+                                      ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
+                                      : 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'
+                                  }`}
+                                >
+                                  {item.source === 'frontend' ? 'Client' : 'Backend'}
+                                </span>
+                              </div>
+
+                              {/* Level */}
+                              <div className="col-span-2 sm:col-span-1">
+                                <span
+                                  className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-black uppercase ${
+                                    isError
+                                      ? 'bg-red-500/10 text-red-400 border border-red-500/30'
+                                      : isWarn
+                                      ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                                      : isInfo
+                                      ? 'bg-blue-500/10 text-blue-400 border border-blue-500/30'
+                                      : 'bg-zinc-800 text-zinc-400'
+                                  }`}
+                                >
+                                  {item.level}
+                                </span>
+                              </div>
+
+                              {/* Module */}
+                              <div className="col-span-5 sm:col-span-2 hidden md:block text-zinc-400 text-[11px] truncate">
+                                {item.module || '-'}
+                              </div>
+
+                              {/* Message */}
+                              <div className="col-span-5 sm:col-span-6 md:col-span-4 flex items-center gap-2 truncate">
+                                <span className={`truncate text-xs ${isError ? 'text-red-200' : isWarn ? 'text-amber-200' : 'text-zinc-200'}`}>
+                                  {item.message}
+                                </span>
+                                {item.is_irrelevant && (
+                                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 text-[10px] border border-zinc-700 shrink-0 font-sans">
+                                    <Ban className="w-2.5 h-2.5" /> Irrelevant
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Actions */}
+                              <div className="col-span-2 flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                                <button
+                                  type="button"
+                                  title={item.is_irrelevant ? 'Wieder als relevant einstufen' : 'Als irrelevant einstufen (ausblenden)'}
+                                  onClick={(e) => handleToggleIrrelevant(item.id, item.is_irrelevant, e)}
+                                  className={`p-1.5 rounded-lg border transition-all ${
+                                    item.is_irrelevant
+                                      ? 'bg-purple-500/20 text-purple-300 border-purple-500/40 hover:bg-purple-500/30'
+                                      : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:text-white hover:border-zinc-700'
+                                  }`}
+                                >
+                                  {item.is_irrelevant ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                                </button>
+
+                                <button
+                                  type="button"
+                                  title="Muster künftig ignorieren"
+                                  onClick={() => handleMarkPattern(item.message.slice(0, 60))}
+                                  className="p-1.5 rounded-lg bg-zinc-900 text-zinc-400 border border-zinc-800 hover:text-purple-400 hover:border-purple-500/40 transition-all hidden sm:inline-flex"
+                                >
+                                  <Ban className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Expanded Detail View */}
+                            {isExpanded && (
+                              <div className="px-6 py-4 bg-zinc-950/80 border-t border-zinc-900 text-xs space-y-3 font-sans">
+                                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800/80 pb-2">
+                                  <div className="flex items-center gap-2 text-zinc-400 font-mono text-[11px]">
+                                    <span className="font-bold text-zinc-300">Log-ID:</span> {item.id}
+                                    <span className="mx-2">•</span>
+                                    <span className="font-bold text-zinc-300">Modul:</span> {item.module || 'N/A'}
+                                  </div>
+
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(
+                                          JSON.stringify({ message: item.message, details: item.details }, null, 2)
+                                        );
+                                        toast.success('Log-Details in Zwischenablage kopiert');
+                                      }}
+                                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold"
+                                    >
+                                      <Copy className="w-3 h-3" /> Kopieren
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={() => handleMarkPattern(item.message.slice(0, 80))}
+                                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 text-xs font-semibold"
+                                    >
+                                      <Ban className="w-3 h-3" /> Textmuster dauerhaft ignorieren
+                                    </button>
+                                  </div>
+                                </div>
+
+                                <div>
+                                  <div className="text-zinc-400 text-xs font-bold mb-1">Vollständige Meldung:</div>
+                                  <div className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 font-mono text-xs text-white break-words select-text">
+                                    {item.message}
+                                  </div>
+                                </div>
+
+                                {item.details && Object.keys(item.details).length > 0 && (
+                                  <div>
+                                    <div className="text-zinc-400 text-xs font-bold mb-1">Kontext & Technische Details:</div>
+                                    <pre className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 font-mono text-[11px] text-zinc-300 overflow-x-auto select-text">
+                                      {typeof item.details === 'object' ? JSON.stringify(item.details, null, 2) : String(item.details)}
+                                    </pre>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Modal: Irrelevanz-Muster verwalten */}
+              {isPatternModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
+                  <div className="w-full max-w-lg rounded-3xl bg-zinc-900 border border-purple-500/30 p-6 shadow-2xl space-y-5">
+                    <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+                      <div className="flex items-center gap-3 text-purple-400">
+                        <div className="p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20">
+                          <SlidersHorizontal className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h3 className="text-base font-bold text-white">Irrelevanz-Filter verwalten</h3>
+                          <p className="text-xs text-zinc-400">Meldungen mit diesen Textbestandteilen werden stummgeschaltet</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsPatternModalOpen(false)}
+                        className="text-zinc-400 hover:text-white text-sm"
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    <div className="space-y-3">
+                      <label className="text-xs font-bold text-zinc-300 block">Neues Ignorier-Muster hinzufügen:</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={newPatternText}
+                          onChange={(e) => setNewPatternText(e.target.value)}
+                          placeholder="z.B. ResizeObserver loop oder Timeout nach 5000ms"
+                          className="flex-1 rounded-xl border border-zinc-800 bg-zinc-950 px-3.5 py-2 text-xs text-white focus:border-purple-500 focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleMarkPattern(newPatternText)}
+                          disabled={!newPatternText.trim()}
+                          className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-xs font-bold text-white transition-all"
+                        >
+                          Hinzufügen
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="text-xs font-bold text-zinc-400">Aktive Ignorier-Muster ({ignorePatterns.length}):</div>
+                      {ignorePatterns.length === 0 ? (
+                        <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-800 text-center text-xs text-zinc-500">
+                          Noch keine automatischen Ignorier-Muster hinterlegt.
+                        </div>
+                      ) : (
+                        <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
+                          {ignorePatterns.map((pat, idx) => (
+                            <div
+                              key={idx}
+                              className="flex items-center justify-between px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-zinc-200"
+                            >
+                              <span className="font-mono text-[11px] truncate max-w-[320px]">{pat}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleDeletePattern(pat)}
+                                className="text-zinc-500 hover:text-red-400 transition-colors p-1"
+                                title="Muster löschen"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex justify-end pt-2 border-t border-zinc-800">
+                      <button
+                        type="button"
+                        onClick={() => setIsPatternModalOpen(false)}
+                        className="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-bold text-white transition-all"
+                      >
+                        Schließen
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Modal: Logs leeren */}
+              {isClearLogsModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
+                  <div className="w-full max-w-md rounded-3xl bg-zinc-900 border border-red-500/30 p-6 shadow-2xl space-y-5">
+                    <div className="flex items-center gap-3 text-red-400 border-b border-zinc-800 pb-3">
+                      <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20">
+                        <Trash2 className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-bold text-white">System-Logs bereinigen</h3>
+                        <p className="text-xs text-zinc-400">Wähle den Bereinigungs-Umfang</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 text-xs">
+                      {[
+                        { id: 'all', title: 'Alle Logs vollständig leeren', desc: 'Löscht die gesamte Log-Tabelle unwiderruflich.' },
+                        { id: '7days', title: 'Älter als 7 Tage löschen', desc: 'Behält nur die Logs der letzten Woche.' },
+                        { id: '30days', title: 'Älter als 30 Tage löschen', desc: 'Behält die Logs des letzten Monats.' },
+                        { id: 'only_irrelevant', title: 'Nur als irrelevant markierte Logs löschen', desc: 'Löscht alle stummgeschalteten Einträge.' },
+                      ].map((opt) => (
+                        <label
+                          key={opt.id}
+                          className={`flex items-start gap-3 p-3 rounded-2xl border cursor-pointer transition-all ${
+                            clearLogsOption === opt.id
+                              ? 'bg-red-500/10 border-red-500/50 text-white'
+                              : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:border-zinc-700'
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="clearOption"
+                            checked={clearLogsOption === opt.id}
+                            onChange={() => setClearLogsOption(opt.id as any)}
+                            className="mt-0.5 text-primary bg-zinc-900 border-zinc-700 focus:ring-0"
+                          />
+                          <div>
+                            <div className="font-bold text-white text-xs">{opt.title}</div>
+                            <div className="text-[11px] text-zinc-500 mt-0.5">{opt.desc}</div>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center justify-end gap-3 pt-2 border-t border-zinc-800">
+                      <button
+                        type="button"
+                        onClick={() => setIsClearLogsModalOpen(false)}
+                        className="px-4 py-2 rounded-xl bg-zinc-800 text-xs font-bold text-zinc-300 hover:bg-zinc-700 hover:text-white transition-all"
+                      >
+                        Abbrechen
+                      </button>
+                      <button
+                        type="button"
+                        disabled={clearingLogs}
+                        onClick={handleExecuteClearLogs}
+                        className="px-5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-xs font-bold text-white transition-all flex items-center gap-2 shadow-lg shadow-red-600/20 disabled:opacity-50"
+                      >
+                        {clearingLogs ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                        <span>Bereinigen ausführen</span>
+                      </button>
                     </div>
                   </div>
                 </div>

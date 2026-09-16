@@ -1,4 +1,5 @@
 import os
+import traceback
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -6,6 +7,7 @@ from api import upload, matches, analytics, auth, admin, videos, install, teams,
 from db.session import engine, SessionLocal
 from models import Base
 from db.migrate import run_migrations
+from services.logger_service import setup_logging, create_system_log
 
 # Tabellen erstellen, Migrationen durchführen und Default-Werte seeden
 try:
@@ -13,10 +15,61 @@ try:
 except Exception as e:
     print(f"Warnung bei DB-Initialisierung: {e}")
 
-
+try:
+    setup_logging()
+except Exception as e:
+    print(f"Warnung bei Logging-Initialisierung: {e}")
 
 # Wir schalten das automatische Hinzufügen von Slashes aus, um Konflikte zu vermeiden
 app = FastAPI(title="MatchTracker API", redirect_slashes=False)
+
+@app.middleware("http")
+async def system_logging_middleware(request: Request, call_next):
+    try:
+        response = await call_next(request)
+        if response.status_code >= 500 and not request.url.path.startswith("/api/admin/logs"):
+            db = SessionLocal()
+            try:
+                create_system_log(
+                    db=db,
+                    source="backend",
+                    level="ERROR",
+                    message=f"HTTP {response.status_code} Fehler bei {request.method} {request.url.path}",
+                    module="api.http",
+                    details={
+                        "path": request.url.path,
+                        "method": request.method,
+                        "status_code": response.status_code,
+                        "client_ip": request.client.host if request.client else None
+                    }
+                )
+            except Exception:
+                pass
+            finally:
+                db.close()
+        return response
+    except Exception as exc:
+        db = SessionLocal()
+        try:
+            create_system_log(
+                db=db,
+                source="backend",
+                level="CRITICAL",
+                message=f"Unbehandelte Ausnahme bei {request.method} {request.url.path}: {str(exc)}",
+                module="api.http",
+                details={
+                    "path": request.url.path,
+                    "method": request.method,
+                    "exception": str(exc),
+                    "traceback": traceback.format_exc(),
+                    "client_ip": request.client.host if request.client else None
+                }
+            )
+        except Exception:
+            pass
+        finally:
+            db.close()
+        raise exc
 
 @app.middleware("http")
 async def strip_api_prefix(request: Request, call_next):

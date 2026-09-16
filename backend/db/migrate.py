@@ -114,6 +114,7 @@ MIGRATION_COLUMNS = [
     ("system_settings", "legal_address", "VARCHAR(500) DEFAULT ''"),
     ("system_settings", "legal_representative", "VARCHAR(255) DEFAULT ''"),
     ("system_settings", "legal_register_info", "VARCHAR(255) DEFAULT ''"),
+    ("system_settings", "log_irrelevant_patterns", "JSON DEFAULT '[]'"),
     ("system_settings", "updated_at", "DATETIME"),
 
     # Table: training_exercises
