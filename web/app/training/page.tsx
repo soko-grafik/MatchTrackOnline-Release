@@ -19,12 +19,15 @@ import {
   Lock,
   Share2,
   Camera,
-  Loader2
+  Loader2,
+  ListPlus,
+  AlertCircle,
+  LayoutGrid
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import PageHeader from '@/components/PageHeader';
 import PrintableTrainingModal from '@/components/PrintableTrainingModal';
-import ExerciseSketchEditor from '@/components/ExerciseSketchEditor';
+import ExerciseSketchEditor, { ExerciseSketchEditorHandle } from '@/components/ExerciseSketchEditor';
 import {
   getExercises,
   createExercise,
@@ -50,11 +53,12 @@ export default function TrainingPage() {
   const [sessions, setSessions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Filter state
+  // Filter & Grid state
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedAge, setSelectedAge] = useState('Alle');
   const [selectedFocus, setSelectedFocus] = useState('Alle');
   const [authorFilter, setAuthorFilter] = useState<'ALL' | 'MINE' | 'OTHERS'>('ALL');
+  const [gridColumns, setGridColumns] = useState<3 | 5 | 7>(5);
 
   // Custom Focus Areas (Admins can add new ones)
   const [focusAreas, setFocusAreas] = useState<string[]>([
@@ -83,6 +87,7 @@ export default function TrainingPage() {
   const [printingSession, setPrintingSession] = useState<any | null>(null);
   const [printingExercise, setPrintingExercise] = useState<any | null>(null);
   const [showSketchEditor, setShowSketchEditor] = useState(true);
+  const sketchEditorRef = useRef<ExerciseSketchEditorHandle | null>(null);
 
   // Exercise Form
   const [exerciseForm, setExerciseForm] = useState({
@@ -211,6 +216,74 @@ export default function TrainingPage() {
     setIsAddingCustomFocus(false);
   };
 
+  const handleBulletKeyDown = (
+    e: React.KeyboardEvent<HTMLTextAreaElement>,
+    field: 'description' | 'provocation_rules'
+  ) => {
+    if (e.key === 'Enter') {
+      const textarea = e.currentTarget;
+      const { selectionStart, selectionEnd, value } = textarea;
+
+      // Find start of current line
+      const lineStart = value.lastIndexOf('\n', selectionStart - 1) + 1;
+      const currentLine = value.slice(lineStart, selectionStart);
+
+      // Check if current line starts with bullet marker
+      const bulletMatch = currentLine.match(/^(\s*[•\-\*]\s*)/);
+
+      if (bulletMatch) {
+        e.preventDefault();
+        const prefix = bulletMatch[1];
+        const lineContentAfterBullet = currentLine.slice(prefix.length).trim();
+
+        // If line is empty (just the bullet), pressing Enter removes the bullet on this line
+        if (lineContentAfterBullet === '') {
+          const before = value.substring(0, lineStart);
+          const after = value.substring(selectionEnd);
+          const newValue = before + after;
+          setExerciseForm((prev) => ({ ...prev, [field]: newValue }));
+          setTimeout(() => {
+            textarea.selectionStart = textarea.selectionEnd = lineStart;
+          }, 0);
+          return;
+        }
+
+        // Otherwise insert newline with bullet
+        const insertText = '\n• ';
+        const before = value.substring(0, selectionStart);
+        const after = value.substring(selectionEnd);
+        const newValue = before + insertText + after;
+        const newCursorPos = selectionStart + insertText.length;
+
+        setExerciseForm((prev) => ({ ...prev, [field]: newValue }));
+        setTimeout(() => {
+          textarea.selectionStart = textarea.selectionEnd = newCursorPos;
+        }, 0);
+      }
+    }
+  };
+
+  const addInitialBulletIfEmpty = (field: 'description' | 'provocation_rules') => {
+    setExerciseForm((prev) => {
+      if (!prev[field] || prev[field].trim() === '') {
+        return { ...prev, [field]: '• ' };
+      }
+      return prev;
+    });
+  };
+
+  const getGridClass = (cols: 3 | 5 | 7) => {
+    switch (cols) {
+      case 3:
+        return 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5';
+      case 7:
+        return 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-7 gap-3';
+      case 5:
+      default:
+        return 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4';
+    }
+  };
+
   const openNewExerciseModal = () => {
     setEditingExerciseId(null);
     setExerciseForm({
@@ -254,10 +327,24 @@ export default function TrainingPage() {
   const handleSaveExercise = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      let finalForm = { ...exerciseForm };
+
+      // Automatically capture sketch diagram and thumbnail if editor is mounted
+      if (sketchEditorRef.current) {
+        const sketchData = sketchEditorRef.current.getDiagramData();
+        if (sketchData) {
+          finalForm = {
+            ...finalForm,
+            diagram_data: sketchData.diagramData,
+            thumbnail_path: sketchData.thumbnailDataUrl
+          };
+        }
+      }
+
       if (editingExerciseId) {
-        await updateExercise(editingExerciseId, exerciseForm);
+        await updateExercise(editingExerciseId, finalForm);
       } else {
-        await createExercise(exerciseForm);
+        await createExercise(finalForm);
       }
       setIsExerciseModalOpen(false);
       setShowSketchEditor(false);
@@ -542,6 +629,28 @@ export default function TrainingPage() {
                     👥 Von anderen Trainern
                   </button>
                 </div>
+
+                {/* Grid Switcher 3, 5, 7 */}
+                <div className="flex items-center gap-1.5 bg-zinc-950/70 p-1 rounded-xl border border-zinc-800">
+                  <span className="text-[10px] font-bold text-zinc-500 uppercase px-1.5 flex items-center gap-1">
+                    <LayoutGrid className="w-3.5 h-3.5 text-zinc-400" /> Spalten:
+                  </span>
+                  {([3, 5, 7] as const).map((num) => (
+                    <button
+                      key={num}
+                      type="button"
+                      onClick={() => setGridColumns(num)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                        gridColumns === num
+                          ? 'bg-primary text-white shadow-sm shadow-primary/30'
+                          : 'text-zinc-400 hover:text-white hover:bg-zinc-800/80'
+                      }`}
+                      title={`${num} Spalten anzeigen`}
+                    >
+                      {num}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
@@ -593,7 +702,7 @@ export default function TrainingPage() {
                 <p className="text-xs text-zinc-400 mt-1">Lege die erste Übung an oder passe deine Filter an.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              <div className={getGridClass(gridColumns)}>
                 {filteredExercises.map((ex) => (
                   <div
                     key={ex.id}
@@ -625,7 +734,17 @@ export default function TrainingPage() {
                       <div>
                         <h3 className="text-base font-bold text-white group-hover:text-primary transition-colors">{ex.title}</h3>
                         {ex.description && (
-                          <p className="text-xs text-zinc-400 mt-1.5 line-clamp-2 leading-relaxed">{ex.description}</p>
+                          <div className="text-xs text-zinc-400 mt-2 space-y-1 line-clamp-3">
+                            {ex.description.split('\n').filter((l: string) => l.trim()).slice(0, 3).map((line: string, idx: number) => {
+                              const cleanLine = line.replace(/^[•\-\*]\s*/, '').trim();
+                              return (
+                                <div key={idx} className="flex items-start gap-1.5 leading-snug">
+                                  <span className="text-primary text-[10px] shrink-0 mt-0.5">•</span>
+                                  <span className="truncate">{cleanLine}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
                         )}
                       </div>
 
@@ -685,38 +804,62 @@ export default function TrainingPage() {
           <div className="space-y-6">
             {/* Filter Bar for Sessions */}
             <div className="space-y-3 bg-zinc-900/60 p-4 rounded-2xl border border-zinc-800">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-zinc-400">Urheber:</span>
-                <button
-                  onClick={() => setAuthorFilter('ALL')}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                    authorFilter === 'ALL'
-                      ? 'bg-zinc-800 text-white border border-zinc-700'
-                      : 'bg-transparent text-zinc-500 hover:text-zinc-300'
-                  }`}
-                >
-                  Alle Trainingspläne
-                </button>
-                <button
-                  onClick={() => setAuthorFilter('MINE')}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                    authorFilter === 'MINE'
-                      ? 'bg-primary text-white shadow-md shadow-primary/20'
-                      : 'bg-transparent text-zinc-500 hover:text-zinc-300'
-                  }`}
-                >
-                  👤 Meine eigenen Pläne
-                </button>
-                <button
-                  onClick={() => setAuthorFilter('OTHERS')}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                    authorFilter === 'OTHERS'
-                      ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
-                      : 'bg-transparent text-zinc-500 hover:text-zinc-300'
-                  }`}
-                >
-                  👥 Von anderen Trainern
-                </button>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-zinc-400">Urheber:</span>
+                  <button
+                    onClick={() => setAuthorFilter('ALL')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                      authorFilter === 'ALL'
+                        ? 'bg-zinc-800 text-white border border-zinc-700'
+                        : 'bg-transparent text-zinc-500 hover:text-zinc-300'
+                    }`}
+                  >
+                    Alle Trainingspläne
+                  </button>
+                  <button
+                    onClick={() => setAuthorFilter('MINE')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                      authorFilter === 'MINE'
+                        ? 'bg-primary text-white shadow-md shadow-primary/20'
+                        : 'bg-transparent text-zinc-500 hover:text-zinc-300'
+                    }`}
+                  >
+                    👤 Meine eigenen Pläne
+                  </button>
+                  <button
+                    onClick={() => setAuthorFilter('OTHERS')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                      authorFilter === 'OTHERS'
+                        ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+                        : 'bg-transparent text-zinc-500 hover:text-zinc-300'
+                    }`}
+                  >
+                    👥 Von anderen Trainern
+                  </button>
+                </div>
+
+                {/* Grid Switcher 3, 5, 7 */}
+                <div className="flex items-center gap-1.5 bg-zinc-950/70 p-1 rounded-xl border border-zinc-800">
+                  <span className="text-[10px] font-bold text-zinc-500 uppercase px-1.5 flex items-center gap-1">
+                    <LayoutGrid className="w-3.5 h-3.5 text-zinc-400" /> Spalten:
+                  </span>
+                  {([3, 5, 7] as const).map((num) => (
+                    <button
+                      key={num}
+                      type="button"
+                      onClick={() => setGridColumns(num)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                        gridColumns === num
+                          ? 'bg-primary text-white shadow-sm shadow-primary/30'
+                          : 'text-zinc-400 hover:text-white hover:bg-zinc-800/80'
+                      }`}
+                      title={`${num} Spalten anzeigen`}
+                    >
+                      {num}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -727,7 +870,7 @@ export default function TrainingPage() {
                 <p className="text-xs text-zinc-400 mt-1">Erstelle einen neuen Trainingsplan oder passe deinen Urheber-Filter an.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              <div className={getGridClass(gridColumns)}>
                 {filteredSessions.map((ses) => (
                   <div key={ses.id} id={`session-pdf-${ses.id}`} className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 space-y-4">
                     <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
@@ -970,25 +1113,28 @@ export default function TrainingPage() {
 
 
               <form onSubmit={handleSaveExercise} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                  <div>
-                    <label className="text-xs font-bold text-zinc-400 block mb-1.5">Titel der Übung</label>
+                {/* Row 1: Titel, Altersklasse, Schwerpunkt, Min Spieler, Dauer, Coaching-Punkte */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-3 items-end">
+                  {/* Titel der Übung */}
+                  <div className="sm:col-span-2 md:col-span-3">
+                    <label className="text-xs font-bold text-zinc-400 block mb-1">Titel der Übung</label>
                     <input
                       type="text"
                       required
                       value={exerciseForm.title}
                       onChange={(e) => setExerciseForm({ ...exerciseForm, title: e.target.value })}
                       placeholder="z. B. 4-gegen-2 Freilaufspiel"
-                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs text-white focus:border-primary focus:outline-none"
+                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs text-white focus:border-primary focus:outline-none"
                     />
                   </div>
 
-                  <div>
-                    <label className="text-xs font-bold text-zinc-400 block mb-1.5">Altersklasse</label>
+                  {/* Altersklasse (kleiner) */}
+                  <div className="sm:col-span-1 md:col-span-1">
+                    <label className="text-xs font-bold text-zinc-400 block mb-1 truncate" title="Altersklasse">Alter</label>
                     <select
                       value={exerciseForm.age_group}
                       onChange={(e) => setExerciseForm({ ...exerciseForm, age_group: e.target.value })}
-                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs text-white focus:border-primary focus:outline-none"
+                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-2 py-1.5 text-xs text-white focus:border-primary focus:outline-none"
                     >
                       <option value="U7-U9">U7 - U9</option>
                       <option value="U10-U13">U10 - U13</option>
@@ -998,34 +1144,36 @@ export default function TrainingPage() {
                     </select>
                   </div>
 
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="text-xs font-bold text-zinc-400">Trainingsschwerpunkt</label>
+                  {/* Trainingsschwerpunkt (kleiner) */}
+                  <div className="sm:col-span-1 md:col-span-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-bold text-zinc-400 truncate">Schwerpunkt</label>
                       {canEdit && !isAddingCustomFocus && (
                         <button
                           type="button"
                           onClick={() => setIsAddingCustomFocus(true)}
-                          className="text-[11px] text-primary font-bold hover:underline flex items-center gap-1"
+                          className="text-[10px] text-primary font-bold hover:underline flex items-center gap-0.5"
+                          title="Neuen Schwerpunkt hinzufügen"
                         >
-                          <Plus className="w-3 h-3" /> Neuer Schwerpunkt
+                          <Plus className="w-2.5 h-2.5" /> Neu
                         </button>
                       )}
                     </div>
 
                     {isAddingCustomFocus ? (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
                         <input
                           type="text"
                           autoFocus
                           value={newFocusInput}
                           onChange={(e) => setNewFocusInput(e.target.value)}
-                          placeholder="Neuen Schwerpunkt..."
-                          className="w-full rounded-xl border border-primary bg-zinc-900 px-3 py-1.5 text-xs text-white focus:outline-none"
+                          placeholder="Neu..."
+                          className="w-full rounded-xl border border-primary bg-zinc-900 px-2 py-1 text-xs text-white focus:outline-none"
                         />
                         <button
                           type="button"
                           onClick={handleAddCustomFocusArea}
-                          className="px-3 py-1.5 rounded-xl bg-primary text-white text-xs font-bold shrink-0"
+                          className="px-2 py-1 rounded-xl bg-primary text-white text-xs font-bold shrink-0"
                         >
                           +
                         </button>
@@ -1041,7 +1189,7 @@ export default function TrainingPage() {
                       <select
                         value={exerciseForm.focus_area}
                         onChange={(e) => setExerciseForm({ ...exerciseForm, focus_area: e.target.value })}
-                        className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs text-white focus:border-primary focus:outline-none"
+                        className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-2 py-1.5 text-xs text-white focus:border-primary focus:outline-none"
                       >
                         {focusAreas.map((fa) => (
                           <option key={fa} value={fa}>{fa}</option>
@@ -1050,59 +1198,88 @@ export default function TrainingPage() {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="text-xs font-bold text-zinc-400 block mb-1.5">Min. Spieler</label>
-                      <input
-                        type="number"
-                        value={exerciseForm.min_players}
-                        onChange={(e) => setExerciseForm({ ...exerciseForm, min_players: parseInt(e.target.value) || 2 })}
-                        className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs text-white focus:border-primary focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-bold text-zinc-400 block mb-1.5">Dauer (Min)</label>
-                      <input
-                        type="number"
-                        value={exerciseForm.duration_minutes}
-                        onChange={(e) => setExerciseForm({ ...exerciseForm, duration_minutes: parseInt(e.target.value) || 10 })}
-                        className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs text-white focus:border-primary focus:outline-none"
-                      />
-                    </div>
+                  {/* Min. Spieler */}
+                  <div className="sm:col-span-1 md:col-span-1">
+                    <label className="text-xs font-bold text-zinc-400 block mb-1 truncate" title="Mindestanzahl Spieler">Spieler</label>
+                    <input
+                      type="number"
+                      value={exerciseForm.min_players}
+                      onChange={(e) => setExerciseForm({ ...exerciseForm, min_players: parseInt(e.target.value) || 2 })}
+                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-2 py-1.5 text-xs text-white focus:border-primary focus:outline-none text-center"
+                    />
                   </div>
 
-                  <div className="md:col-span-2">
-                    <label className="text-xs font-bold text-zinc-400 block mb-1.5">Coaching-Punkte</label>
+                  {/* Dauer (Min) */}
+                  <div className="sm:col-span-1 md:col-span-1">
+                    <label className="text-xs font-bold text-zinc-400 block mb-1 truncate" title="Dauer in Minuten">Dauer</label>
+                    <input
+                      type="number"
+                      value={exerciseForm.duration_minutes}
+                      onChange={(e) => setExerciseForm({ ...exerciseForm, duration_minutes: parseInt(e.target.value) || 10 })}
+                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-2 py-1.5 text-xs text-white focus:border-primary focus:outline-none text-center"
+                    />
+                  </div>
+
+                  {/* Coaching-Punkte (in die obere Reihe) */}
+                  <div className="sm:col-span-2 md:col-span-4">
+                    <label className="text-xs font-bold text-zinc-400 block mb-1 truncate">Coaching-Punkte</label>
                     <input
                       type="text"
                       value={exerciseForm.coaching_points}
                       onChange={(e) => setExerciseForm({ ...exerciseForm, coaching_points: e.target.value })}
-                      placeholder="z. B. Sauberes Passspiel, offene Stellung, Kommunikation"
-                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs text-white focus:border-primary focus:outline-none"
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="text-xs font-bold text-zinc-400 block mb-1.5">Provokationsregeln</label>
-                    <input
-                      type="text"
-                      value={exerciseForm.provocation_rules}
-                      onChange={(e) => setExerciseForm({ ...exerciseForm, provocation_rules: e.target.value })}
-                      placeholder="z. B. Max 2 Kontakte, Tore zählen doppelt nach Seitenwechsel"
-                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs text-white focus:border-primary focus:outline-none"
+                      placeholder="z. B. Sauberes Passspiel, offene Stellung..."
+                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs text-white focus:border-primary focus:outline-none"
                     />
                   </div>
                 </div>
 
-                <div>
-                  <label className="text-xs font-bold text-zinc-400 block mb-1.5">Ablauf & Beschreibung</label>
-                  <textarea
-                    rows={3}
-                    value={exerciseForm.description}
-                    onChange={(e) => setExerciseForm({ ...exerciseForm, description: e.target.value })}
-                    placeholder="Detaillierte Ablaufbeschreibung..."
-                    className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs text-white focus:border-primary focus:outline-none"
-                  />
+                {/* Row 2: Ablauf & Beschreibung NEBEN Provokationsregeln */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Ablauf & Beschreibung */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-bold text-zinc-400">Ablauf & Beschreibung</label>
+                      <button
+                        type="button"
+                        onClick={() => addInitialBulletIfEmpty('description')}
+                        className="text-[11px] text-primary hover:underline flex items-center gap-1 font-semibold"
+                      >
+                        <ListPlus className="w-3.5 h-3.5" /> + Stichpunkt
+                      </button>
+                    </div>
+                    <textarea
+                      rows={4}
+                      value={exerciseForm.description}
+                      onKeyDown={(e) => handleBulletKeyDown(e, 'description')}
+                      onChange={(e) => setExerciseForm({ ...exerciseForm, description: e.target.value })}
+                      placeholder="• Spieler A passt zu Spieler B&#10;• Spieler B lässt klatschen&#10;• Torschuss mit max. 2 Kontakten"
+                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs text-white focus:border-primary focus:outline-none leading-relaxed resize-y"
+                    />
+                    <p className="text-[10px] text-zinc-500 mt-1">Tipp: Drücke Enter für den nächsten Stichpunkt.</p>
+                  </div>
+
+                  {/* Provokationsregeln */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-bold text-zinc-400">Provokationsregeln</label>
+                      <button
+                        type="button"
+                        onClick={() => addInitialBulletIfEmpty('provocation_rules')}
+                        className="text-[11px] text-primary hover:underline flex items-center gap-1 font-semibold"
+                      >
+                        <ListPlus className="w-3.5 h-3.5" /> + Stichpunkt
+                      </button>
+                    </div>
+                    <textarea
+                      rows={4}
+                      value={exerciseForm.provocation_rules}
+                      onKeyDown={(e) => handleBulletKeyDown(e, 'provocation_rules')}
+                      onChange={(e) => setExerciseForm({ ...exerciseForm, provocation_rules: e.target.value })}
+                      placeholder="• Max 2 Kontakte&#10;• Tore zählen doppelt nach Seitenwechsel"
+                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs text-white focus:border-primary focus:outline-none leading-relaxed resize-y"
+                    />
+                    <p className="text-[10px] text-zinc-500 mt-1">Tipp: Drücke Enter für den nächsten Stichpunkt.</p>
+                  </div>
                 </div>
 
                 {/* Sketch Editor Section */}
@@ -1120,15 +1297,8 @@ export default function TrainingPage() {
 
                   {showSketchEditor && (
                     <ExerciseSketchEditor
+                      ref={sketchEditorRef}
                       initialData={exerciseForm.diagram_data}
-                      onSave={(diagramData, thumbnailDataUrl) => {
-                        setExerciseForm((prev) => ({
-                          ...prev,
-                          diagram_data: diagramData,
-                          thumbnail_path: thumbnailDataUrl
-                        }));
-                        toast.success('Skizze erfolgreich übernommen');
-                      }}
                     />
                   )}
                 </div>

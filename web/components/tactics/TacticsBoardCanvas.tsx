@@ -59,6 +59,15 @@ export interface TacticalText {
   fontSize?: number;
 }
 
+export interface PlannedSubstitution {
+  id: string;
+  playerIn: PlayerToken;
+  playerOut: PlayerToken;
+  minute?: string;
+  notes?: string;
+  status?: 'planned' | 'executed';
+}
+
 export interface TacticsFrame {
   id?: string;
   title?: string;
@@ -69,6 +78,8 @@ export interface TacticsFrame {
   lines: TacticalLine[];
   zones: TacticalZone[];
   texts: TacticalText[];
+  benchPlayers?: PlayerToken[];
+  plannedSubstitutions?: PlannedSubstitution[];
 }
 
 interface TacticsBoardCanvasProps {
@@ -642,7 +653,8 @@ export default function TacticsBoardCanvas({
         homeColors,
         awayColors,
         playerLabelMode,
-        selectedElementId
+        selectedElementId,
+        currentFrame.plannedSubstitutions || []
       );
 
       // 8. Draw Balls (with smooth interpolation if playing)
@@ -1286,7 +1298,8 @@ function drawPlayers(
   homeColors: any,
   awayColors: any,
   labelMode: string,
-  selectedId: string | null
+  selectedId: string | null,
+  plannedSubstitutions: PlannedSubstitution[] = []
 ) {
   const radius = 18;
 
@@ -1360,6 +1373,36 @@ function drawPlayers(
       ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
       ctx.font = 'bold 10px sans-serif';
       ctx.fillText(p.name, px, py + radius + 11);
+    }
+
+    // Planned Substitution Indicator Badge (e.g. ⇄ Theo)
+    const plannedSub = plannedSubstitutions?.find(
+      (s) => s.playerOut?.id === p.id && s.status !== 'executed'
+    );
+    if (plannedSub) {
+      const subInName = plannedSub.playerIn?.name || 'Wechsel';
+      const badgeText = `⇄ ${subInName}`;
+      ctx.save();
+      ctx.font = 'bold 9px sans-serif';
+      const textMetrics = ctx.measureText(badgeText);
+      const badgeW = Math.max(textMetrics.width + 10, 24);
+      const badgeH = 16;
+      const badgeX = px + radius - 4;
+      const badgeY = py - radius - 6;
+
+      ctx.beginPath();
+      ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 6);
+      ctx.fillStyle = 'rgba(16, 185, 129, 0.95)'; // emerald-500
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(badgeText, badgeX + badgeW / 2, badgeY + badgeH / 2);
+      ctx.restore();
     }
   });
 }

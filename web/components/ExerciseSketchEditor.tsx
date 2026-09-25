@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import {
   Square,
   Circle,
@@ -29,15 +29,20 @@ import {
   Palette,
   ZoomIn,
   ZoomOut,
-  X
+  X,
+  Minus,
+  Group,
+  Ungroup,
+  Layers,
+  MousePointer
 } from 'lucide-react';
 
 import { useToast } from '@/contexts/ToastContext';
 
 interface ElementItem {
   id: string;
-  type: 'pitch' | 'cone' | 'disc' | 'ring' | 'ladder' | 'player' | 'goalkeeper' | 'dummy' | 'ball' | 'goal' | 'line' | 'text';
-  subType?: string; // e.g. goal type ('mini', 'youth', 'full') or line type ('pass', 'run', 'dribble')
+  type: 'pitch' | 'cone' | 'disc' | 'ring' | 'ladder' | 'player' | 'goalkeeper' | 'dummy' | 'ball' | 'goal' | 'line' | 'text' | 'rect' | 'circle';
+  subType?: string; // e.g. goal type ('mini', 'youth', 'full') or line type ('pass', 'run', 'dribble', 'straight', 'straight_dashed')
   x: number;
   y: number;
   x2?: number;
@@ -48,6 +53,15 @@ interface ElementItem {
   size?: number; // scale percentage (e.g. 100)
   customWidth?: number;
   customDepth?: number;
+  groupId?: string;
+  filled?: boolean;
+}
+
+export interface ExerciseSketchEditorHandle {
+  getDiagramData: () => {
+    diagramData: any;
+    thumbnailDataUrl: string;
+  } | null;
 }
 
 interface ExerciseSketchEditorProps {
@@ -121,11 +135,11 @@ if (typeof window !== 'undefined') {
   preloadEditorAssets();
 }
 
-export default function ExerciseSketchEditor({
+const ExerciseSketchEditor = forwardRef<ExerciseSketchEditorHandle, ExerciseSketchEditorProps>(function ExerciseSketchEditor({
   initialData,
   onSave,
   onCancel
-}: ExerciseSketchEditorProps) {
+}, ref) {
   const { toast, confirm: confirmModal } = useToast();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [pitchType, setPitchType] = useState<
@@ -143,8 +157,11 @@ export default function ExerciseSketchEditor({
   const [selectedColor, setSelectedColor] = useState<string>('#ef4444'); // Red default
   const [elements, setElements] = useState<ElementItem[]>(initialData?.elements || []);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
+  const [selectedElementIds, setSelectedElementIds] = useState<string[]>([]);
   const [isDrawing, setIsDrawing] = useState(false);
   const [startPos, setStartPos] = useState<{ x: number; y: number } | null>(null);
+  const [selectionBox, setSelectionBox] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
+  const [isMarqueeSelecting, setIsMarqueeSelecting] = useState(false);
   const [textInput, setTextInput] = useState('');
 
   // Background Tracing Image State
@@ -262,6 +279,7 @@ export default function ExerciseSketchEditor({
     orientation,
     elements,
     selectedElementId,
+    selectedElementIds,
     backgroundImage,
     bgOpacity,
     loadedImages,
@@ -802,6 +820,72 @@ export default function ExerciseSketchEditor({
     ctx.restore();
   };
 
+  const drawShapeRect = (ctx: CanvasRenderingContext2D, el: ElementItem) => {
+    ctx.save();
+    const x1 = Math.min(el.x, el.x2 !== undefined ? el.x2 : el.x);
+    const y1 = Math.min(el.y, el.y2 !== undefined ? el.y2 : el.y);
+    const w = el.x2 !== undefined ? Math.abs(el.x2 - el.x) : (el.customWidth || 80);
+    const h = el.y2 !== undefined ? Math.abs(el.y2 - el.y) : (el.customDepth || 60);
+
+    const color = el.color || '#3b82f6';
+    if (el.filled !== false) {
+      ctx.fillStyle = color.startsWith('#') ? `${color}33` : 'rgba(59, 130, 246, 0.2)';
+      ctx.fillRect(x1, y1, w, h);
+    }
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2.5;
+    if (el.subType === 'dashed') {
+      ctx.setLineDash([8, 6]);
+    } else {
+      ctx.setLineDash([]);
+    }
+    ctx.strokeRect(x1, y1, w, h);
+    ctx.setLineDash([]);
+
+    if (el.label) {
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(el.label, x1 + w / 2, y1 + h / 2);
+    }
+    ctx.restore();
+  };
+
+  const drawShapeCircle = (ctx: CanvasRenderingContext2D, el: ElementItem) => {
+    ctx.save();
+    const radius = el.x2 !== undefined && el.y2 !== undefined
+      ? Math.hypot(el.x2 - el.x, el.y2 - el.y)
+      : (el.customWidth ? el.customWidth / 2 : 40);
+
+    const color = el.color || '#eab308';
+    ctx.beginPath();
+    ctx.arc(el.x, el.y, Math.max(5, radius), 0, Math.PI * 2);
+
+    if (el.filled !== false) {
+      ctx.fillStyle = color.startsWith('#') ? `${color}33` : 'rgba(234, 179, 8, 0.2)';
+      ctx.fill();
+    }
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2.5;
+    if (el.subType === 'dashed') {
+      ctx.setLineDash([8, 6]);
+    } else {
+      ctx.setLineDash([]);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    if (el.label) {
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(el.label, el.x, el.y);
+    }
+    ctx.restore();
+  };
+
   const drawCanvas = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -821,17 +905,20 @@ export default function ExerciseSketchEditor({
     }
 
     // Draw elements
-
     elements.forEach((el) => {
-      const isSelected = el.id === selectedElementId;
+      const isSelected = (selectedElementId === el.id) || selectedElementIds.includes(el.id);
 
       ctx.save();
       if (isSelected) {
-        ctx.shadowColor = '#3b82f6';
-        ctx.shadowBlur = 12;
+        ctx.shadowColor = '#38bdf8';
+        ctx.shadowBlur = 14;
       }
 
-      if (el.type === 'cone') {
+      if (el.type === 'rect') {
+        drawShapeRect(ctx, el);
+      } else if (el.type === 'circle') {
+        drawShapeCircle(ctx, el);
+      } else if (el.type === 'cone') {
         // Cone / Hütchen (SVG)
         drawCone(ctx, el);
       } else if (el.type === 'disc') {
@@ -862,10 +949,12 @@ export default function ExerciseSketchEditor({
         // Line / Arrow / Pass path
         ctx.strokeStyle = el.color || '#ffffff';
         ctx.lineWidth = 3;
-        if (el.subType === 'pass') {
-          ctx.setLineDash([6, 6]); // Dashed for pass
+        const hasArrow = el.subType !== 'straight' && el.subType !== 'straight_dashed';
+
+        if (el.subType === 'pass' || el.subType === 'straight_dashed') {
+          ctx.setLineDash([7, 6]); // Dashed
         } else if (el.subType === 'dribble') {
-          ctx.setLineDash([2, 4]); // Dotted
+          ctx.setLineDash([2, 5]); // Dotted
         } else {
           ctx.setLineDash([]);
         }
@@ -876,28 +965,85 @@ export default function ExerciseSketchEditor({
         ctx.stroke();
         ctx.setLineDash([]);
 
-        // Draw Arrowhead
-        const angle = Math.atan2(el.y2 - el.y, el.x2 - el.x);
-        ctx.fillStyle = el.color || '#ffffff';
-        ctx.beginPath();
-        ctx.moveTo(el.x2, el.y2);
-        ctx.lineTo(el.x2 - 12 * Math.cos(angle - Math.PI / 6), el.y2 - 12 * Math.sin(angle - Math.PI / 6));
-        ctx.lineTo(el.x2 - 12 * Math.cos(angle + Math.PI / 6), el.y2 - 12 * Math.sin(angle + Math.PI / 6));
-        ctx.closePath();
-        ctx.fill();
+        // Draw Arrowhead if arrow type
+        if (hasArrow) {
+          const angle = Math.atan2(el.y2 - el.y, el.x2 - el.x);
+          ctx.fillStyle = el.color || '#ffffff';
+          ctx.beginPath();
+          ctx.moveTo(el.x2, el.y2);
+          ctx.lineTo(el.x2 - 12 * Math.cos(angle - Math.PI / 6), el.y2 - 12 * Math.sin(angle - Math.PI / 6));
+          ctx.lineTo(el.x2 - 12 * Math.cos(angle + Math.PI / 6), el.y2 - 12 * Math.sin(angle + Math.PI / 6));
+          ctx.closePath();
+          ctx.fill();
+        }
       } else if (el.type === 'text' && el.label) {
         ctx.fillStyle = el.color || '#ffffff';
         ctx.font = 'bold 14px sans-serif';
         ctx.fillText(el.label, el.x, el.y);
       }
 
+      // Group badge indicator if element has a groupId
+      if (el.groupId) {
+        ctx.fillStyle = '#0284c7';
+        ctx.beginPath();
+        ctx.arc(el.x + 12, el.y - 12, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
       ctx.restore();
     });
+
+    // Draw active Marquee Selection Box if present
+    if (selectionBox) {
+      ctx.save();
+      const minX = Math.min(selectionBox.x1, selectionBox.x2);
+      const minY = Math.min(selectionBox.y1, selectionBox.y2);
+      const boxW = Math.abs(selectionBox.x2 - selectionBox.x1);
+      const boxH = Math.abs(selectionBox.y2 - selectionBox.y1);
+
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.15)';
+      ctx.fillRect(minX, minY, boxW, boxH);
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([5, 4]);
+      ctx.strokeRect(minX, minY, boxW, boxH);
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
   };
   drawCanvasRef.current = drawCanvas;
 
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [dragInitialPositions, setDragInitialPositions] = useState<{ id: string; x: number; y: number; x2?: number; y2?: number }[]>([]);
+
+  const isPointInElement = (x: number, y: number, el: ElementItem): boolean => {
+    if (el.type === 'rect') {
+      const x1 = Math.min(el.x, el.x2 !== undefined ? el.x2 : el.x);
+      const y1 = Math.min(el.y, el.y2 !== undefined ? el.y2 : el.y);
+      const w = el.x2 !== undefined ? Math.abs(el.x2 - el.x) : (el.customWidth || 80);
+      const h = el.y2 !== undefined ? Math.abs(el.y2 - el.y) : (el.customDepth || 60);
+      return x >= x1 - 10 && x <= x1 + w + 10 && y >= y1 - 10 && y <= y1 + h + 10;
+    }
+    if (el.type === 'circle') {
+      const radius = el.x2 !== undefined && el.y2 !== undefined
+        ? Math.hypot(el.x2 - el.x, el.y2 - el.y)
+        : (el.customWidth ? el.customWidth / 2 : 40);
+      return Math.hypot(el.x - x, el.y - y) <= Math.max(20, radius + 10);
+    }
+    if (el.type === 'line' && el.x2 !== undefined && el.y2 !== undefined) {
+      // Distance from point to line segment
+      const dx = el.x2 - el.x;
+      const dy = el.y2 - el.y;
+      const lenSq = dx * dx + dy * dy;
+      if (lenSq === 0) return Math.hypot(el.x - x, el.y - y) < 25;
+      const t = Math.max(0, Math.min(1, ((x - el.x) * dx + (y - el.y) * dy) / lenSq));
+      const projX = el.x + t * dx;
+      const projY = el.y + t * dy;
+      return Math.hypot(projX - x, projY - y) < 20;
+    }
+    return Math.hypot(el.x - x, el.y - y) < 30;
+  };
 
   const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
@@ -905,22 +1051,61 @@ export default function ExerciseSketchEditor({
     const rect = canvas.getBoundingClientRect();
     const x = (e.clientX - rect.left) * (canvas.width / rect.width);
     const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+    const isMultiModifier = e.shiftKey || e.ctrlKey || e.metaKey;
 
     if (activeTool === 'select') {
-      // Find clicked element
-      const found = elements.slice().reverse().find((el) => {
-        const dist = Math.hypot(el.x - x, el.y - y);
-        return dist < 30;
-      });
+      // Find clicked element (from topmost to bottommost)
+      const found = elements.slice().reverse().find((el) => isPointInElement(x, y, el));
 
       if (found) {
-        setSelectedElementId(found.id);
+        let targets = [found.id];
+        // If element is part of a group, select all group members
+        if (found.groupId) {
+          const groupMembers = elements.filter((el) => el.groupId === found.groupId).map((el) => el.id);
+          targets = Array.from(new Set([...targets, ...groupMembers]));
+        }
+
+        if (isMultiModifier) {
+          setSelectedElementIds((prev) => {
+            const next = new Set(prev);
+            const isAlreadySelected = targets.every((id) => next.has(id));
+            if (isAlreadySelected) {
+              targets.forEach((id) => next.delete(id));
+            } else {
+              targets.forEach((id) => next.add(id));
+            }
+            const arr = Array.from(next);
+            setSelectedElementId(arr.length === 1 ? arr[0] : null);
+            return arr;
+          });
+        } else {
+          // If already selected within multi-selection, keep multi-selection for group drag
+          if (!selectedElementIds.includes(found.id)) {
+            setSelectedElementIds(targets);
+            setSelectedElementId(targets.length === 1 ? targets[0] : null);
+          }
+        }
+
         setIsDragging(true);
-        setDragOffset({ x: x - found.x, y: y - found.y });
+        setDragOffset({ x, y });
+        // Snapshot initial positions of all elements that will move together
+        const currentActiveIds = selectedElementIds.includes(found.id)
+          ? selectedElementIds
+          : targets;
+        const initial = elements
+          .filter((el) => currentActiveIds.includes(el.id))
+          .map((el) => ({ id: el.id, x: el.x, y: el.y, x2: el.x2, y2: el.y2 }));
+        setDragInitialPositions(initial);
       } else {
-        setSelectedElementId(null);
+        // Clicked on empty space: start marquee selection box
+        if (!isMultiModifier) {
+          setSelectedElementId(null);
+          setSelectedElementIds([]);
+        }
+        setIsMarqueeSelecting(true);
+        setSelectionBox({ x1: x, y1: y, x2: x, y2: y });
       }
-    } else if (['pass', 'run', 'dribble'].includes(activeTool)) {
+    } else if (['pass', 'run', 'dribble', 'straight', 'straight_dashed', 'rect', 'circle'].includes(activeTool)) {
       setIsDrawing(true);
       setStartPos({ x, y });
     } else {
@@ -938,6 +1123,7 @@ export default function ExerciseSketchEditor({
       };
       setElements([...elements, newEl]);
       setSelectedElementId(newEl.id);
+      setSelectedElementIds([newEl.id]);
     }
   };
 
@@ -948,26 +1134,48 @@ export default function ExerciseSketchEditor({
     const x = (e.clientX - rect.left) * (canvas.width / rect.width);
     const y = (e.clientY - rect.top) * (canvas.height / rect.height);
 
-    // Handle Dragging selected element
-    if (isDragging && selectedElementId && activeTool === 'select') {
+    // Handle Marquee Selection
+    if (isMarqueeSelecting && selectionBox) {
+      const nextBox = { ...selectionBox, x2: x, y2: y };
+      setSelectionBox(nextBox);
+
+      const minX = Math.min(nextBox.x1, nextBox.x2);
+      const maxX = Math.max(nextBox.x1, nextBox.x2);
+      const minY = Math.min(nextBox.y1, nextBox.y2);
+      const maxY = Math.max(nextBox.y1, nextBox.y2);
+
+      const insideIds = elements
+        .filter((el) => {
+          const elX2 = el.x2 !== undefined ? el.x2 : el.x;
+          const elY2 = el.y2 !== undefined ? el.y2 : el.y;
+          const left = Math.min(el.x, elX2);
+          const right = Math.max(el.x, elX2);
+          const top = Math.min(el.y, elY2);
+          const bottom = Math.max(el.y, elY2);
+          return right >= minX && left <= maxX && bottom >= minY && top <= maxY;
+        })
+        .map((el) => el.id);
+
+      setSelectedElementIds(insideIds);
+      setSelectedElementId(insideIds.length === 1 ? insideIds[0] : null);
+      return;
+    }
+
+    // Handle Dragging selected elements (Simultaneous Multi-Drag)
+    if (isDragging && activeTool === 'select' && dragInitialPositions.length > 0) {
+      const deltaX = x - dragOffset.x;
+      const deltaY = y - dragOffset.y;
+
       setElements((prevElements) =>
         prevElements.map((el) => {
-          if (el.id === selectedElementId) {
-            const dx = x - dragOffset.x - el.x;
-            const dy = y - dragOffset.y - el.y;
-            if (el.type === 'line' && el.x2 !== undefined && el.y2 !== undefined) {
-              return {
-                ...el,
-                x: x - dragOffset.x,
-                y: y - dragOffset.y,
-                x2: el.x2 + dx,
-                y2: el.y2 + dy
-              };
-            }
+          const init = dragInitialPositions.find((item) => item.id === el.id);
+          if (init) {
             return {
               ...el,
-              x: x - dragOffset.x,
-              y: y - dragOffset.y
+              x: init.x + deltaX,
+              y: init.y + deltaY,
+              x2: init.x2 !== undefined ? init.x2 + deltaX : undefined,
+              y2: init.y2 !== undefined ? init.y2 + deltaY : undefined
             };
           }
           return el;
@@ -976,26 +1184,68 @@ export default function ExerciseSketchEditor({
       return;
     }
 
-    // Handle Line Drawing Preview
+    // Handle Shape / Line Drawing Preview
     if (isDrawing && startPos) {
       drawCanvas();
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
 
+      ctx.save();
       ctx.strokeStyle = selectedColor;
       ctx.lineWidth = 3;
-      if (activeTool === 'pass') ctx.setLineDash([6, 6]);
-      ctx.beginPath();
-      ctx.moveTo(startPos.x, startPos.y);
-      ctx.lineTo(x, y);
-      ctx.stroke();
-      ctx.setLineDash([]);
+
+      if (activeTool === 'rect') {
+        const minX = Math.min(startPos.x, x);
+        const minY = Math.min(startPos.y, y);
+        const w = Math.abs(x - startPos.x);
+        const h = Math.abs(y - startPos.y);
+        ctx.fillStyle = selectedColor.startsWith('#') ? `${selectedColor}33` : 'rgba(59, 130, 246, 0.2)';
+        ctx.fillRect(minX, minY, w, h);
+        ctx.strokeRect(minX, minY, w, h);
+      } else if (activeTool === 'circle') {
+        const radius = Math.hypot(x - startPos.x, y - startPos.y);
+        ctx.fillStyle = selectedColor.startsWith('#') ? `${selectedColor}33` : 'rgba(234, 179, 8, 0.2)';
+        ctx.beginPath();
+        ctx.arc(startPos.x, startPos.y, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      } else {
+        // Line or arrow
+        if (activeTool === 'pass' || activeTool === 'straight_dashed') {
+          ctx.setLineDash([7, 6]);
+        } else if (activeTool === 'dribble') {
+          ctx.setLineDash([2, 5]);
+        }
+        ctx.beginPath();
+        ctx.moveTo(startPos.x, startPos.y);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        if (activeTool !== 'straight' && activeTool !== 'straight_dashed') {
+          const angle = Math.atan2(y - startPos.y, x - startPos.x);
+          ctx.fillStyle = selectedColor;
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(x - 12 * Math.cos(angle - Math.PI / 6), y - 12 * Math.sin(angle - Math.PI / 6));
+          ctx.lineTo(x - 12 * Math.cos(angle + Math.PI / 6), y - 12 * Math.sin(angle + Math.PI / 6));
+          ctx.closePath();
+          ctx.fill();
+        }
+      }
+      ctx.restore();
     }
   };
 
   const handleCanvasMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (isDragging) {
       setIsDragging(false);
+      setDragInitialPositions([]);
+    }
+
+    if (isMarqueeSelecting) {
+      setIsMarqueeSelecting(false);
+      setSelectionBox(null);
     }
 
     if (isDrawing && startPos) {
@@ -1005,27 +1255,63 @@ export default function ExerciseSketchEditor({
       const x = (e.clientX - rect.left) * (canvas.width / rect.width);
       const y = (e.clientY - rect.top) * (canvas.height / rect.height);
 
-      const newEl: ElementItem = {
-        id: `el_${Date.now()}`,
-        type: 'line',
-        subType: activeTool,
-        x: startPos.x,
-        y: startPos.y,
-        x2: x,
-        y2: y,
-        color: selectedColor
-      };
+      let newEl: ElementItem;
+      if (activeTool === 'rect') {
+        newEl = {
+          id: `el_${Date.now()}`,
+          type: 'rect',
+          x: Math.min(startPos.x, x),
+          y: Math.min(startPos.y, y),
+          x2: Math.max(startPos.x, x),
+          y2: Math.max(startPos.y, y),
+          color: selectedColor,
+          filled: true
+        };
+      } else if (activeTool === 'circle') {
+        newEl = {
+          id: `el_${Date.now()}`,
+          type: 'circle',
+          x: startPos.x,
+          y: startPos.y,
+          x2: x,
+          y2: y,
+          color: selectedColor,
+          filled: true
+        };
+      } else {
+        newEl = {
+          id: `el_${Date.now()}`,
+          type: 'line',
+          subType: activeTool,
+          x: startPos.x,
+          y: startPos.y,
+          x2: x,
+          y2: y,
+          color: selectedColor
+        };
+      }
+
       setElements([...elements, newEl]);
+      setSelectedElementId(newEl.id);
+      setSelectedElementIds([newEl.id]);
       setIsDrawing(false);
       setStartPos(null);
     }
   };
 
-  // Clipboard state for Copy & Paste
-  const [clipboard, setClipboard] = useState<ElementItem | null>(null);
+  // Clipboard state for Multi-Element Copy & Paste
+  const [clipboard, setClipboard] = useState<ElementItem[]>([]);
+
+  const getActiveSelectionIds = (): string[] => {
+    if (selectedElementIds.length > 0) return selectedElementIds;
+    if (selectedElementId) return [selectedElementId];
+    return [];
+  };
 
   const getElementTypeName = (el: ElementItem): string => {
     switch (el.type) {
+      case 'rect': return 'Rechteck';
+      case 'circle': return 'Kreis';
       case 'cone': return 'Hütchen';
       case 'disc': return 'Markierteller';
       case 'ring': return 'Koordinationsring';
@@ -1037,7 +1323,15 @@ export default function ExerciseSketchEditor({
       case 'goal':
         return el.subType === 'mini' ? 'Mini-Tor' : el.subType === 'youth' ? 'Jugend-Tor' : 'Groß-Tor';
       case 'line':
-        return el.subType === 'pass' ? 'Passweg' : el.subType === 'dribble' ? 'Dribbling' : 'Laufweg';
+        return el.subType === 'pass'
+          ? 'Passweg'
+          : el.subType === 'dribble'
+          ? 'Dribbling'
+          : el.subType === 'straight_dashed'
+          ? 'Gestrichelte Linie'
+          : el.subType === 'straight'
+          ? 'Gerade'
+          : 'Laufweg';
       case 'text': return 'Text';
       default: return 'Element';
     }
@@ -1045,6 +1339,8 @@ export default function ExerciseSketchEditor({
 
   const getElementIconEmoji = (type: string): string => {
     switch (type) {
+      case 'rect': return '⬛';
+      case 'circle': return '⭕';
       case 'cone': return '📐';
       case 'disc': return '🔘';
       case 'ring': return '⭕';
@@ -1061,17 +1357,19 @@ export default function ExerciseSketchEditor({
   };
 
   const updateSelectedElement = (updates: Partial<ElementItem>) => {
-    if (!selectedElementId) return;
+    const activeIds = getActiveSelectionIds();
+    if (activeIds.length === 0) return;
     setElements((prev) =>
-      prev.map((el) => (el.id === selectedElementId ? { ...el, ...updates } : el))
+      prev.map((el) => (activeIds.includes(el.id) ? { ...el, ...updates } : el))
     );
   };
 
   const handleRotateSelected = () => {
-    if (!selectedElementId) return;
+    const activeIds = getActiveSelectionIds();
+    if (activeIds.length === 0) return;
     setElements((prev) =>
       prev.map((el) => {
-        if (el.id === selectedElementId) {
+        if (activeIds.includes(el.id)) {
           const currentRot = el.rotation || 0;
           return { ...el, rotation: (currentRot + 90) % 360 };
         }
@@ -1081,10 +1379,11 @@ export default function ExerciseSketchEditor({
   };
 
   const handleResizeSelected = (delta: number) => {
-    if (!selectedElementId) return;
+    const activeIds = getActiveSelectionIds();
+    if (activeIds.length === 0) return;
     setElements((prev) =>
       prev.map((el) => {
-        if (el.id === selectedElementId) {
+        if (activeIds.includes(el.id)) {
           const currentSize = el.size || 100;
           const newSize = Math.max(40, Math.min(250, currentSize + delta));
           return { ...el, size: newSize };
@@ -1095,74 +1394,137 @@ export default function ExerciseSketchEditor({
   };
 
   const handleDeleteSelected = () => {
-    if (!selectedElementId) return;
-    setElements((prev) => prev.filter((el) => el.id !== selectedElementId));
+    const activeIds = getActiveSelectionIds();
+    if (activeIds.length === 0) return;
+    setElements((prev) => prev.filter((el) => !activeIds.includes(el.id)));
     setSelectedElementId(null);
-    toast.info('Element gelöscht.');
+    setSelectedElementIds([]);
+    toast.info(`${activeIds.length > 1 ? `${activeIds.length} Elemente` : 'Element'} gelöscht.`);
   };
 
   const handleCopy = () => {
-    if (!selectedElementId) return;
-    const el = elements.find((item) => item.id === selectedElementId);
-    if (el) {
-      setClipboard({ ...el });
-      toast.info(`"${getElementTypeName(el)}" kopiert.`);
+    const activeIds = getActiveSelectionIds();
+    if (activeIds.length === 0) return;
+    const targets = elements.filter((item) => activeIds.includes(item.id));
+    if (targets.length > 0) {
+      setClipboard(targets.map((t) => ({ ...t })));
+      toast.info(
+        targets.length === 1
+          ? `"${getElementTypeName(targets[0])}" kopiert.`
+          : `${targets.length} Elemente kopiert.`
+      );
     }
   };
 
   const handlePaste = () => {
-    if (!clipboard) return;
+    if (clipboard.length === 0) return;
     const canvas = canvasRef.current;
     const maxW = canvas?.width || 720;
     const maxH = canvas?.height || 720;
 
-    let newX = clipboard.x + 25;
-    let newY = clipboard.y + 25;
-    if (newX > maxW - 30) newX = 40;
-    if (newY > maxH - 30) newY = 40;
+    // Check bounds offset
+    const newItems: ElementItem[] = clipboard.map((item) => {
+      let newX = item.x + 25;
+      let newY = item.y + 25;
+      if (newX > maxW - 30) newX = 40;
+      if (newY > maxH - 30) newY = 40;
 
-    const newEl: ElementItem = {
-      ...clipboard,
-      id: `el_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      x: newX,
-      y: newY,
-      x2: clipboard.x2 !== undefined ? clipboard.x2 + 25 : undefined,
-      y2: clipboard.y2 !== undefined ? clipboard.y2 + 25 : undefined
-    };
+      return {
+        ...item,
+        id: `el_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        x: newX,
+        y: newY,
+        x2: item.x2 !== undefined ? item.x2 + 25 : undefined,
+        y2: item.y2 !== undefined ? item.y2 + 25 : undefined
+      };
+    });
 
-    setElements((prev) => [...prev, newEl]);
-    setSelectedElementId(newEl.id);
-    setClipboard(newEl);
-    toast.success('Element eingefügt.');
+    setElements((prev) => [...prev, ...newItems]);
+    const newIds = newItems.map((item) => item.id);
+    setSelectedElementIds(newIds);
+    setSelectedElementId(newIds.length === 1 ? newIds[0] : null);
+    setClipboard(newItems);
+    toast.success(`${newItems.length > 1 ? `${newItems.length} Elemente` : 'Element'} eingefügt.`);
   };
 
   const handleDuplicate = () => {
-    if (!selectedElementId) return;
-    const el = elements.find((item) => item.id === selectedElementId);
-    if (!el) return;
+    const activeIds = getActiveSelectionIds();
+    if (activeIds.length === 0) return;
+    const targets = elements.filter((item) => activeIds.includes(item.id));
+    if (targets.length === 0) return;
 
     const canvas = canvasRef.current;
     const maxW = canvas?.width || 720;
     const maxH = canvas?.height || 720;
 
-    let newX = el.x + 25;
-    let newY = el.y + 25;
-    if (newX > maxW - 30) newX = 40;
-    if (newY > maxH - 30) newY = 40;
+    const newItems: ElementItem[] = targets.map((el) => {
+      let newX = el.x + 25;
+      let newY = el.y + 25;
+      if (newX > maxW - 30) newX = 40;
+      if (newY > maxH - 30) newY = 40;
 
-    const newEl: ElementItem = {
-      ...el,
-      id: `el_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      x: newX,
-      y: newY,
-      x2: el.x2 !== undefined ? el.x2 + 25 : undefined,
-      y2: el.y2 !== undefined ? el.y2 + 25 : undefined
-    };
+      return {
+        ...el,
+        id: `el_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        x: newX,
+        y: newY,
+        x2: el.x2 !== undefined ? el.x2 + 25 : undefined,
+        y2: el.y2 !== undefined ? el.y2 + 25 : undefined
+      };
+    });
 
-    setElements((prev) => [...prev, newEl]);
-    setSelectedElementId(newEl.id);
-    setClipboard(newEl);
-    toast.success('Element dupliziert.');
+    setElements((prev) => [...prev, ...newItems]);
+    const newIds = newItems.map((item) => item.id);
+    setSelectedElementIds(newIds);
+    setSelectedElementId(newIds.length === 1 ? newIds[0] : null);
+    setClipboard(newItems);
+    toast.success(`${newItems.length > 1 ? `${newItems.length} Elemente` : 'Element'} dupliziert.`);
+  };
+
+  // Grouping & Ungrouping
+  const handleGroupSelected = () => {
+    const activeIds = getActiveSelectionIds();
+    if (activeIds.length < 2) {
+      toast.warning('Wähle mindestens 2 Elemente aus, um sie zu gruppieren.');
+      return;
+    }
+    const newGroupId = `grp_${Date.now()}`;
+    setElements((prev) =>
+      prev.map((el) => (activeIds.includes(el.id) ? { ...el, groupId: newGroupId } : el))
+    );
+    toast.success(`${activeIds.length} Elemente gruppiert.`);
+  };
+
+  const handleUngroupSelected = () => {
+    const activeIds = getActiveSelectionIds();
+    if (activeIds.length === 0) return;
+    setElements((prev) =>
+      prev.map((el) => (activeIds.includes(el.id) ? { ...el, groupId: undefined } : el))
+    );
+    toast.info('Gruppierung aufgehoben.');
+  };
+
+  // Layer Ordering (Ebenen-Reihenfolge)
+  const handleSendToBack = () => {
+    const activeIds = getActiveSelectionIds();
+    if (activeIds.length === 0) return;
+    setElements((prev) => {
+      const selected = prev.filter((el) => activeIds.includes(el.id));
+      const remaining = prev.filter((el) => !activeIds.includes(el.id));
+      return [...selected, ...remaining]; // First elements rendered are in background
+    });
+    toast.info('In den Hintergrund gesetzt.');
+  };
+
+  const handleBringToFront = () => {
+    const activeIds = getActiveSelectionIds();
+    if (activeIds.length === 0) return;
+    setElements((prev) => {
+      const selected = prev.filter((el) => activeIds.includes(el.id));
+      const remaining = prev.filter((el) => !activeIds.includes(el.id));
+      return [...remaining, ...selected]; // Last elements rendered are in foreground
+    });
+    toast.info('In den Vordergrund geholt.');
   };
 
   useEffect(() => {
@@ -1172,34 +1534,63 @@ export default function ExerciseSketchEditor({
         return;
       }
 
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
-        if (selectedElementId) {
+      const activeIds = selectedElementIds.length > 0
+        ? selectedElementIds
+        : selectedElementId
+        ? [selectedElementId]
+        : [];
+
+      if ((e.ctrlKey || e.metaKey) && e.key === '[') {
+        if (activeIds.length > 0) {
+          e.preventDefault();
+          handleSendToBack();
+        }
+      } else if ((e.ctrlKey || e.metaKey) && e.key === ']') {
+        if (activeIds.length > 0) {
+          e.preventDefault();
+          handleBringToFront();
+        }
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'g') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          handleUngroupSelected();
+        } else {
+          handleGroupSelected();
+        }
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+        if (activeIds.length > 0) {
           e.preventDefault();
           handleCopy();
         }
       } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
-        if (clipboard) {
+        if (clipboard.length > 0) {
           e.preventDefault();
           handlePaste();
         }
       } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
-        if (selectedElementId) {
+        if (activeIds.length > 0) {
           e.preventDefault();
           handleDuplicate();
         }
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
+        e.preventDefault();
+        const allIds = elements.map((el) => el.id);
+        setSelectedElementIds(allIds);
+        setSelectedElementId(allIds.length === 1 ? allIds[0] : null);
       } else if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (selectedElementId) {
+        if (activeIds.length > 0) {
           e.preventDefault();
           handleDeleteSelected();
         }
       } else if (e.key === 'Escape') {
         setSelectedElementId(null);
+        setSelectedElementIds([]);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedElementId, clipboard, elements]);
+  }, [selectedElementId, selectedElementIds, clipboard, elements]);
 
   const handleClearAll = async () => {
     const isConfirmed = await confirmModal({
@@ -1224,6 +1615,17 @@ export default function ExerciseSketchEditor({
       onSave({ elements, pitchType, orientation }, thumbnailDataUrl);
     }
   };
+
+  useImperativeHandle(ref, () => ({
+    getDiagramData: () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return null;
+      return {
+        diagramData: { elements, pitchType, orientation },
+        thumbnailDataUrl: canvas.toDataURL('image/png')
+      };
+    }
+  }), [elements, pitchType, orientation]);
 
   const selectedElement = elements.find((el) => el.id === selectedElementId) || null;
 
@@ -1335,8 +1737,8 @@ export default function ExerciseSketchEditor({
 
       {/* Main Workspace (Tools Panel + Canvas + Properties Panel) */}
       <div className="flex flex-col xl:flex-row gap-4 items-start">
-        {/* Left Elements / Tools Panel */}
-        <div className="w-full xl:w-56 flex flex-col gap-2 shrink-0">
+        {/* Left Elements / Tools Panel (2-Spaltig) */}
+        <div className="w-full xl:w-72 flex flex-col gap-2 shrink-0">
           <div className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1 hidden lg:block">
             Werkzeuge & Akteure
           </div>
@@ -1386,39 +1788,49 @@ export default function ExerciseSketchEditor({
             )}
           </div>
 
-          {[
-            { id: 'select', label: 'Auswählen & Verschieben', icon: Square },
-            { id: 'cone', label: 'Hütchen', icon: Square },
-            { id: 'disc', label: 'Markierteller (Loch)', icon: Disc },
-            { id: 'ring', label: 'Koordinationsring', icon: CircleDot },
-            { id: 'ladder', label: 'Koordinationsleiter', icon: AlignJustify },
-            { id: 'player', label: 'Feldspieler (Trikot)', icon: Users },
-            { id: 'goalkeeper', label: 'Torwart (TW)', icon: Shield },
-            { id: 'dummy', label: 'Freistoß-Dummy', icon: UserX },
-            { id: 'ball', label: 'Fußball (Real)', icon: Circle },
-            { id: 'goal', label: 'Tor (Drehbar)', icon: Grid },
-            { id: 'pass', label: 'Passweg (---)', icon: ArrowRight },
-            { id: 'run', label: 'Laufweg (──)', icon: ArrowRight },
-            { id: 'text', label: 'Text', icon: Type }
-          ].map((tool) => {
-            const Icon = tool.icon;
-            const isActive = activeTool === tool.id;
-            return (
-              <button
-                key={tool.id}
-                type="button"
-                onClick={() => setActiveTool(tool.id)}
-                className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition-all w-full text-left ${
-                  isActive
-                    ? 'bg-primary text-white shadow-lg shadow-primary/20'
-                    : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:bg-zinc-800 hover:text-white'
-                }`}
-              >
-                <Icon className="w-4 h-4 shrink-0" />
-                <span>{tool.label}</span>
-              </button>
-            );
-          })}
+          {/* 2-Spaltiges Werkzeug-Raster */}
+          <div className="grid grid-cols-2 gap-1.5">
+            {[
+              { id: 'select', label: 'Auswählen', icon: MousePointer, colSpan: 'col-span-2' },
+              { id: 'player', label: 'Spieler', icon: Users },
+              { id: 'goalkeeper', label: 'Torwart', icon: Shield },
+              { id: 'ball', label: 'Ball', icon: Circle },
+              { id: 'goal', label: 'Tor', icon: Grid },
+              { id: 'cone', label: 'Hütchen', icon: Square },
+              { id: 'disc', label: 'Teller', icon: Disc },
+              { id: 'ring', label: 'Ring', icon: CircleDot },
+              { id: 'ladder', label: 'Leiter', icon: AlignJustify },
+              { id: 'dummy', label: 'Dummy', icon: UserX },
+              { id: 'pass', label: 'Passweg (---)', icon: ArrowRight },
+              { id: 'run', label: 'Laufweg (──)', icon: MoveRight },
+              { id: 'straight_dashed', label: 'Linie (---)', icon: Minus },
+              { id: 'straight', label: 'Linie (──)', icon: Minus },
+              { id: 'rect', label: 'Rechteck', icon: Square },
+              { id: 'circle', label: 'Kreis', icon: Circle },
+              { id: 'text', label: 'Text', icon: Type, colSpan: 'col-span-2' }
+            ].map((tool) => {
+              const Icon = tool.icon;
+              const isActive = activeTool === tool.id;
+              return (
+                <button
+                  key={tool.id}
+                  type="button"
+                  onClick={() => setActiveTool(tool.id)}
+                  title={tool.label}
+                  className={`flex items-center gap-2 px-2.5 py-2 rounded-xl text-xs font-bold transition-all text-left ${
+                    tool.colSpan || ''
+                  } ${
+                    isActive
+                      ? 'bg-primary text-white shadow-lg shadow-primary/20 ring-1 ring-white/30'
+                      : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:bg-zinc-800 hover:text-white'
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">{tool.label}</span>
+                </button>
+              );
+            })}
+          </div>
 
 
           {/* Tor-Typ Auswahl bei gewähltem Tor-Tool */}
@@ -1499,13 +1911,20 @@ export default function ExerciseSketchEditor({
             <div className="flex items-center gap-2">
               <Settings2 className="w-4 h-4 text-primary" />
               <span className="text-xs font-bold text-white uppercase tracking-wider">
-                {selectedElement ? 'Element-Optionen' : 'Eigenschaften'}
+                {selectedElementIds.length > 1
+                  ? `${selectedElementIds.length} Elemente gewählt`
+                  : selectedElement
+                  ? 'Element-Optionen'
+                  : 'Eigenschaften'}
               </span>
             </div>
-            {selectedElement && (
+            {(selectedElement || selectedElementIds.length > 0) && (
               <button
                 type="button"
-                onClick={() => setSelectedElementId(null)}
+                onClick={() => {
+                  setSelectedElementId(null);
+                  setSelectedElementIds([]);
+                }}
                 className="text-zinc-500 hover:text-white p-1 rounded hover:bg-zinc-800 transition-colors"
                 title="Auswahl aufheben (Esc)"
               >
@@ -1514,18 +1933,32 @@ export default function ExerciseSketchEditor({
             )}
           </div>
 
-          {selectedElement ? (
+          {(selectedElement || selectedElementIds.length > 0) ? (
             <div className="space-y-3.5">
               {/* Selected Element Info Badge & Delete */}
               <div className="flex items-center justify-between bg-zinc-950/70 p-2.5 rounded-xl border border-zinc-800/80">
                 <div className="flex items-center gap-2">
-                  <span className="text-base">{getElementIconEmoji(selectedElement.type)}</span>
+                  <span className="text-base">
+                    {selectedElementIds.length > 1
+                      ? '📑'
+                      : selectedElement
+                      ? getElementIconEmoji(selectedElement.type)
+                      : '📍'}
+                  </span>
                   <div>
                     <span className="text-xs font-bold text-white block leading-tight">
-                      {getElementTypeName(selectedElement)}
+                      {selectedElementIds.length > 1
+                        ? `${selectedElementIds.length} Elemente ausgewählt`
+                        : selectedElement
+                        ? getElementTypeName(selectedElement)
+                        : ''}
                     </span>
                     <span className="text-[10px] text-zinc-500 font-mono">
-                      X: {Math.round(selectedElement.x)} · Y: {Math.round(selectedElement.y)}
+                      {selectedElementIds.length > 1
+                        ? 'Mehrfachauswahl aktiv'
+                        : selectedElement
+                        ? `X: ${Math.round(selectedElement.x)} · Y: ${Math.round(selectedElement.y)}`
+                        : ''}
                     </span>
                   </div>
                 </div>
@@ -1533,10 +1966,65 @@ export default function ExerciseSketchEditor({
                   type="button"
                   onClick={handleDeleteSelected}
                   className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition-all text-xs"
-                  title="Element löschen (Entf)"
+                  title="Ausgewählte Elemente löschen (Entf)"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
+              </div>
+
+              {/* Layer Ordering Actions */}
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
+                  Ebene / Reihenfolge
+                </span>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={handleSendToBack}
+                    className="flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 text-xs font-bold transition-all"
+                    title="In den Hintergrund setzen (Ctrl+[)"
+                  >
+                    <Layers className="w-3.5 h-3.5" />
+                    <span>Hintergrund</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleBringToFront}
+                    className="flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-bold transition-all border border-zinc-700/50"
+                    title="In den Vordergrund holen (Ctrl+])"
+                  >
+                    <Layers className="w-3.5 h-3.5" />
+                    <span>Vordergrund</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Grouping Actions */}
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
+                  Gruppierung
+                </span>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={handleGroupSelected}
+                    disabled={getActiveSelectionIds().length < 2}
+                    className="flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/30 text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                    title="Elemente gruppieren (Ctrl+G)"
+                  >
+                    <Group className="w-3.5 h-3.5" />
+                    <span>Gruppieren</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleUngroupSelected}
+                    className="flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-bold transition-all border border-zinc-700/50"
+                    title="Gruppe auflösen (Ctrl+Shift+G)"
+                  >
+                    <Ungroup className="w-3.5 h-3.5" />
+                    <span>Trennen</span>
+                  </button>
+                </div>
               </div>
 
               {/* Copy / Duplicate / Paste Actions */}
@@ -1549,7 +2037,7 @@ export default function ExerciseSketchEditor({
                     type="button"
                     onClick={handleDuplicate}
                     className="flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 text-xs font-bold transition-all"
-                    title="Element duplizieren (Ctrl+D)"
+                    title="Elemente duplizieren (Ctrl+D)"
                   >
                     <Copy className="w-3.5 h-3.5" />
                     <span>Duplizieren</span>
@@ -1564,15 +2052,15 @@ export default function ExerciseSketchEditor({
                     <span>Kopieren</span>
                   </button>
                 </div>
-                {clipboard && (
+                {clipboard.length > 0 && (
                   <button
                     type="button"
                     onClick={handlePaste}
                     className="w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-bold transition-all"
-                    title="Kopiertes Element einfügen (Ctrl+V)"
+                    title="Kopierte Elemente einfügen (Ctrl+V)"
                   >
                     <ClipboardPaste className="w-3.5 h-3.5" />
-                    <span>Einfügen (Ctrl+V)</span>
+                    <span>{clipboard.length > 1 ? `${clipboard.length} Elemente einfügen` : 'Einfügen'} (Ctrl+V)</span>
                   </button>
                 )}
               </div>
@@ -1584,7 +2072,7 @@ export default function ExerciseSketchEditor({
                     <Palette className="w-3.5 h-3.5 text-primary" /> Farbe
                   </span>
                   <span className="text-[10px] text-zinc-500 font-mono">
-                    {selectedElement.color || selectedColor}
+                    {selectedElement?.color || selectedColor}
                   </span>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -1597,7 +2085,7 @@ export default function ExerciseSketchEditor({
                         updateSelectedElement({ color: col });
                       }}
                       className={`w-6 h-6 rounded-full border-2 transition-transform ${
-                        (selectedElement.color || selectedColor) === col ? 'scale-125 border-white shadow-md' : 'border-transparent'
+                        (selectedElement?.color || selectedColor) === col ? 'scale-125 border-white shadow-md' : 'border-transparent'
                       }`}
                       style={{ backgroundColor: col }}
                     />
@@ -1608,7 +2096,7 @@ export default function ExerciseSketchEditor({
                   >
                     <input
                       type="color"
-                      value={selectedElement.color || selectedColor}
+                      value={selectedElement?.color || selectedColor}
                       onChange={(e) => {
                         setSelectedColor(e.target.value);
                         updateSelectedElement({ color: e.target.value });
@@ -1627,7 +2115,7 @@ export default function ExerciseSketchEditor({
                     <ZoomIn className="w-3.5 h-3.5 text-primary" /> Größe
                   </span>
                   <span className="text-[11px] font-bold text-white bg-zinc-800 px-2 py-0.5 rounded">
-                    {selectedElement.size || 100}%
+                    {selectedElement?.size || 100}%
                   </span>
                 </div>
                 <input
@@ -1635,7 +2123,7 @@ export default function ExerciseSketchEditor({
                   min="40"
                   max="250"
                   step="5"
-                  value={selectedElement.size || 100}
+                  value={selectedElement?.size || 100}
                   onChange={(e) => updateSelectedElement({ size: parseInt(e.target.value) })}
                   className="w-full accent-primary h-1.5 bg-zinc-800 rounded-lg cursor-pointer"
                 />
@@ -1672,7 +2160,7 @@ export default function ExerciseSketchEditor({
                     <RotateCw className="w-3.5 h-3.5 text-primary" /> Drehung
                   </span>
                   <span className="text-[11px] font-bold text-white bg-zinc-800 px-2 py-0.5 rounded">
-                    {selectedElement.rotation || 0}°
+                    {selectedElement?.rotation || 0}°
                   </span>
                 </div>
                 <button
@@ -1690,7 +2178,7 @@ export default function ExerciseSketchEditor({
                       type="button"
                       onClick={() => updateSelectedElement({ rotation: deg })}
                       className={`py-1 rounded text-[10px] font-bold transition-all ${
-                        (selectedElement.rotation || 0) === deg
+                        (selectedElement?.rotation || 0) === deg
                           ? 'bg-primary text-white'
                           : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white'
                       }`}
@@ -1701,8 +2189,48 @@ export default function ExerciseSketchEditor({
                 </div>
               </div>
 
+              {/* Shape Specific Options: Rect / Circle (Fill & Border) */}
+              {selectedElement && (selectedElement.type === 'rect' || selectedElement.type === 'circle') && (
+                <div className="space-y-2 border-t border-zinc-800 pt-3">
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
+                    Form-Optionen
+                  </label>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => updateSelectedElement({ filled: !(selectedElement.filled !== false) })}
+                      className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
+                        selectedElement.filled !== false
+                          ? 'bg-primary/20 text-primary border-primary/30'
+                          : 'bg-zinc-950/60 text-zinc-400 border-zinc-800'
+                      }`}
+                    >
+                      {selectedElement.filled !== false ? '🎨 Gefüllt (Aktiv)' : '⭕ Nur Umriss'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateSelectedElement({ subType: selectedElement.subType === 'dashed' ? 'solid' : 'dashed' })}
+                      className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
+                        selectedElement.subType === 'dashed'
+                          ? 'bg-primary/20 text-primary border-primary/30'
+                          : 'bg-zinc-950/60 text-zinc-400 border-zinc-800'
+                      }`}
+                    >
+                      {selectedElement.subType === 'dashed' ? '--- Gestrichelt' : '── Durchgezogen'}
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    value={selectedElement.label || ''}
+                    onChange={(e) => updateSelectedElement({ label: e.target.value })}
+                    placeholder="Zonen-Beschriftung (z. B. Feld A)"
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-zinc-500 focus:border-primary focus:outline-none"
+                  />
+                </div>
+              )}
+
               {/* Type Specific Options: Goal */}
-              {selectedElement.type === 'goal' && (
+              {selectedElement?.type === 'goal' && (
                 <div className="space-y-1.5 border-t border-zinc-800 pt-3">
                   <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
                     Tor-Größe wählen
@@ -1731,7 +2259,7 @@ export default function ExerciseSketchEditor({
               )}
 
               {/* Type Specific Options: Player / Goalkeeper / Text Label */}
-              {['player', 'goalkeeper', 'text'].includes(selectedElement.type) && (
+              {selectedElement && ['player', 'goalkeeper', 'text'].includes(selectedElement.type) && (
                 <div className="space-y-1.5 border-t border-zinc-800 pt-3">
                   <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
                     {selectedElement.type === 'text' ? 'Text' : 'Trikotnummer / Name'}
@@ -1747,16 +2275,18 @@ export default function ExerciseSketchEditor({
               )}
 
               {/* Type Specific Options: Line Style */}
-              {selectedElement.type === 'line' && (
+              {selectedElement?.type === 'line' && (
                 <div className="space-y-1.5 border-t border-zinc-800 pt-3">
                   <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
                     Linientyp
                   </label>
                   <div className="space-y-1">
                     {[
-                      { id: 'pass', label: 'Passweg (---)' },
-                      { id: 'run', label: 'Laufweg (──)' },
-                      { id: 'dribble', label: 'Dribbling (···)' }
+                      { id: 'pass', label: 'Passweg (Pfeil gestrichelt)' },
+                      { id: 'run', label: 'Laufweg (Pfeil durchgezogen)' },
+                      { id: 'dribble', label: 'Dribbling (Pfeil gepunktet)' },
+                      { id: 'straight_dashed', label: 'Linie (Gestrichelt, ohne Pfeil)' },
+                      { id: 'straight', label: 'Linie (Gerade, ohne Pfeil)' }
                     ].map((lt) => (
                       <button
                         key={lt.id}
@@ -1777,10 +2307,10 @@ export default function ExerciseSketchEditor({
             </div>
           ) : (
             <div className="space-y-3.5">
-              {clipboard ? (
+              {clipboard.length > 0 ? (
                 <div className="p-3 rounded-xl bg-zinc-950/80 border border-emerald-500/30 space-y-2">
                   <div className="flex items-center justify-between text-xs text-zinc-300 font-bold">
-                    <span>Element in Ablage</span>
+                    <span>{clipboard.length > 1 ? `${clipboard.length} Elemente in Ablage` : '1 Element in Ablage'}</span>
                     <span className="text-[10px] text-emerald-400 font-normal">Kopiert</span>
                   </div>
                   <button
@@ -1796,7 +2326,7 @@ export default function ExerciseSketchEditor({
                 <div className="p-3.5 rounded-xl bg-zinc-950/60 border border-zinc-800/80 text-center text-zinc-500 space-y-1">
                   <p className="text-xs font-semibold text-zinc-300">Kein Element ausgewählt</p>
                   <p className="text-[11px] leading-relaxed text-zinc-400">
-                    Klicke auf ein Element auf dem Spielfeld, um Farbe, Drehung oder Größe anzupassen.
+                    Klicke auf ein Element oder ziehe einen Rahmen mit der Maus, um mehrere Elemente zu markieren.
                   </p>
                 </div>
               )}
@@ -1837,46 +2367,42 @@ export default function ExerciseSketchEditor({
               <div className="p-3 rounded-xl bg-zinc-950/50 border border-zinc-800/80 space-y-1.5 text-[11px] text-zinc-400">
                 <span className="font-bold text-zinc-300 block mb-1">Tastatur-Shortcuts:</span>
                 <div className="flex justify-between items-center">
-                  <span>Kopieren:</span>
-                  <kbd className="px-1.5 py-0.5 bg-zinc-800 rounded text-zinc-200 font-mono text-[10px]">Ctrl+C</kbd>
+                  <span>Mehrfachauswahl:</span>
+                  <kbd className="px-1.5 py-0.5 bg-zinc-800 rounded text-zinc-200 font-mono text-[10px]">Shift+Klick</kbd>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>Einfügen:</span>
-                  <kbd className="px-1.5 py-0.5 bg-zinc-800 rounded text-zinc-200 font-mono text-[10px]">Ctrl+V</kbd>
+                  <span>Gruppieren:</span>
+                  <kbd className="px-1.5 py-0.5 bg-zinc-800 rounded text-zinc-200 font-mono text-[10px]">Ctrl+G</kbd>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>Duplizieren:</span>
-                  <kbd className="px-1.5 py-0.5 bg-zinc-800 rounded text-zinc-200 font-mono text-[10px]">Ctrl+D</kbd>
+                  <span>Gruppe trennen:</span>
+                  <kbd className="px-1.5 py-0.5 bg-zinc-800 rounded text-zinc-200 font-mono text-[10px]">Ctrl+Shift+G</kbd>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>Löschen:</span>
-                  <kbd className="px-1.5 py-0.5 bg-zinc-800 rounded text-zinc-200 font-mono text-[10px]">Entf</kbd>
+                  <span>Alle auswählen:</span>
+                  <kbd className="px-1.5 py-0.5 bg-zinc-800 rounded text-zinc-200 font-mono text-[10px]">Ctrl+A</kbd>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span>Ebene vor / zurück:</span>
+                  <kbd className="px-1.5 py-0.5 bg-zinc-800 rounded text-zinc-200 font-mono text-[10px]">Ctrl+] / Ctrl+[</kbd>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span>Kopieren / Einfügen:</span>
+                  <kbd className="px-1.5 py-0.5 bg-zinc-800 rounded text-zinc-200 font-mono text-[10px]">Ctrl+C / V</kbd>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span>Duplizieren / Löschen:</span>
+                  <kbd className="px-1.5 py-0.5 bg-zinc-800 rounded text-zinc-200 font-mono text-[10px]">Ctrl+D / Entf</kbd>
                 </div>
               </div>
             </div>
           )}
         </div>
       </div>
-
-      {/* Bottom Save / Cancel Footer */}
-      <div className="flex items-center justify-end gap-3 border-t border-zinc-800 pt-3">
-        {onCancel && (
-          <button
-            type="button"
-            onClick={onCancel}
-            className="px-4 py-2 rounded-xl bg-zinc-900 text-zinc-400 hover:text-white text-xs font-bold transition-all"
-          >
-            Abbrechen
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={handleSaveDiagram}
-          className="flex items-center gap-2 px-5 py-2 rounded-xl bg-primary text-white font-bold text-xs shadow-lg shadow-primary/20 hover:bg-primary-hover transition-all"
-        >
-          <Save className="w-4 h-4" /> Skizze übernehmen & Speichern
-        </button>
-      </div>
     </div>
   );
-}
+});
+
+ExerciseSketchEditor.displayName = 'ExerciseSketchEditor';
+
+export default ExerciseSketchEditor;

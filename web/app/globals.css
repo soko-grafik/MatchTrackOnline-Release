@@ -81,19 +81,20 @@ html:not(.dark) img[alt*="logo"] {
 @media print {
   @page {
     size: A4 portrait;
-    margin: 6mm;
+    margin: 5mm;
   }
 
   html, body {
     width: 210mm !important;
     min-width: 210mm !important;
-    height: auto !important;
-    min-height: 100% !important;
+    max-width: 210mm !important;
+    height: 287mm !important;
+    max-height: 287mm !important;
     margin: 0 !important;
     padding: 0 !important;
     background: #ffffff !important;
     color: #0f172a !important;
-    overflow: visible !important;
+    overflow: hidden !important;
     color-scheme: light !important;
     -webkit-text-size-adjust: 100% !important;
   }
@@ -113,12 +114,13 @@ html:not(.dark) img[alt*="logo"] {
     width: 210mm !important;
     min-width: 210mm !important;
     max-width: 210mm !important;
-    height: auto !important;
+    height: 287mm !important;
+    max-height: 287mm !important;
     margin: 0 !important;
     padding: 0 !important;
     background: #ffffff !important;
     color: #0f172a !important;
-    overflow: visible !important;
+    overflow: hidden !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
   }
@@ -133,27 +135,37 @@ html:not(.dark) img[alt*="logo"] {
     width: 210mm !important;
     min-width: 210mm !important;
     max-width: 210mm !important;
-    height: auto !important;
+    height: 287mm !important;
+    max-height: 287mm !important;
     margin: 0 !important;
     padding: 0 !important;
-    overflow: visible !important;
+    overflow: hidden !important;
   }
 
   #printable-training-plan-area,
   #printable-consent-sheet-area {
-    display: block !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
     position: static !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
+    width: 200mm !important;
+    min-width: 200mm !important;
+    max-width: 200mm !important;
+    height: 285mm !important;
+    max-height: 285mm !important;
+    margin: 0 auto !important;
+    padding: 2mm 0 !important;
     box-sizing: border-box !important;
     background: #ffffff !important;
     color: #0f172a !important;
     box-shadow: none !important;
     border: none !important;
     border-radius: 0 !important;
-    overflow: visible !important;
+    overflow: hidden !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
     color-scheme: light !important;
@@ -163,40 +175,6 @@ html:not(.dark) img[alt*="logo"] {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
   }
-
-  .print-desktop-grid {
-    display: grid !important;
-    grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
-  }
-
-  .print-col-7 {
-    grid-column: span 7 / span 7 !important;
-  }
-
-  .print-col-5 {
-    grid-column: span 5 / span 5 !important;
-    border-top: none !important;
-    border-left: 1px solid #e2e8f0 !important;
-    padding-top: 0 !important;
-    padding-left: 0.75rem !important;
-  }
-
-  .print-col-12 {
-    grid-column: span 12 / span 12 !important;
-  }
-
-  .print-row-layout {
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: flex-start !important;
-  }
-
-  .print-sketch-box {
-    width: 18rem !important;
-    min-width: 18rem !important;
-    max-width: 18rem !important;
-    flex-shrink: 0 !important;
-  }
 }
 
 /* Force A4 desktop dimensions during client-side PDF export (html2canvas) */
@@ -204,7 +182,13 @@ html:not(.dark) img[alt*="logo"] {
   width: 794px !important;
   max-width: 794px !important;
   min-width: 794px !important;
+  height: 1120px !important;
+  max-height: 1120px !important;
   box-sizing: border-box !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
 }
 
 .force-a4-render .print-desktop-grid {

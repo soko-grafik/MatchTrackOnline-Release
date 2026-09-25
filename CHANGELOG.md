@@ -1,18 +1,18 @@
 # 📋 MatchTrack Online - Versions-Changelog
 
-## Release: 2026-09-16 13:23:50 (Dev Commit: `856e6f6b`)
+## Release: 2026-09-25 10:32:26 (Dev Commit: `d20ef818`)
 
 ### 🚀 Letzte Änderungen aus dem Entwicklungs-Repository:
-* fix(print): harmonize mobile print and pdf export with desktop DIN A4 layout (856e6f6b - 2026-09-16)
-* feat(admin): add system and client logs tab with filters and irrelevance classification (5908e347 - 2026-09-15)
-* remove (955e1e36 - 2026-09-15)
-* fix(sketch-editor): preload and immediately render FT-Graphics icons without requiring canvas click (fa940d8e - 2026-09-15)
-* feat(training): display sketch editor by default in exercise modal (d2e29c99 - 2026-09-15)
-* feat(training): allow editing exercises directly via popup from training plan overview (7bba5efa - 2026-09-15)
-* feat(training): sort training plan print sections pedagogically and optimize A4 page space utilization (04f1dc6f - 2026-09-15)
-* fix(print): resolve blank print preview in Windows print dialog for training plans and consent modals (85e8a9e6 - 2026-09-15)
-* update training page popup width (e5112ff3 - 2026-09-10)
-* feat: add right properties sidebar for element options and copy/paste functionality (6b969a9d - 2026-09-10)
+* docs(chats): update chat session log with table of contents (d20ef818 - 2026-09-25)
+* refactor(sketch): remove redundant sketch save button in favor of unified exercise save button (53687988 - 2026-09-25)
+* style(training): reorganize exercise form layout into compact two-row structure (2d12bf85 - 2026-09-25)
+* feat(training): add adjustable 3/5/7 column grid and simplify exercise card layout (b60ad34c - 2026-09-25)
+* feat(training): add bullet list support for provocation rules and exercise description (93b7d645 - 2026-09-25)
+* feat(training): automatically save sketch when saving exercise (1396feeb - 2026-09-25)
+* feat(sketch): add layer ordering (send to back / bring to front) (626d9de0 - 2026-09-25)
+* style(print): enlarge exercise sketch and fill A4 sheet in single exercise view (14361893 - 2026-09-25)
+* style(sketch): convert tools sidebar into a compact 2-column grid (40c7f8eb - 2026-09-25)
+* feat(sketch): add shapes, dashed lines, multi-select, grouping and multi-copy (359b08dd - 2026-09-25)
 
 ---
 *Automatisch generiert durch die MatchTrack Release Pipeline.*

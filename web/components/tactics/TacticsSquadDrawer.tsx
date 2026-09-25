@@ -24,12 +24,21 @@ interface TacticsSquadDrawerProps {
     team: 'home' | 'away';
     avatar_url?: string;
   }) => void;
+  onAddBenchPlayer?: (playerData: {
+    id: string;
+    name: string;
+    number: number;
+    role: string;
+    team: 'home' | 'away';
+    avatar_url?: string;
+  }) => void;
 }
 
 export default function TacticsSquadDrawer({
   isOpen,
   onClose,
-  onAddPlayerToken
+  onAddPlayerToken,
+  onAddBenchPlayer
 }: TacticsSquadDrawerProps) {
   const [teams, setTeams] = useState<any[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
@@ -95,6 +104,20 @@ export default function TacticsSquadDrawer({
       team: targetTeam,
       avatar_url: player.avatar_path ? getMediaUrl(player.avatar_path) : undefined
     });
+  };
+
+  const handleAddToBench = (player: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onAddBenchPlayer) {
+      onAddBenchPlayer({
+        id: `bench_${player.id}_${Date.now()}`,
+        name: player.last_name || player.first_name || 'Spieler',
+        number: player.jersey_number || 0,
+        role: player.primary_position || 'SP',
+        team: targetTeam,
+        avatar_url: player.avatar_path ? getMediaUrl(player.avatar_path) : undefined
+      });
+    }
   };
 
   if (!isOpen) return null;
@@ -227,8 +250,31 @@ export default function TacticsSquadDrawer({
                   </div>
                 </div>
 
-                <div className="w-7 h-7 rounded-lg bg-zinc-800 group-hover:bg-amber-500 text-zinc-400 group-hover:text-zinc-950 flex items-center justify-center transition-all">
-                  <Plus className="w-4 h-4" />
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {onAddBenchPlayer && (
+                    <button
+                      type="button"
+                      onClick={(e) => handleAddToBench(player, e)}
+                      className="px-2 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-[11px] font-bold flex items-center gap-1 transition-all active:scale-95"
+                      title="Auf die Reservebank setzen"
+                    >
+                      <Plus className="w-3 h-3" />
+                      <span>Bank</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSelectPlayer(player);
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 text-[11px] font-bold flex items-center gap-1 transition-all active:scale-95"
+                    title="Auf das Spielfeld setzen"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>Feld</span>
+                  </button>
                 </div>
               </div>
             ))
@@ -238,7 +284,7 @@ export default function TacticsSquadDrawer({
         {/* Footer */}
         <div className="p-4 border-t border-zinc-800 bg-zinc-900/60 text-center">
           <span className="text-[11px] text-zinc-400 block">
-            Klicke auf einen Spieler, um ihn auf die Taktiktafel zu setzen.
+            Wähle &quot;Feld&quot; für die Startaufstellung oder &quot;Bank&quot; für die Reservebank.
           </span>
         </div>
 

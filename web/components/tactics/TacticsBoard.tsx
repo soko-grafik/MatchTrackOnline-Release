@@ -14,7 +14,8 @@ import TacticsToolbar from './TacticsToolbar';
 import TacticsBoardCanvas, {
   TacticsFrame,
   PlayerToken,
-  BallItem
+  BallItem,
+  PlannedSubstitution
 } from './TacticsBoardCanvas';
 import TacticsTimeline from './TacticsTimeline';
 import TacticsPreferencesModal from './TacticsPreferencesModal';
@@ -23,7 +24,9 @@ import TacticsSquadDrawer from './TacticsSquadDrawer';
 import TacticsPresentationOverlay from './TacticsPresentationOverlay';
 import TacticsExportModal from './TacticsExportModal';
 import TacticsPlayerEditModal from './TacticsPlayerEditModal';
-import { Edit3, Trash2, X } from 'lucide-react';
+import TacticsBenchBar from './TacticsBenchBar';
+import TacticsSubstitutionModal from './TacticsSubstitutionModal';
+import { Edit3, Trash2, X, ArrowLeftRight, ArrowDownRight, Check } from 'lucide-react';
 
 interface TacticsBoardProps {
   initialBoardId?: string;
@@ -75,11 +78,17 @@ export default function TacticsBoard({ initialBoardId }: TacticsBoardProps) {
     { id: 'h4', x: 0.22, y: 0.62, team: 'home', number: 5, name: 'IV', role: 'IV' },
     { id: 'h5', x: 0.24, y: 0.85, team: 'home', number: 2, name: 'RV', role: 'RV' },
     { id: 'h6', x: 0.36, y: 0.50, team: 'home', number: 6, name: 'DM', role: 'DM' },
-    { id: 'h7', x: 0.48, y: 0.32, team: 'home', number: 8, name: 'ZM', role: 'ZM' },
+    { id: 'h7', x: 0.48, y: 0.32, team: 'home', number: 8, name: 'Albert', role: 'ZM' },
     { id: 'h8', x: 0.48, y: 0.68, team: 'home', number: 10, name: 'ZM', role: 'ZM' },
     { id: 'h9', x: 0.66, y: 0.18, team: 'home', number: 11, name: 'LA', role: 'LA' },
     { id: 'h10', x: 0.70, y: 0.50, team: 'home', number: 9, name: 'ST', role: 'ST' },
     { id: 'h11', x: 0.66, y: 0.82, team: 'home', number: 7, name: 'RA', role: 'RA' }
+  ];
+
+  // Default Initial Bench Setup
+  const createDefaultBench = (): PlayerToken[] => [
+    { id: 'bench_1', x: 0, y: 0, team: 'home', number: 12, name: 'Theo', role: 'ZM' },
+    { id: 'bench_2', x: 0, y: 0, team: 'home', number: 14, name: 'Lukas', role: 'ST' }
   ];
 
   // Multi-Phase Animation Frames State
@@ -89,6 +98,8 @@ export default function TacticsBoard({ initialBoardId }: TacticsBoardProps) {
       title: 'Phase 1: Grundaufstellung',
       duration: 1.8,
       players: createDefaultHomeTeam(),
+      benchPlayers: createDefaultBench(),
+      plannedSubstitutions: [],
       balls: [{ id: 'b1', x: 0.50, y: 0.50 }],
       equipment: [],
       lines: [],
@@ -99,6 +110,12 @@ export default function TacticsBoard({ initialBoardId }: TacticsBoardProps) {
 
   const [activeFrameIndex, setActiveFrameIndex] = useState<number>(0);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
+
+  // Bench & Substitution State
+  const [isBenchCollapsed, setIsBenchCollapsed] = useState<boolean>(false);
+  const [isSubstitutionModalOpen, setIsSubstitutionModalOpen] = useState<boolean>(false);
+  const [subPreselectedBenchId, setSubPreselectedBenchId] = useState<string | null>(null);
+  const [subPreselectedFieldId, setSubPreselectedFieldId] = useState<string | null>(null);
 
   // Playback State
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
@@ -180,7 +197,12 @@ export default function TacticsBoard({ initialBoardId }: TacticsBoardProps) {
         if (data.pitch_type) setPitchType(data.pitch_type);
         if (data.pitch_style) setPitchStyle(data.pitch_style);
         if (Array.isArray(data.frames_data) && data.frames_data.length > 0) {
-          setFrames(data.frames_data);
+          const sanitized = data.frames_data.map((f: any) => ({
+            ...f,
+            benchPlayers: f.benchPlayers || [],
+            plannedSubstitutions: f.plannedSubstitutions || []
+          }));
+          setFrames(sanitized);
           setActiveFrameIndex(0);
         }
       }
@@ -199,6 +221,8 @@ export default function TacticsBoard({ initialBoardId }: TacticsBoardProps) {
       const nextFrames = [...prevFrames];
       const cur = nextFrames[activeFrameIndex] || {
         players: [],
+        benchPlayers: [],
+        plannedSubstitutions: [],
         balls: [],
         equipment: [],
         lines: [],
@@ -232,12 +256,14 @@ export default function TacticsBoard({ initialBoardId }: TacticsBoardProps) {
   // --- Timeline Frame Management ---
   const handleAddFrame = () => {
     const curFrame = frames[activeFrameIndex];
-    // Copy positions from current frame to maintain continuity
+    // Copy positions and bench/subs from current frame to maintain continuity
     const newFrame: TacticsFrame = {
       id: `f_${Date.now()}`,
       title: `Phase ${frames.length + 1}`,
       duration: 1.8,
       players: JSON.parse(JSON.stringify(curFrame.players || [])),
+      benchPlayers: JSON.parse(JSON.stringify(curFrame.benchPlayers || [])),
+      plannedSubstitutions: JSON.parse(JSON.stringify(curFrame.plannedSubstitutions || [])),
       balls: JSON.parse(JSON.stringify(curFrame.balls || [])),
       equipment: JSON.parse(JSON.stringify(curFrame.equipment || [])),
       lines: [], // Fresh drawings for new phase
@@ -363,6 +389,191 @@ export default function TacticsBoard({ initialBoardId }: TacticsBoardProps) {
     toast.success(`${playerData.name} aufgestellt!`);
   };
 
+  // --- Bench & Substitution Handlers ---
+  const handleAddBenchPlayer = (playerData: {
+    id: string;
+    name: string;
+    number: number;
+    role: string;
+    team: 'home' | 'away';
+    avatar_url?: string;
+  }) => {
+    const newToken: PlayerToken = {
+      id: playerData.id,
+      x: 0,
+      y: 0,
+      team: playerData.team,
+      number: playerData.number,
+      name: playerData.name,
+      role: playerData.role,
+      avatar_url: playerData.avatar_url,
+      isGoalkeeper: playerData.role === 'TW'
+    };
+
+    handleUpdateCurrentFrame((prev) => ({
+      ...prev,
+      benchPlayers: [...(prev.benchPlayers || []), newToken]
+    }));
+    toast.success(`${playerData.name} zur Reservebank hinzugefügt!`);
+  };
+
+  const handleRemoveBenchPlayer = (id: string) => {
+    handleUpdateCurrentFrame((prev) => ({
+      ...prev,
+      benchPlayers: (prev.benchPlayers || []).filter((p) => p.id !== id),
+      plannedSubstitutions: (prev.plannedSubstitutions || []).filter((s) => s.playerIn.id !== id)
+    }));
+    toast.success('Spieler von der Reservebank entfernt.');
+  };
+
+  const handleMoveToPitch = (benchPlayer: PlayerToken) => {
+    const onPitchToken: PlayerToken = {
+      ...benchPlayer,
+      x: benchPlayer.team === 'home' ? 0.35 : 0.65,
+      y: 0.50
+    };
+
+    handleUpdateCurrentFrame((prev) => ({
+      ...prev,
+      players: [...prev.players, onPitchToken],
+      benchPlayers: (prev.benchPlayers || []).filter((p) => p.id !== benchPlayer.id),
+      plannedSubstitutions: (prev.plannedSubstitutions || []).filter((s) => s.playerIn.id !== benchPlayer.id)
+    }));
+    toast.success(`${benchPlayer.name} auf das Spielfeld gesetzt!`);
+  };
+
+  const handleMoveToBench = (playerId: string) => {
+    const curFrame = frames[activeFrameIndex];
+    const target = curFrame?.players.find((p) => p.id === playerId);
+    if (!target) return;
+
+    handleUpdateCurrentFrame((prev) => ({
+      ...prev,
+      players: prev.players.filter((p) => p.id !== playerId),
+      benchPlayers: [...(prev.benchPlayers || []), { ...target, x: 0, y: 0 }],
+      plannedSubstitutions: (prev.plannedSubstitutions || []).filter((s) => s.playerOut.id !== playerId)
+    }));
+    setSelectedElementId(null);
+    toast.success(`${target.name} auf die Reservebank gesetzt!`);
+  };
+
+  const handleSaveSubstitution = (subData: {
+    playerIn: PlayerToken;
+    playerOut: PlayerToken;
+    minute?: string;
+    notes?: string;
+  }) => {
+    const newSub: PlannedSubstitution = {
+      id: `sub_${Date.now()}`,
+      playerIn: subData.playerIn,
+      playerOut: subData.playerOut,
+      minute: subData.minute,
+      notes: subData.notes,
+      status: 'planned'
+    };
+
+    handleUpdateCurrentFrame((prev) => {
+      const filtered = (prev.plannedSubstitutions || []).filter(
+        (s) => s.playerOut.id !== subData.playerOut.id
+      );
+      return {
+        ...prev,
+        plannedSubstitutions: [...filtered, newSub]
+      };
+    });
+
+    toast.success(`Wechsel vorbereitet: ${subData.playerIn.name} für ${subData.playerOut.name}!`);
+  };
+
+  const handleDeleteSubstitution = (subId: string) => {
+    handleUpdateCurrentFrame((prev) => ({
+      ...prev,
+      plannedSubstitutions: (prev.plannedSubstitutions || []).filter((s) => s.id !== subId)
+    }));
+    toast.success('Vorbereiteter Wechsel verworfen.');
+  };
+
+  const handleExecuteSubstitution = (sub: PlannedSubstitution, createNewPhase: boolean) => {
+    if (createNewPhase) {
+      const curFrame = frames[activeFrameIndex];
+      const targetOut = curFrame.players.find((p) => p.id === sub.playerOut.id);
+      const targetIn = curFrame.benchPlayers?.find((p) => p.id === sub.playerIn.id) || sub.playerIn;
+
+      const newX = targetOut ? targetOut.x : 0.50;
+      const newY = targetOut ? targetOut.y : 0.50;
+
+      const playerInOnPitch: PlayerToken = {
+        ...targetIn,
+        x: newX,
+        y: newY,
+        team: targetOut?.team || targetIn.team || 'home'
+      };
+
+      const updatedPlayers = curFrame.players.map((p) =>
+        p.id === sub.playerOut.id ? playerInOnPitch : p
+      );
+
+      const updatedBench = [
+        ...(curFrame.benchPlayers || []).filter((p) => p.id !== sub.playerIn.id),
+        { ...sub.playerOut, x: 0, y: 0 }
+      ];
+
+      const remainingSubs = (curFrame.plannedSubstitutions || []).filter((s) => s.id !== sub.id);
+
+      const newFrame: TacticsFrame = {
+        id: `f_${Date.now()}`,
+        title: `Phase ${frames.length + 1}: Wechsel ${sub.playerIn.name} für ${sub.playerOut.name}`,
+        duration: 1.8,
+        players: updatedPlayers,
+        benchPlayers: updatedBench,
+        plannedSubstitutions: remainingSubs,
+        balls: JSON.parse(JSON.stringify(curFrame.balls || [])),
+        equipment: JSON.parse(JSON.stringify(curFrame.equipment || [])),
+        lines: [],
+        zones: JSON.parse(JSON.stringify(curFrame.zones || [])),
+        texts: []
+      };
+
+      setFrames((prev) => [...prev, newFrame]);
+      setActiveFrameIndex(frames.length);
+      toast.success(`Neue Phase angelegt: ${sub.playerIn.name} für ${sub.playerOut.name} eingewechselt!`);
+    } else {
+      handleUpdateCurrentFrame((curFrame) => {
+        const targetOut = curFrame.players.find((p) => p.id === sub.playerOut.id);
+        const targetIn = curFrame.benchPlayers?.find((p) => p.id === sub.playerIn.id) || sub.playerIn;
+
+        const newX = targetOut ? targetOut.x : 0.50;
+        const newY = targetOut ? targetOut.y : 0.50;
+
+        const playerInOnPitch: PlayerToken = {
+          ...targetIn,
+          x: newX,
+          y: newY,
+          team: targetOut?.team || targetIn.team || 'home'
+        };
+
+        const updatedPlayers = curFrame.players.map((p) =>
+          p.id === sub.playerOut.id ? playerInOnPitch : p
+        );
+
+        const updatedBench = [
+          ...(curFrame.benchPlayers || []).filter((p) => p.id !== sub.playerIn.id),
+          { ...sub.playerOut, x: 0, y: 0 }
+        ];
+
+        const remainingSubs = (curFrame.plannedSubstitutions || []).filter((s) => s.id !== sub.id);
+
+        return {
+          ...curFrame,
+          players: updatedPlayers,
+          benchPlayers: updatedBench,
+          plannedSubstitutions: remainingSubs
+        };
+      });
+      toast.success(`Wechsel vollzogen: ${sub.playerIn.name} für ${sub.playerOut.name} eingewechselt!`);
+    }
+  };
+
   // --- Save Board to Cloud API ---
   const handleSaveBoard = async () => {
     setIsSaving(true);
@@ -453,6 +664,9 @@ export default function TacticsBoard({ initialBoardId }: TacticsBoardProps) {
         onChangeCategory={setCategory}
         homeColor={homeColors.primary}
         awayColor={awayColors.primary}
+        onToggleBench={() => setIsBenchCollapsed((prev) => !prev)}
+        benchCount={frames[activeFrameIndex]?.benchPlayers?.length || 0}
+        plannedSubCount={frames[activeFrameIndex]?.plannedSubstitutions?.length || 0}
       />
 
       {/* 2. Central Interactive Pitch Canvas */}
@@ -554,6 +768,60 @@ export default function TacticsBoard({ initialBoardId }: TacticsBoardProps) {
               <Edit3 className="w-4 h-4" />
             </button>
 
+            {/* Substitution controls for selected player */}
+            {(() => {
+              const plannedSub = frames[activeFrameIndex]?.plannedSubstitutions?.find(
+                (s) => s.playerOut.id === selectedPlayer.id && s.status !== 'executed'
+              );
+              if (plannedSub) {
+                return (
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-950/60 border border-emerald-500/40 text-xs text-emerald-300">
+                    <span className="text-[11px] font-bold">⇄ {plannedSub.playerIn.name} kommt</span>
+                    <button
+                      type="button"
+                      onClick={() => handleExecuteSubstitution(plannedSub, false)}
+                      className="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] transition-all"
+                      title="Wechsel sofort vollziehen"
+                    >
+                      Einwechseln
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteSubstitution(plannedSub.id)}
+                      className="p-1 rounded text-zinc-400 hover:text-rose-400"
+                      title="Wechsel verwerfen"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                );
+              }
+              return (
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSubPreselectedFieldId(selectedPlayer.id);
+                      setSubPreselectedBenchId(null);
+                      setIsSubstitutionModalOpen(true);
+                    }}
+                    className="p-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 hover:text-white transition-all active:scale-95"
+                    title={`Wechsel für ${selectedPlayer.name} vorbereiten`}
+                  >
+                    <ArrowLeftRight className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleMoveToBench(selectedPlayer.id)}
+                    className="p-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 hover:text-white transition-all active:scale-95"
+                    title={`${selectedPlayer.name} auf die Reservebank setzen`}
+                  >
+                    <ArrowDownRight className="w-4 h-4" />
+                  </button>
+                </div>
+              );
+            })()}
+
             {/* Delete Player Button */}
             <button
               type="button"
@@ -577,6 +845,28 @@ export default function TacticsBoard({ initialBoardId }: TacticsBoardProps) {
           </div>
         )}
       </div>
+
+      {/* 2b. Reservebank & Wechsel Dock */}
+      <TacticsBenchBar
+        benchPlayers={frames[activeFrameIndex]?.benchPlayers || []}
+        fieldPlayers={frames[activeFrameIndex]?.players || []}
+        plannedSubstitutions={frames[activeFrameIndex]?.plannedSubstitutions || []}
+        homeColors={homeColors}
+        awayColors={awayColors}
+        isCollapsed={isBenchCollapsed}
+        onToggleCollapse={() => setIsBenchCollapsed((prev) => !prev)}
+        onOpenSquadDrawer={() => setIsSquadDrawerOpen(true)}
+        onOpenSubstitutionModal={(benchId, fieldId) => {
+          setSubPreselectedBenchId(benchId || null);
+          setSubPreselectedFieldId(fieldId || null);
+          setIsSubstitutionModalOpen(true);
+        }}
+        onAddBenchPlayer={handleAddBenchPlayer}
+        onRemoveBenchPlayer={handleRemoveBenchPlayer}
+        onMoveToPitch={handleMoveToPitch}
+        onExecuteSubstitution={handleExecuteSubstitution}
+        onDeleteSubstitution={handleDeleteSubstitution}
+      />
 
       {/* 3. Bottom Keyframing Timeline */}
       <TacticsTimeline
@@ -617,6 +907,7 @@ export default function TacticsBoard({ initialBoardId }: TacticsBoardProps) {
         isOpen={isSquadDrawerOpen}
         onClose={() => setIsSquadDrawerOpen(false)}
         onAddPlayerToken={handleAddPlayerToken}
+        onAddBenchPlayer={handleAddBenchPlayer}
       />
 
       {/* 4. Presentation Overlay (Tablet / Fullscreen) */}
@@ -657,6 +948,32 @@ export default function TacticsBoard({ initialBoardId }: TacticsBoardProps) {
         onDeletePlayer={handleDeleteSelected}
         homeColor={homeColors.primary}
         awayColor={awayColors.primary}
+      />
+
+      {/* 7. Tactics Substitution Modal */}
+      <TacticsSubstitutionModal
+        isOpen={isSubstitutionModalOpen}
+        onClose={() => {
+          setIsSubstitutionModalOpen(false);
+          setSubPreselectedBenchId(null);
+          setSubPreselectedFieldId(null);
+        }}
+        benchPlayers={frames[activeFrameIndex]?.benchPlayers || []}
+        fieldPlayers={frames[activeFrameIndex]?.players || []}
+        preselectedBenchPlayerId={subPreselectedBenchId}
+        preselectedFieldPlayerId={subPreselectedFieldId}
+        homeColors={homeColors}
+        awayColors={awayColors}
+        onSaveSubstitution={handleSaveSubstitution}
+        onExecuteImmediate={(playerIn, playerOut, newPhase) => {
+          const sub: PlannedSubstitution = {
+            id: `sub_${Date.now()}`,
+            playerIn,
+            playerOut,
+            status: 'planned'
+          };
+          handleExecuteSubstitution(sub, newPhase);
+        }}
       />
 
     </div>

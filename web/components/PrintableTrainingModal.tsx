@@ -14,7 +14,8 @@ import {
   Loader2,
   Bookmark,
   Sparkles,
-  Dumbbell
+  Dumbbell,
+  AlertCircle
 } from 'lucide-react';
 import { getMediaUrl } from '@/services/api';
 import { useToast } from '@/contexts/ToastContext';
@@ -92,6 +93,28 @@ export default function PrintableTrainingModal({
     if (rankA !== rankB) return rankA - rankB;
     return secA.localeCompare(secB, 'de');
   });
+
+  // Flatten exercises with their section information for unified 1-page grid rendering
+  const allSessionExercises: {
+    secName: string;
+    exItem: any;
+    exDetail: any;
+    idx: number;
+  }[] = [];
+
+  if (session) {
+    sortedSections.forEach(([secName, exList]) => {
+      exList.forEach((exItem) => {
+        const exDetail = exercisesList.find(x => x.id === exItem.exercise_id) || exItem.exercise || {};
+        allSessionExercises.push({
+          secName,
+          exItem,
+          exDetail,
+          idx: allSessionExercises.length + 1
+        });
+      });
+    });
+  }
 
   // Calculate total duration (for session mode)
   const totalDuration = session
@@ -178,19 +201,20 @@ export default function PrintableTrainingModal({
       <style dangerouslySetInnerHTML={{ __html: `
         @page {
           size: A4 portrait;
-          margin: 6mm;
+          margin: 5mm;
         }
         @media print {
           html, body {
             width: 210mm !important;
             min-width: 210mm !important;
-            height: auto !important;
-            min-height: 100% !important;
+            max-width: 210mm !important;
+            height: 287mm !important;
+            max-height: 287mm !important;
             margin: 0 !important;
             padding: 0 !important;
             background: #ffffff !important;
             color: #0f172a !important;
-            overflow: visible !important;
+            overflow: hidden !important;
             color-scheme: light !important;
             -webkit-text-size-adjust: 100% !important;
           }
@@ -207,12 +231,13 @@ export default function PrintableTrainingModal({
             width: 210mm !important;
             min-width: 210mm !important;
             max-width: 210mm !important;
-            height: auto !important;
+            height: 287mm !important;
+            max-height: 287mm !important;
             margin: 0 !important;
             padding: 0 !important;
             background: #ffffff !important;
             color: #0f172a !important;
-            overflow: visible !important;
+            overflow: hidden !important;
             backdrop-filter: none !important;
             -webkit-backdrop-filter: none !important;
           }
@@ -227,26 +252,36 @@ export default function PrintableTrainingModal({
             width: 210mm !important;
             min-width: 210mm !important;
             max-width: 210mm !important;
-            height: auto !important;
+            height: 287mm !important;
+            max-height: 287mm !important;
             margin: 0 !important;
             padding: 0 !important;
-            overflow: visible !important;
+            overflow: hidden !important;
           }
 
           #printable-training-plan-area {
-            display: block !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: space-between !important;
             position: static !important;
-            width: 100% !important;
-            max-width: 100% !important;
-            margin: 0 !important;
-            padding: 0 !important;
+            width: 200mm !important;
+            min-width: 200mm !important;
+            max-width: 200mm !important;
+            height: 285mm !important;
+            max-height: 285mm !important;
+            margin: 0 auto !important;
+            padding: 2mm 0 !important;
             box-sizing: border-box !important;
             background: #ffffff !important;
             color: #0f172a !important;
             box-shadow: none !important;
             border: none !important;
             border-radius: 0 !important;
-            overflow: visible !important;
+            overflow: hidden !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            page-break-after: avoid !important;
+            break-after: avoid !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
             color-scheme: light !important;
@@ -255,40 +290,6 @@ export default function PrintableTrainingModal({
           .print-avoid-break {
             page-break-inside: avoid !important;
             break-inside: avoid !important;
-          }
-
-          .print-desktop-grid {
-            display: grid !important;
-            grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
-          }
-
-          .print-col-7 {
-            grid-column: span 7 / span 7 !important;
-          }
-
-          .print-col-5 {
-            grid-column: span 5 / span 5 !important;
-            border-top: none !important;
-            border-left: 1px solid #e2e8f0 !important;
-            padding-top: 0 !important;
-            padding-left: 0.75rem !important;
-          }
-
-          .print-col-12 {
-            grid-column: span 12 / span 12 !important;
-          }
-
-          .print-row-layout {
-            display: flex !important;
-            flex-direction: row !important;
-            align-items: flex-start !important;
-          }
-
-          .print-sketch-box {
-            width: 18rem !important;
-            min-width: 18rem !important;
-            max-width: 18rem !important;
-            flex-shrink: 0 !important;
           }
         }
       ` }} />
@@ -352,41 +353,41 @@ export default function PrintableTrainingModal({
         <div
           id="printable-training-plan-area"
           ref={printRef}
-          className="bg-white text-slate-900 p-6 sm:p-8 rounded-xl shadow-2xl border border-slate-300 text-left font-sans space-y-4 w-full max-w-[210mm] mx-auto box-border border-t-8 border-t-emerald-600 print:border-none print:shadow-none print:p-0 print:rounded-none print:max-w-none print:w-full print:m-0"
+          className="bg-white text-slate-900 p-6 sm:p-8 rounded-xl shadow-2xl border border-slate-300 text-left font-sans space-y-4 print:space-y-1.5 w-full max-w-[210mm] mx-auto box-border border-t-8 border-t-emerald-600 print:border-none print:shadow-none print:p-0 print:rounded-none print:max-w-none print:w-full print:m-0"
         >
           {/* ============================================================ */}
-          {/* MODE A: FULL TRAINING PLAN SESSION */}
+          {/* MODE A: FULL TRAINING PLAN SESSION (STRICT SINGLE A4 PAGE) */}
           {/* ============================================================ */}
           {!isSingleExercise && session && (
             <>
               {/* Header Banner */}
-              <div className="border-b-2 border-slate-300 pb-3.5 flex items-start justify-between gap-4">
-                <div className="space-y-1">
+              <div className="border-b-2 border-slate-300 pb-2 flex items-start justify-between gap-3 shrink-0">
+                <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black tracking-widest text-emerald-700 uppercase bg-emerald-50 border border-emerald-300 px-2 py-0.5 rounded">
+                    <span className="text-[9px] font-black tracking-widest text-emerald-700 uppercase bg-emerald-50 border border-emerald-300 px-1.5 py-0.5 rounded">
                       MatchTrack Online • Trainingsplan
                     </span>
                     {session.date && (
-                      <span className="text-[11px] font-semibold text-slate-500">
+                      <span className="text-[10px] font-semibold text-slate-500">
                         Datum: {new Date(session.date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                       </span>
                     )}
                   </div>
-                  <h1 className="text-2xl font-black text-slate-950 m-0 leading-tight">
+                  <h1 className="text-lg sm:text-xl print:text-base font-black text-slate-950 m-0 leading-tight">
                     {session.title}
                   </h1>
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600 pt-0.5">
-                    <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-900 font-bold">
+                  <div className="flex flex-wrap items-center gap-1.5 text-[10px] print:text-[9px] text-slate-600">
+                    <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-900 font-bold">
                       {session.age_group || 'Alle Altersklassen'}
                     </span>
                     <span>•</span>
-                    <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 font-medium">
+                    <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-800 font-medium">
                       Modell: {session.methodology || 'Trainingsphilosophie Deutschland'}
                     </span>
                     {session.team?.name && (
                       <>
                         <span>•</span>
-                        <span className="px-2 py-0.5 rounded-md bg-blue-100 text-blue-900 font-bold">
+                        <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-900 font-bold">
                           {session.team.name}
                         </span>
                       </>
@@ -396,12 +397,12 @@ export default function PrintableTrainingModal({
 
                 <div className="text-right shrink-0">
                   <div className="inline-flex flex-col items-end">
-                    <span className="text-sm font-black border-2 border-emerald-600 bg-emerald-50 text-emerald-900 px-3 py-1 rounded-lg shadow-sm">
+                    <span className="text-xs sm:text-sm print:text-xs font-black border-2 border-emerald-600 bg-emerald-50 text-emerald-900 px-2.5 py-0.5 rounded-lg shadow-xs">
                       ⏱️ {totalDuration} Minuten
                     </span>
                     {session.target_duration_minutes && session.target_duration_minutes !== totalDuration && (
-                      <span className="text-[10px] text-slate-500 mt-1 font-medium">
-                        Zielzeit: {session.target_duration_minutes} Min.
+                      <span className="text-[9px] text-slate-500 mt-0.5 font-medium">
+                        Ziel: {session.target_duration_minutes} Min.
                       </span>
                     )}
                   </div>
@@ -410,26 +411,26 @@ export default function PrintableTrainingModal({
 
               {/* Summary / Notes & Material Checklist Card */}
               {(session.notes || aggregatedMaterials.length > 0) && (
-                <div className="grid grid-cols-1 sm:grid-cols-12 print-desktop-grid gap-3 bg-slate-50 border border-slate-200 rounded-xl p-3 print-avoid-break">
+                <div className="grid grid-cols-12 gap-2 bg-slate-50 border border-slate-200 rounded-lg p-2 print:p-1.5 shrink-0 print-avoid-break">
                   {session.notes && (
-                    <div className={aggregatedMaterials.length > 0 ? "sm:col-span-7 print-col-7 space-y-1" : "sm:col-span-12 print-col-12 space-y-1"}>
-                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-700 flex items-center gap-1">
-                        <Bookmark className="w-3 h-3 text-emerald-600" /> Trainingsschwerpunkt & Bemerkungen
+                    <div className={aggregatedMaterials.length > 0 ? "col-span-7 space-y-0.5" : "col-span-12 space-y-0.5"}>
+                      <span className="text-[9px] font-black uppercase tracking-wider text-slate-700 flex items-center gap-1">
+                        <Bookmark className="w-2.5 h-2.5 text-emerald-600" /> Trainingsschwerpunkt:
                       </span>
-                      <p className="text-[11px] text-slate-700 leading-snug whitespace-pre-line m-0">
+                      <p className="text-[10px] print:text-[8.5px] text-slate-700 leading-snug line-clamp-2 m-0">
                         {session.notes}
                       </p>
                     </div>
                   )}
 
                   {aggregatedMaterials.length > 0 && (
-                    <div className={session.notes ? "sm:col-span-5 print-col-5 space-y-1 border-t sm:border-t-0 sm:border-l border-slate-200 pt-2 sm:pt-0 sm:pl-3" : "sm:col-span-12 print-col-12 space-y-1"}>
-                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-700 flex items-center gap-1">
-                        <Dumbbell className="w-3 h-3 text-emerald-600" /> Benötigtes Material (Packliste)
+                    <div className={session.notes ? "col-span-5 space-y-0.5 border-l border-slate-200 pl-2" : "col-span-12 space-y-0.5"}>
+                      <span className="text-[9px] font-black uppercase tracking-wider text-slate-700 flex items-center gap-1">
+                        <Dumbbell className="w-2.5 h-2.5 text-emerald-600" /> Benötigtes Material:
                       </span>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {aggregatedMaterials.map((mat, i) => (
-                          <span key={i} className="text-[10px] font-bold bg-white border border-slate-300 text-slate-800 px-1.5 py-0.5 rounded shadow-2xs">
+                      <div className="flex flex-wrap gap-1 mt-0.5">
+                        {aggregatedMaterials.slice(0, 8).map((mat, i) => (
+                          <span key={i} className="text-[8.5px] print:text-[7.5px] font-bold bg-white border border-slate-300 text-slate-800 px-1 py-0.2 rounded shadow-2xs">
                             ✓ {mat}
                           </span>
                         ))}
@@ -439,139 +440,143 @@ export default function PrintableTrainingModal({
                 </div>
               )}
 
-              {/* Training Sections & Exercises */}
-              <div className="space-y-4 pt-1 print:space-y-3 print:pt-0">
-                {sortedSections.map(([secName, exList]) => {
-                  const secDuration = exList.reduce((acc, item) => {
-                    const exDetail = exercisesList.find(x => x.id === item.exercise_id) || item.exercise;
-                    return acc + (item.duration_override || exDetail?.duration_minutes || 15);
-                  }, 0);
+              {/* Training Exercises: 2-Column Grid for DIN A4 1-Page Layout */}
+              <div className={`grid gap-2.5 print:gap-1.5 flex-1 my-1 print:my-0.5 ${
+                allSessionExercises.length <= 1 
+                  ? 'grid-cols-1' 
+                  : 'grid-cols-1 md:grid-cols-2 print:grid-cols-2'
+              }`}>
+                {allSessionExercises.map(({ secName, exItem, exDetail, idx }) => {
+                  const title = exDetail.title || exItem.title || 'Übung';
+                  const focus = exDetail.focus_area || exItem.focus_area || '';
+                  const duration = exItem.duration_override || exDetail.duration_minutes || exItem.duration_minutes || 15;
+                  const minPlayers = exDetail.min_players || 4;
+                  const maxPlayers = exDetail.max_players || 12;
+                  const coaching = exDetail.coaching_points || '';
+                  const description = exDetail.description || '';
+                  const provocation = exDetail.provocation_rules || '';
+                  const thumbnail = exDetail.thumbnail_path || exItem.thumbnail_path || '';
+                  const materials = exDetail.materials || [];
+
+                  const imageSrc = thumbnail
+                    ? (thumbnail.startsWith('data:') || thumbnail.startsWith('http') ? thumbnail : getMediaUrl(thumbnail))
+                    : null;
 
                   return (
-                    <div key={secName} className="space-y-2.5 print:space-y-2">
-                      {/* Section Title Banner */}
-                      <div className="bg-emerald-800 text-white px-3 py-1.5 print:px-2.5 print:py-1 rounded-lg print:rounded-md flex items-center justify-between shadow-xs print-avoid-break">
-                        <h2 className="text-xs print:text-[11px] font-black uppercase tracking-wider m-0 flex items-center gap-2">
-                          <Layers className="w-3.5 h-3.5 text-emerald-300" />
-                          <span>{formatSectionTitle(secName)}</span>
-                        </h2>
-                        <span className="text-xs print:text-[11px] font-bold text-emerald-200">
-                          {secDuration} Minuten
-                        </span>
+                    <div 
+                      key={exItem.id || idx} 
+                      className="border border-slate-300 rounded-lg p-2.5 print:p-2 bg-white shadow-xs space-y-1.5 print:space-y-1 print-avoid-break hover:border-slate-400 transition-colors flex flex-col justify-between"
+                    >
+                      {/* Exercise Header */}
+                      <div className="flex items-center justify-between border-b border-slate-200 pb-1 shrink-0">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="px-1.5 py-0.5 rounded bg-emerald-800 text-white text-[9px] print:text-[8px] font-black uppercase tracking-wider shrink-0">
+                            {formatSectionTitle(secName)}
+                          </span>
+                          <h3 className="text-xs print:text-[10px] font-black text-slate-900 truncate m-0">
+                            {title}
+                          </h3>
+                        </div>
+
+                        <div className="flex items-center gap-1 text-[9px] print:text-[8px] font-bold text-slate-600 shrink-0">
+                          {focus && (
+                            <span className="px-1 py-0.2 rounded bg-emerald-100 text-emerald-900 font-black">
+                              {focus}
+                            </span>
+                          )}
+                          <span className="flex items-center gap-0.5 text-slate-700">
+                            <Clock className="w-2.5 h-2.5 text-slate-500" /> {duration}m
+                          </span>
+                          <span className="text-slate-500">
+                            👥 {minPlayers}-{maxPlayers}
+                          </span>
+                        </div>
                       </div>
 
-                      {/* Exercise Cards */}
-                      <div className="space-y-3 print:space-y-2">
-                        {exList.map((exItem: any, idx: number) => {
-                          const exDetail = exercisesList.find(x => x.id === exItem.exercise_id) || exItem.exercise || {};
-                          const title = exDetail.title || exItem.title || 'Übung';
-                          const focus = exDetail.focus_area || exItem.focus_area || '';
-                          const duration = exItem.duration_override || exDetail.duration_minutes || exItem.duration_minutes || 15;
-                          const minPlayers = exDetail.min_players || 4;
-                          const maxPlayers = exDetail.max_players || 12;
-                          const coaching = exDetail.coaching_points || '';
-                          const description = exDetail.description || '';
-                          const thumbnail = exDetail.thumbnail_path || exItem.thumbnail_path || '';
-                          const materials = exDetail.materials || [];
-
-                          const imageSrc = thumbnail
-                            ? (thumbnail.startsWith('data:') || thumbnail.startsWith('http') ? thumbnail : getMediaUrl(thumbnail))
-                            : null;
-
-                          return (
-                            <div 
-                              key={exItem.id || idx} 
-                              className="border border-slate-300 rounded-xl print:rounded-lg p-3 print:p-2.5 bg-white shadow-xs space-y-2 print:space-y-1.5 print-avoid-break hover:border-slate-400 transition-colors w-full"
-                            >
-                              {/* Exercise Header */}
-                              <div className="flex items-center justify-between border-b border-slate-200 pb-1.5 print:pb-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="w-5 h-5 rounded-full bg-emerald-700 text-white text-[11px] print:text-[10px] font-black flex items-center justify-center shrink-0">
-                                    {idx + 1}
-                                  </span>
-                                  <h3 className="text-xs print:text-[11px] font-bold text-slate-900 m-0">
-                                    {title}
-                                  </h3>
-                                </div>
-
-                                <div className="flex items-center gap-2 text-[10px] print:text-[9.5px] font-bold text-slate-600">
-                                  {focus && (
-                                    <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 font-black">
-                                      {focus}
-                                    </span>
-                                  )}
-                                  <span className="flex items-center gap-1 text-slate-700">
-                                    <Clock className="w-3 h-3 text-slate-500" /> {duration} Min.
-                                  </span>
-                                  <span className="flex items-center gap-1 text-slate-700">
-                                    <Users className="w-3 h-3 text-slate-500" /> {minPlayers}-{maxPlayers} Spieler
-                                  </span>
-                                </div>
-                              </div>
-
-                              {/* Content: Left Text details / Right Diagram */}
-                              <div className="flex flex-col sm:flex-row print-row-layout items-start gap-3.5 print:gap-3 w-full">
-                                <div className="flex-1 text-[11px] print:text-[10px] text-slate-800 leading-normal print:leading-snug space-y-2 print:space-y-1.5 min-w-0">
-                                  {description && (
-                                    <div>
-                                      <strong className="text-slate-900 block font-bold mb-0.5">Ablauf & Organisation:</strong>
-                                      <p className="text-slate-700 m-0 whitespace-pre-line leading-relaxed print:leading-snug">
-                                        {description}
-                                      </p>
-                                    </div>
-                                  )}
-
-                                  {coaching && (
-                                    <div className="bg-emerald-50/80 border border-emerald-200 rounded-lg print:rounded p-2 print:p-1.5 text-slate-900">
-                                      <strong className="text-emerald-900 font-bold block mb-0.5 flex items-center gap-1">
-                                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Coaching-Punkte:
-                                      </strong>
-                                      <p className="text-slate-800 m-0 whitespace-pre-line text-[10.5px] print:text-[9.5px] leading-relaxed print:leading-snug">
-                                        {coaching}
-                                      </p>
-                                    </div>
-                                  )}
-
-                                  {materials && Array.isArray(materials) && materials.length > 0 && (
-                                    <div className="text-[10px] print:text-[9px] text-slate-500">
-                                      <strong className="text-slate-700">Material: </strong>
-                                      <span>{materials.join(', ')}</span>
-                                    </div>
-                                  )}
-                                </div>
-
-                                {imageSrc && (
-                                  <div className="w-full sm:w-60 print-sketch-box border border-slate-300 rounded-lg overflow-hidden bg-white p-1.5 shadow-2xs text-center">
-                                    <img
-                                      src={imageSrc}
-                                      alt={title}
-                                      crossOrigin="anonymous"
-                                      className="w-full h-auto max-h-48 print:max-h-44 object-contain mx-auto block"
-                                    />
-                                    <span className="text-[9px] print:text-[8px] font-bold text-slate-400 block mt-0.5 tracking-wider uppercase">
-                                      FT-Graphics Taktik-Skizze
-                                    </span>
+                      {/* Text details: Ablauf, Provokation, Coaching, Material */}
+                      <div className="text-[10px] print:text-[8.5px] text-slate-800 leading-snug space-y-1 shrink-0">
+                        {description && (
+                          <div>
+                            <strong className="text-slate-900 font-bold text-[9.5px] print:text-[8px]">Ablauf: </strong>
+                            <div className="text-slate-700 space-y-0.5 mt-0.5">
+                              {description.split('\n').filter((l: string) => l.trim()).map((line: string, i: number) => {
+                                const clean = line.replace(/^[•\-\*]\s*/, '').trim();
+                                return (
+                                  <div key={i} className="flex items-start gap-1">
+                                    <span className="text-emerald-600 font-bold text-[8px] shrink-0 mt-0.5">•</span>
+                                    <span>{clean}</span>
                                   </div>
-                                )}
-                              </div>
+                                );
+                              })}
                             </div>
-                          );
-                        })}
+                          </div>
+                        )}
+
+                        {provocation && (
+                          <div className="bg-amber-50/90 border border-amber-200 rounded p-1 text-amber-950">
+                            <strong className="text-amber-900 font-bold block mb-0.5 text-[9px] print:text-[7.5px] flex items-center gap-1">
+                              <AlertCircle className="w-2.5 h-2.5 text-amber-600 inline" /> Provokation:
+                            </strong>
+                            <div className="space-y-0.5 text-[9px] print:text-[8px] leading-tight text-amber-950">
+                              {provocation.split('\n').filter((l: string) => l.trim()).map((line: string, i: number) => {
+                                const clean = line.replace(/^[•\-\*]\s*/, '').trim();
+                                return (
+                                  <div key={i} className="flex items-start gap-1">
+                                    <span className="text-amber-600 font-bold text-[8px] shrink-0 mt-0.5">•</span>
+                                    <span>{clean}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {coaching && (
+                          <div className="bg-emerald-50/90 border border-emerald-200 rounded p-1 text-slate-900">
+                            <strong className="text-emerald-900 font-bold block mb-0.5 text-[9px] print:text-[7.5px] flex items-center gap-1">
+                              <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600 inline" /> Coaching:
+                            </strong>
+                            <p className="text-slate-800 m-0 whitespace-pre-line text-[9px] print:text-[8px] leading-tight">
+                              {coaching}
+                            </p>
+                          </div>
+                        )}
+
+                        {materials && Array.isArray(materials) && materials.length > 0 && (
+                          <div className="text-[8.5px] print:text-[7.5px] text-slate-500 truncate">
+                            <strong className="text-slate-700">Material: </strong>
+                            <span>{materials.join(', ')}</span>
+                          </div>
+                        )}
                       </div>
+
+                      {/* Large Central Taktik-Skizze at bottom of card */}
+                      {imageSrc && (
+                        <div className="w-full border border-slate-300 rounded-md overflow-hidden bg-white p-1 shadow-2xs text-center mt-auto">
+                          <img
+                            src={imageSrc}
+                            alt={title}
+                            crossOrigin="anonymous"
+                            className="w-full h-auto max-h-36 sm:max-h-40 print:max-h-36 object-contain mx-auto block"
+                          />
+                          <span className="text-[7.5px] print:text-[7px] font-bold text-slate-400 block mt-0.5 tracking-wider uppercase">
+                            TAKTIK-SKIZZE
+                          </span>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
               </div>
 
               {/* Hand-written Trainer Notes on Pitch Box */}
-              <div className="border border-dashed border-slate-300 rounded-xl print:rounded-lg p-3.5 print:p-2.5 space-y-2 print:space-y-1.5 print-avoid-break bg-slate-50/60 mt-4 print:mt-2 w-full">
-                <span className="text-[10px] print:text-[9px] font-black uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+              <div className="border border-dashed border-slate-300 rounded-lg p-2 print:p-1.5 space-y-1 print-avoid-break bg-slate-50/60 shrink-0 w-full">
+                <span className="text-[9px] print:text-[8px] font-black uppercase tracking-wider text-slate-600 flex items-center gap-1">
                   ✍️ Notizen & Beobachtungen auf dem Platz (Für Nachbesprechung & nächste Einheit)
                 </span>
-                <div className="space-y-2.5 pt-1">
-                  <div className="border-b border-slate-300 h-4"></div>
-                  <div className="border-b border-slate-300 h-4"></div>
-                  <div className="border-b border-slate-300 h-4"></div>
+                <div className="space-y-1.5 pt-0.5">
+                  <div className="border-b border-slate-300 h-3"></div>
+                  <div className="border-b border-slate-300 h-3"></div>
                 </div>
               </div>
             </>
@@ -581,9 +586,9 @@ export default function PrintableTrainingModal({
           {/* MODE B: SINGLE EXERCISE PRINT */}
           {/* ============================================================ */}
           {isSingleExercise && exercise && (
-            <div className="space-y-4 print:space-y-2.5">
+            <div className="flex-1 flex flex-col justify-between space-y-3 print:space-y-2 w-full">
               {/* Header */}
-              <div className="border-b-2 border-slate-300 pb-3 flex items-start justify-between gap-4">
+              <div className="border-b-2 border-slate-300 pb-2.5 flex items-start justify-between gap-4">
                 <div className="space-y-1">
                   <span className="text-[10px] font-black tracking-widest text-emerald-700 uppercase bg-emerald-50 border border-emerald-300 px-2 py-0.5 rounded">
                     MatchTrack Online • Wissensdatenbank
@@ -612,16 +617,16 @@ export default function PrintableTrainingModal({
                 </div>
               </div>
 
-              {/* Large Central Sketch */}
+              {/* Large Central Sketch - Expanded to fill available width and height */}
               {exercise.thumbnail_path && (
-                <div className="border border-slate-300 rounded-xl overflow-hidden bg-white p-2 shadow-xs text-center print-avoid-break">
+                <div className="w-full border border-slate-300 rounded-xl overflow-hidden bg-white p-2 shadow-xs text-center print-avoid-break">
                   <img
                     src={exercise.thumbnail_path.startsWith('data:') || exercise.thumbnail_path.startsWith('http') ? exercise.thumbnail_path : getMediaUrl(exercise.thumbnail_path)}
                     alt={exercise.title}
                     crossOrigin="anonymous"
-                    className="w-full h-auto max-h-72 print:max-h-56 object-contain mx-auto block"
+                    className="w-full h-auto max-h-[420px] print:max-h-[105mm] object-contain mx-auto block"
                   />
-                  <span className="text-[10px] font-bold text-slate-400 block mt-1 tracking-wider uppercase">
+                  <span className="text-[9.5px] print:text-[8.5px] font-bold text-slate-400 block mt-1 tracking-wider uppercase">
                     FT-Graphics Taktik-Skizze
                   </span>
                 </div>
@@ -629,13 +634,13 @@ export default function PrintableTrainingModal({
 
               {/* Materials */}
               {exercise.materials && Array.isArray(exercise.materials) && exercise.materials.length > 0 && (
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 print-avoid-break">
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 print:p-2 print-avoid-break">
                   <span className="text-[10px] font-black uppercase tracking-wider text-slate-700 flex items-center gap-1 mb-1">
                     <Dumbbell className="w-3 h-3 text-emerald-600" /> Benötigtes Material
                   </span>
                   <div className="flex flex-wrap gap-1.5">
                     {exercise.materials.map((m: string, idx: number) => (
-                      <span key={idx} className="text-xs font-bold bg-white border border-slate-300 text-slate-800 px-2 py-0.5 rounded shadow-2xs">
+                      <span key={idx} className="text-xs font-bold bg-white border border-slate-300 text-slate-800 px-2.5 py-0.5 rounded shadow-2xs">
                         ✓ {m}
                       </span>
                     ))}
@@ -644,20 +649,48 @@ export default function PrintableTrainingModal({
               )}
 
               {/* Content sections */}
-              <div className="space-y-3 print:space-y-2">
+              <div className="space-y-2.5 print:space-y-1.5">
                 {exercise.description && (
-                  <div className="border border-slate-200 rounded-xl p-4 print:p-2.5 bg-white print-avoid-break">
+                  <div className="border border-slate-200 rounded-xl p-3.5 print:p-2 bg-white print-avoid-break">
                     <h3 className="text-xs font-black uppercase tracking-wider text-slate-900 mb-1.5">
                       Ablauf & Spielregeln
                     </h3>
-                    <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-line m-0">
-                      {exercise.description}
-                    </p>
+                    <div className="space-y-1 text-xs text-slate-700 leading-relaxed">
+                      {exercise.description.split('\n').filter((l: string) => l.trim()).map((line: string, idx: number) => {
+                        const cleanLine = line.replace(/^[•\-\*]\s*/, '').trim();
+                        return (
+                          <div key={idx} className="flex items-start gap-2">
+                            <span className="text-emerald-600 font-bold shrink-0 mt-0.5">•</span>
+                            <span className="whitespace-pre-line">{cleanLine}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {exercise.provocation_rules && (
+                  <div className="bg-amber-50/90 border border-amber-300 rounded-xl p-3.5 print:p-2 print-avoid-break">
+                    <h3 className="text-xs font-black uppercase tracking-wider text-amber-950 mb-1.5 flex items-center gap-1.5">
+                      <AlertCircle className="w-4 h-4 text-amber-700" />
+                      Provokationsregeln
+                    </h3>
+                    <div className="space-y-1 text-xs text-amber-950 leading-relaxed">
+                      {exercise.provocation_rules.split('\n').filter((l: string) => l.trim()).map((line: string, idx: number) => {
+                        const cleanLine = line.replace(/^[•\-\*]\s*/, '').trim();
+                        return (
+                          <div key={idx} className="flex items-start gap-2">
+                            <span className="text-amber-700 font-bold shrink-0 mt-0.5">•</span>
+                            <span className="whitespace-pre-line">{cleanLine}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
 
                 {exercise.coaching_points && (
-                  <div className="bg-emerald-50/90 border border-emerald-300 rounded-xl p-4 print:p-2.5 print-avoid-break">
+                  <div className="bg-emerald-50/90 border border-emerald-300 rounded-xl p-3.5 print:p-2 print-avoid-break">
                     <h3 className="text-xs font-black uppercase tracking-wider text-emerald-950 mb-1.5 flex items-center gap-1.5">
                       <CheckCircle2 className="w-4 h-4 text-emerald-700" />
                       Coaching-Punkte & Schwerpunkte
@@ -670,13 +703,13 @@ export default function PrintableTrainingModal({
               </div>
 
               {/* Handwritten space */}
-              <div className="border border-dashed border-slate-300 rounded-xl p-3.5 space-y-2 print-avoid-break bg-slate-50/60 mt-4 print:mt-2">
+              <div className="border border-dashed border-slate-300 rounded-xl p-3 print:p-2 space-y-1.5 print-avoid-break bg-slate-50/60 mt-auto">
                 <span className="text-[10px] font-black uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
                   ✍️ Eigene Trainingsnotizen / Variationen
                 </span>
-                <div className="space-y-2.5 pt-1">
-                  <div className="border-b border-slate-300 h-4"></div>
-                  <div className="border-b border-slate-300 h-4"></div>
+                <div className="space-y-2 pt-0.5">
+                  <div className="border-b border-slate-300 h-3.5"></div>
+                  <div className="border-b border-slate-300 h-3.5"></div>
                 </div>
               </div>
             </div>

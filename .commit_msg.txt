@@ -1,11 +1,11 @@
-release: fix(print): harmonize mobile print and pdf export with desktop DIN A4 layout (dev: 856e6f6b)
+release: docs(chats): update chat session log with table of contents (dev: d20ef818)
 
 Letzte Änderungen:
-* fix(print): harmonize mobile print and pdf export with desktop DIN A4 layout (856e6f6b)
-* feat(admin): add system and client logs tab with filters and irrelevance classification (5908e347)
-* remove (955e1e36)
-* fix(sketch-editor): preload and immediately render FT-Graphics icons without requiring canvas click (fa940d8e)
-* feat(training): display sketch editor by default in exercise modal (d2e29c99)
-* feat(training): allow editing exercises directly via popup from training plan overview (7bba5efa)
+* docs(chats): update chat session log with table of contents (d20ef818)
+* refactor(sketch): remove redundant sketch save button in favor of unified exercise save button (53687988)
+* style(training): reorganize exercise form layout into compact two-row structure (2d12bf85)
+* feat(training): add adjustable 3/5/7 column grid and simplify exercise card layout (b60ad34c)
+* feat(training): add bullet list support for provocation rules and exercise description (93b7d645)
+* feat(training): automatically save sketch when saving exercise (1396feeb)
 
-Build-Zeitstempel: 2026-09-16 13:23:50
+Build-Zeitstempel: 2026-09-25 10:32:26

@@ -27,7 +27,8 @@ import {
   Save,
   Plus,
   Compass,
-  FolderOpen
+  FolderOpen,
+  ArrowLeftRight
 } from 'lucide-react';
 
 interface TacticsToolbarProps {
@@ -52,6 +53,9 @@ interface TacticsToolbarProps {
   hasSelection: boolean;
   onOpenFormations: () => void;
   onOpenSquadDrawer: () => void;
+  onToggleBench?: () => void;
+  benchCount?: number;
+  plannedSubCount?: number;
   onOpenPreferences: () => void;
   onOpenExport: () => void;
   onTogglePresentation: () => void;
@@ -88,6 +92,9 @@ export default function TacticsToolbar({
   hasSelection,
   onOpenFormations,
   onOpenSquadDrawer,
+  onToggleBench,
+  benchCount = 0,
+  plannedSubCount = 0,
   onOpenPreferences,
   onOpenExport,
   onTogglePresentation,
@@ -234,6 +241,27 @@ export default function TacticsToolbar({
             <Users className="w-4 h-4" />
             <span className="hidden sm:inline">Kader</span>
           </button>
+
+          {/* Reservebank & Wechsel Toggle */}
+          {onToggleBench && (
+            <button
+              type="button"
+              onClick={onToggleBench}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-bold transition-all active:scale-95"
+              title="Reservebank & vorbereitete Wechsel anzeigen"
+            >
+              <ArrowLeftRight className="w-4 h-4" />
+              <span className="hidden sm:inline">Bank</span>
+              {benchCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-[10px] font-mono font-bold text-emerald-300">
+                  {benchCount}
+                </span>
+              )}
+              {plannedSubCount > 0 && (
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title={`${plannedSubCount} Wechsel vorbereitet`} />
+              )}
+            </button>
+          )}
 
           {/* Formations Modal Toggle */}
           <button
