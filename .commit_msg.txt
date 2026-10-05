@@ -8,4 +8,4 @@ Letzte Änderungen:
 * style(training): reorganize exercise form layout into compact two-row structure (2d12bf85)
 * feat(training): add adjustable 3/5/7 column grid and simplify exercise card layout (b60ad34c)
 
-Build-Zeitstempel: 2026-10-05 11:16:18
+Build-Zeitstempel: 2026-10-05 11:17:40

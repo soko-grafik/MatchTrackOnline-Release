@@ -1,6 +1,6 @@
 # 📋 MatchTrack Online - Versions-Changelog
 
-## Release: 2026-10-05 11:16:18 (Dev Commit: `946cc82b`)
+## Release: 2026-10-05 11:17:40 (Dev Commit: `946cc82b`)
 
 ### 🚀 Letzte Änderungen aus dem Entwicklungs-Repository:
 * feat(organizer): Schulferien-Import (.ics) als transparente Hintergrund-Ebene im Kalender integriert (946cc82b - 2026-10-05)
