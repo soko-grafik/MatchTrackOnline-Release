@@ -390,6 +390,20 @@ class PushSubscription(Base):
     user = relationship("User")
 
 
+class SchoolHoliday(Base):
+    __tablename__ = "school_holidays"
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    name = Column(String(255), nullable=False) # E.g. "Sommerferien 2026"
+    start_date = Column(DateTime, nullable=False, index=True)
+    end_date = Column(DateTime, nullable=False, index=True)
+    state_or_region = Column(String(100), nullable=True) # E.g. "Bayern", "Nordrhein-Westfalen"
+    source = Column(String(100), default="ICS_IMPORT", nullable=False) # "ICS_IMPORT", "MANUAL"
+    created_by_user_id = Column(String(50), ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    created_by = relationship("User")
+
+
 class Player(Base):
     __tablename__ = "players"
     id = Column(String(50), primary_key=True, index=True)

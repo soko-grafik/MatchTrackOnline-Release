@@ -208,6 +208,15 @@ MIGRATION_COLUMNS = [
     ("video_stitch_jobs", "settings_json", "JSON"),
     ("video_stitch_jobs", "created_at", "DATETIME"),
     ("video_stitch_jobs", "updated_at", "DATETIME"),
+
+    # Table: school_holidays
+    ("school_holidays", "name", "VARCHAR(255)"),
+    ("school_holidays", "start_date", "DATETIME"),
+    ("school_holidays", "end_date", "DATETIME"),
+    ("school_holidays", "state_or_region", "VARCHAR(100)"),
+    ("school_holidays", "source", "VARCHAR(100) DEFAULT 'ICS_IMPORT'"),
+    ("school_holidays", "created_by_user_id", "VARCHAR(50)"),
+    ("school_holidays", "created_at", "DATETIME"),
 ]
 
 def run_migrations(engine=None):

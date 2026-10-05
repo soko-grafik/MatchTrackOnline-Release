@@ -22,7 +22,8 @@ import {
   Loader2,
   ListPlus,
   AlertCircle,
-  LayoutGrid
+  LayoutGrid,
+  Copy
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import PageHeader from '@/components/PageHeader';
@@ -33,6 +34,7 @@ import {
   createExercise,
   updateExercise,
   deleteExercise,
+  duplicateExercise,
   getTrainingSessions,
   createTrainingSession,
   updateTrainingSession,
@@ -78,6 +80,17 @@ export default function TrainingPage() {
   // Modals & Creation / Editing state
   const [isExerciseModalOpen, setIsExerciseModalOpen] = useState(false);
   const [editingExerciseId, setEditingExerciseId] = useState<number | null>(null);
+  const [duplicateModal, setDuplicateModal] = useState<{
+    isOpen: boolean;
+    exercise: any | null;
+    title: string;
+    isSubmitting: boolean;
+  }>({
+    isOpen: false,
+    exercise: null,
+    title: '',
+    isSubmitting: false
+  });
 
   const [isSessionModalOpen, setIsSessionModalOpen] = useState(false);
   const [editingSessionId, setEditingSessionId] = useState<number | null>(null);
@@ -370,6 +383,57 @@ export default function TrainingPage() {
       toast.success('Übung gelöscht');
     } catch (err) {
       toast.error('Fehler beim Löschen der Übung');
+    }
+  };
+
+  const openDuplicateModal = (ex: any) => {
+    setDuplicateModal({
+      isOpen: true,
+      exercise: ex,
+      title: `${ex.title || 'Übung'} (Kopie)`,
+      isSubmitting: false
+    });
+  };
+
+  const handleConfirmDuplicate = async (andEdit: boolean = false) => {
+    if (!duplicateModal.exercise) return;
+    const finalTitle = duplicateModal.title.trim() || `${duplicateModal.exercise.title || 'Übung'} (Kopie)`;
+    setDuplicateModal(prev => ({ ...prev, isSubmitting: true }));
+    try {
+      const duplicated = await duplicateExercise(duplicateModal.exercise.id, finalTitle);
+      toast.success(`Übung "${finalTitle}" erfolgreich erstellt`);
+      setDuplicateModal({ isOpen: false, exercise: null, title: '', isSubmitting: false });
+      await loadData();
+      if (andEdit && duplicated) {
+        openEditExerciseModal(duplicated);
+      }
+    } catch (err) {
+      console.error('Fehler beim Duplizieren:', err);
+      toast.error('Fehler beim Duplizieren der Übung');
+      setDuplicateModal(prev => ({ ...prev, isSubmitting: false }));
+    }
+  };
+
+  const handleSaveAsCopy = async () => {
+    try {
+      let finalForm = { ...exerciseForm };
+      if (sketchEditorRef.current) {
+        const sketchData = sketchEditorRef.current.getDiagramData();
+        if (sketchData) {
+          finalForm = {
+            ...finalForm,
+            diagram_data: sketchData.diagramData,
+            thumbnail_path: sketchData.thumbnailDataUrl
+          };
+        }
+      }
+      await createExercise(finalForm);
+      setIsExerciseModalOpen(false);
+      setShowSketchEditor(false);
+      loadData();
+      toast.success('Übung erfolgreich als neue Kopie gespeichert');
+    } catch (err) {
+      toast.error('Fehler beim Speichern der Kopie');
     }
   };
 
@@ -772,11 +836,20 @@ export default function TrainingPage() {
                           </button>
 
                           {canEdit && (
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => openDuplicateModal(ex)}
+                                className="p-2 rounded-lg bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700 transition-all text-xs font-bold flex items-center gap-1"
+                                title="Übung duplizieren"
+                              >
+                                <Copy className="w-3.5 h-3.5 text-blue-400" />
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => openEditExerciseModal(ex)}
                                 className="p-2 rounded-lg bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700 transition-all text-xs font-bold flex items-center gap-1"
+                                title="Übung bearbeiten"
                               >
                                 <Pencil className="w-3.5 h-3.5" /> Bearbeiten
                               </button>
@@ -784,6 +857,7 @@ export default function TrainingPage() {
                                 type="button"
                                 onClick={() => handleDeleteExercise(ex.id)}
                                 className="p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-all text-xs"
+                                title="Übung löschen"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
@@ -1303,22 +1377,111 @@ export default function TrainingPage() {
                   )}
                 </div>
 
-                <div className="flex justify-end gap-3 border-t border-zinc-800 pt-5">
-                  <button
-                    type="button"
-                    onClick={() => setIsExerciseModalOpen(false)}
-                    className="px-5 py-2.5 rounded-xl bg-zinc-900 text-zinc-400 text-xs font-bold hover:text-white"
-                  >
-                    Abbrechen
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-6 py-2.5 rounded-xl bg-primary text-white text-xs font-bold shadow-lg shadow-primary/20 hover:bg-primary-hover"
-                  >
-                    {editingExerciseId ? 'Änderungen Speichern' : 'Übung Speichern'}
-                  </button>
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-800 pt-5">
+                  <div>
+                    {editingExerciseId && (
+                      <button
+                        type="button"
+                        onClick={handleSaveAsCopy}
+                        className="px-4 py-2.5 rounded-xl bg-blue-600/20 border border-blue-500/30 text-blue-300 text-xs font-bold hover:bg-blue-600/30 hover:text-white transition-all flex items-center gap-1.5"
+                        title="Speichert diese Eingaben als neue Übung ab"
+                      >
+                        <Copy className="w-3.5 h-3.5" /> Als neue Kopie speichern
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setIsExerciseModalOpen(false)}
+                      className="px-5 py-2.5 rounded-xl bg-zinc-900 text-zinc-400 text-xs font-bold hover:text-white"
+                    >
+                      Abbrechen
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-6 py-2.5 rounded-xl bg-primary text-white text-xs font-bold shadow-lg shadow-primary/20 hover:bg-primary-hover"
+                    >
+                      {editingExerciseId ? 'Änderungen Speichern' : 'Übung Speichern'}
+                    </button>
+                  </div>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Modal: Übung duplizieren */}
+        {duplicateModal.isOpen && duplicateModal.exercise && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 p-4 backdrop-blur-md">
+            <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950 p-6 shadow-2xl space-y-5">
+              <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400">
+                    <Copy className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-white">Übung duplizieren</h3>
+                    <p className="text-[11px] text-zinc-400">Erstellt eine vollständige Kopie inklusive Taktik-Skizze.</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setDuplicateModal({ isOpen: false, exercise: null, title: '', isSubmitting: false })}
+                  className="text-zinc-500 hover:text-white text-lg"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-zinc-300 block mb-1.5">
+                  Neuer Name der Übung
+                </label>
+                <input
+                  type="text"
+                  autoFocus
+                  value={duplicateModal.title}
+                  onChange={(e) => setDuplicateModal(prev => ({ ...prev, title: e.target.value }))}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleConfirmDuplicate(false);
+                    }
+                  }}
+                  placeholder="Übungsname eingeben..."
+                  className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2.5 text-xs text-white focus:border-primary focus:outline-none"
+                />
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center justify-end gap-2.5 pt-2">
+                <button
+                  type="button"
+                  disabled={duplicateModal.isSubmitting}
+                  onClick={() => setDuplicateModal({ isOpen: false, exercise: null, title: '', isSubmitting: false })}
+                  className="w-full sm:w-auto px-4 py-2 rounded-xl bg-zinc-900 text-zinc-400 text-xs font-bold hover:text-white transition-colors"
+                >
+                  Abbrechen
+                </button>
+                <button
+                  type="button"
+                  disabled={duplicateModal.isSubmitting}
+                  onClick={() => handleConfirmDuplicate(true)}
+                  className="w-full sm:w-auto px-4 py-2 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-200 text-xs font-bold hover:bg-zinc-700 hover:text-white transition-all flex items-center justify-center gap-1.5"
+                  title="Erstellt die Kopie und öffnet direkt den Editor"
+                >
+                  {duplicateModal.isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Pencil className="w-3.5 h-3.5 text-primary" />}
+                  <span>Kopieren & Bearbeiten</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={duplicateModal.isSubmitting}
+                  onClick={() => handleConfirmDuplicate(false)}
+                  className="w-full sm:w-auto px-5 py-2 rounded-xl bg-primary text-white text-xs font-bold shadow-lg shadow-primary/20 hover:bg-primary-hover transition-all flex items-center justify-center gap-1.5"
+                >
+                  {duplicateModal.isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>Duplizieren</span>
+                </button>
+              </div>
             </div>
           </div>
         )}

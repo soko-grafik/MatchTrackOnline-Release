@@ -516,6 +516,11 @@ export const deleteExercise = async (id: number) => {
   return safeJsonParse(response.data);
 };
 
+export const duplicateExercise = async (id: number, title?: string) => {
+  const response = await api.post(`/training/exercises/${id}/duplicate`, title ? { title } : {});
+  return safeJsonParse(response.data);
+};
+
 export const getTrainingSessions = async (team_id?: string) => {
   const url = team_id ? `/training/sessions?team_id=${team_id}` : '/training/sessions';
   const response = await api.get(url);
@@ -629,6 +634,66 @@ export const cleanupOrganizerMatches = async (teamId?: string | null, onlyFussba
     team_id: teamId || null,
     only_fussball_de: onlyFussballDe
   });
+  return safeJsonParse(response.data);
+};
+
+// --- School Holidays API (Schulferien) ---
+
+export interface SchoolHoliday {
+  id: number;
+  name: string;
+  start_date: string;
+  end_date: string;
+  state_or_region?: string | null;
+  source?: string;
+  created_by_user_id?: string | null;
+  created_at?: string;
+}
+
+export const getSchoolHolidays = async (params?: { year?: number; start_date?: string; end_date?: string }) => {
+  const query = new URLSearchParams();
+  if (params?.year) query.append('year', params.year.toString());
+  if (params?.start_date) query.append('start_date', params.start_date);
+  if (params?.end_date) query.append('end_date', params.end_date);
+  const response = await api.get(`/organizer/holidays${query.toString() ? `?${query.toString()}` : ''}`);
+  return safeJsonParse(response.data);
+};
+
+export const importSchoolHolidaysIcs = async (file: File) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await api.post('/organizer/holidays/import-ics', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  });
+  return safeJsonParse(response.data);
+};
+
+export const importSchoolHolidaysIcsText = async (icsText: string) => {
+  const response = await api.post('/organizer/holidays/import-ics-text', { ics_text: icsText });
+  return safeJsonParse(response.data);
+};
+
+export const createSchoolHoliday = async (data: {
+  name: string;
+  start_date: string;
+  end_date: string;
+  state_or_region?: string;
+}) => {
+  const response = await api.post('/organizer/holidays', data);
+  return safeJsonParse(response.data);
+};
+
+export const deleteSchoolHoliday = async (id: number) => {
+  const response = await api.delete(`/organizer/holidays/${id}`);
+  return safeJsonParse(response.data);
+};
+
+export const deleteAllSchoolHolidays = async (year?: number) => {
+  const query = new URLSearchParams();
+  if (year) query.append('year', year.toString());
+  const response = await api.delete(`/organizer/holidays${query.toString() ? `?${query.toString()}` : ''}`);
   return safeJsonParse(response.data);
 };
 

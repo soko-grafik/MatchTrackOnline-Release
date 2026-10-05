@@ -3,7 +3,7 @@ from .models import (
     HeatmapStatus, StitchingStatus, SystemSettings, Team, user_teams,
     TrainingExercise, TrainingSession, TrainingSessionExercise,
     CalendarEvent, calendar_event_teams, calendar_event_attendees, PushSubscription, Player,
-    PlayerAttendance, PlayerEvaluation,
+    SchoolHoliday, PlayerAttendance, PlayerEvaluation,
     UserTacticsPreference, TacticsBoard, TacticsFormationPreset,
     VideoStitchJob, UserActivityLog, UserActivityType, SystemLog
 )

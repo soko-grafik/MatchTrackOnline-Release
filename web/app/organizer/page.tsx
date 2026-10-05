@@ -28,12 +28,14 @@ import {
   PartyPopper,
   UserPlus,
   Mail,
-  ExternalLink
+  ExternalLink,
+  Palmtree
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import PageHeader from '@/components/PageHeader';
 import PrintableTrainingModal from '@/components/PrintableTrainingModal';
 import EditCalendarEventModal from '@/components/EditCalendarEventModal';
+import SchoolHolidaysModal from '@/components/SchoolHolidaysModal';
 import {
   getCalendarEvents,
   createCalendarEvent,
@@ -48,7 +50,9 @@ import {
   unsubscribePushNotifications,
   sendTestPushNotification,
   cleanupOrganizerMatches,
-  getOrganizerTrainers
+  getOrganizerTrainers,
+  getSchoolHolidays,
+  SchoolHoliday
 } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSettings } from '@/contexts/SettingsContext';
@@ -87,6 +91,17 @@ export default function OrganizerPage() {
   const [viewMode, setViewMode] = useState<'GRID' | 'LIST'>('GRID');
   const [pushStatus, setPushStatus] = useState<'checking' | 'enabled' | 'disabled' | 'unsupported'>('checking');
   const [pushBusy, setPushBusy] = useState(false);
+
+  // School Holidays (Schulferien) State
+  const [holidays, setHolidays] = useState<SchoolHoliday[]>([]);
+  const [showHolidays, setShowHolidays] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('organizer_show_holidays');
+      return saved !== null ? saved === 'true' : true;
+    }
+    return true;
+  });
+  const [isSchoolHolidaysModalOpen, setIsSchoolHolidaysModalOpen] = useState(false);
 
   // Edit Calendar Event Modal State (with Attendance Tab)
   const [editingEventModalItem, setEditingEventModalItem] = useState<any | null>(null);
@@ -284,6 +299,23 @@ export default function OrganizerPage() {
   const showTestPushAction = isAdmin && !!settings?.show_push_test_button;
   const showMatchCleanupAction = (isAdmin || canEdit) && !!settings?.show_match_cleanup_button;
 
+  const handleToggleShowHolidays = () => {
+    const nextVal = !showHolidays;
+    setShowHolidays(nextVal);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('organizer_show_holidays', String(nextVal));
+    }
+  };
+
+  const getHolidayForDate = (dateStr: string): SchoolHoliday | undefined => {
+    if (!holidays || holidays.length === 0) return undefined;
+    return holidays.find((h) => {
+      const s = h.start_date.slice(0, 10);
+      const e = h.end_date.slice(0, 10);
+      return dateStr >= s && dateStr <= e;
+    });
+  };
+
   useEffect(() => {
     loadData();
   }, [selectedTeamFilter, selectedTypeFilter]);
@@ -302,18 +334,20 @@ export default function OrganizerPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [evData, teamsData, sesData, trainersData] = await Promise.all([
+      const [evData, teamsData, sesData, trainersData, holidaysData] = await Promise.all([
         getCalendarEvents({
           team_id: selectedTeamFilter !== 'ALL' ? selectedTeamFilter : undefined,
           event_type: selectedTypeFilter !== 'ALL' ? selectedTypeFilter : undefined
         }),
         getMyTeams(),
         getTrainingSessions(),
-        getOrganizerTrainers().catch(() => [])
+        getOrganizerTrainers().catch(() => []),
+        getSchoolHolidays().catch(() => [])
       ]);
 
       if (Array.isArray(evData)) setEvents(evData);
       if (Array.isArray(trainersData)) setTrainers(trainersData);
+      if (Array.isArray(holidaysData)) setHolidays(holidaysData);
       if (Array.isArray(teamsData)) {
         setTeams(teamsData);
         const editableTeams = teamsData.filter((t: any) => {
@@ -765,6 +799,33 @@ export default function OrganizerPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            {/* Schulferien Overlay Umschalter */}
+            <button
+              onClick={handleToggleShowHolidays}
+              aria-pressed={showHolidays}
+              aria-label={showHolidays ? 'Schulferien im Kalender ausblenden' : 'Schulferien im Kalender einblenden'}
+              title={
+                showHolidays
+                  ? `Schulferien aktiv (${holidays.length} hinterlegt) - klicken zum Ausblenden`
+                  : 'Schulferien im Kalender einblenden'
+              }
+              className={`px-2.5 sm:px-3 py-2 rounded-xl border transition-all flex items-center gap-1.5 text-xs font-bold ${
+                showHolidays
+                  ? 'bg-amber-500/15 border-amber-500/40 text-amber-400 hover:bg-amber-500/25 shadow-sm'
+                  : 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800'
+              }`}
+            >
+              <Palmtree className="w-4 h-4 shrink-0" />
+              <span className="hidden sm:inline">Ferien</span>
+              {holidays.length > 0 && (
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                  showHolidays ? 'bg-amber-400/20 text-amber-300' : 'bg-zinc-800 text-zinc-500'
+                }`}>
+                  {holidays.length}
+                </span>
+              )}
+            </button>
+
             {/* Push-Benachrichtigungen: grüne Glocke = aktiv, graue durchgestrichene Glocke = inaktiv */}
             <button
               onClick={handleTogglePush}
@@ -831,7 +892,7 @@ export default function OrganizerPage() {
               </button>
             )}
 
-            {/* 3-Dots Dropdown für weitere Aktionen (fussball.de Import, Test-Push, Spieltermine löschen).
+            {/* 3-Dots Dropdown für weitere Aktionen (fussball.de Import, Schulferien, Test-Push, Spieltermine löschen).
                 Nur anzeigen, wenn mindestens eine Aktion verfügbar ist. */}
             {(canEdit || showTestPushAction || showMatchCleanupAction) && (
             <div className="relative" ref={moreActionsMenuRef}>
@@ -844,17 +905,29 @@ export default function OrganizerPage() {
               </button>
 
               {isMoreActionsMenuOpen && (
-                <div className="absolute right-0 top-full mt-2 w-56 rounded-xl bg-zinc-900 border border-zinc-700 shadow-2xl p-1.5 z-[110] space-y-1 text-xs font-semibold">
+                <div className="absolute right-0 top-full mt-2 w-64 rounded-xl bg-zinc-900 border border-zinc-700 shadow-2xl p-1.5 z-[110] space-y-1 text-xs font-semibold">
                   {canEdit && (
-                    <button
-                      onClick={() => {
-                        setIsMoreActionsMenuOpen(false);
-                        setIsImportModalOpen(true);
-                      }}
-                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-zinc-200 hover:bg-zinc-800 hover:text-white transition-all text-left"
-                    >
-                      <Download className="w-4 h-4 text-blue-400" /> fussball.de Import
-                    </button>
+                    <>
+                      <button
+                        onClick={() => {
+                          setIsMoreActionsMenuOpen(false);
+                          setIsSchoolHolidaysModalOpen(true);
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-amber-300 hover:bg-amber-500/10 transition-all text-left"
+                      >
+                        <Palmtree className="w-4 h-4 text-amber-400" /> Schulferien (.ics) verwalten
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setIsMoreActionsMenuOpen(false);
+                          setIsImportModalOpen(true);
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-zinc-200 hover:bg-zinc-800 hover:text-white transition-all text-left"
+                      >
+                        <Download className="w-4 h-4 text-blue-400" /> fussball.de Import
+                      </button>
+                    </>
                   )}
 
                   {showTestPushAction && (
@@ -976,24 +1049,44 @@ export default function OrganizerPage() {
                   return evDate === dateStr;
                 });
 
+                const activeHoliday = showHolidays ? getHolidayForDate(dateStr) : undefined;
+
                 return (
                   <div
                     key={`day_${dayNumber}`}
                     id={isToday ? 'today-calendar-day' : `day_${dayNumber}`}
-                    className={`min-h-[90px] md:min-h-[110px] border-b border-r border-zinc-800/60 p-2.5 transition-all flex flex-col justify-between group ${
+                    className={`min-h-[90px] md:min-h-[110px] border-b border-r p-2.5 transition-all flex flex-col justify-between group relative overflow-hidden ${
                       isToday
                         ? 'bg-primary/10 border-primary/60 ring-2 ring-primary/40 shadow-lg shadow-primary/10'
-                        : 'bg-zinc-900/30 hover:bg-zinc-900/60'
+                        : activeHoliday
+                        ? 'bg-amber-500/[0.07] border-amber-500/25 hover:bg-amber-500/[0.12]'
+                        : 'bg-zinc-900/30 border-zinc-800/60 hover:bg-zinc-900/60'
                     }`}
                   >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className={`text-xs font-bold ${
+                    {/* Subtle Top Indicator Stripe for Holidays */}
+                    {activeHoliday && !isToday && (
+                      <div className="absolute top-0 left-0 right-0 h-0.5 bg-amber-500/40" />
+                    )}
+
+                    <div className="flex items-center justify-between gap-1 mb-1.5 min-w-0">
+                      <span className={`text-xs font-bold shrink-0 ${
                         isToday
                           ? 'bg-primary text-white px-2 py-0.5 rounded-full shadow-md text-[11px]'
+                          : activeHoliday
+                          ? 'text-amber-300'
                           : 'text-zinc-400 group-hover:text-white'
                       }`}>
                         <span className="md:hidden">{weekdayName}, </span>{dayNumber}. {isToday && <span className="text-[9px] font-normal uppercase ml-1">Heute</span>}
                       </span>
+
+                      {activeHoliday && (
+                        <span
+                          className="truncate text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 max-w-[120px]"
+                          title={`🏖️ ${activeHoliday.name}${activeHoliday.state_or_region ? ` (${activeHoliday.state_or_region})` : ''}`}
+                        >
+                          🏖️ {activeHoliday.name}
+                        </span>
+                      )}
                     </div>
 
                     <div className="space-y-1">
@@ -1151,9 +1244,20 @@ export default function OrganizerPage() {
                             )}
                           </div>
 
-                          <span className="text-xs font-bold font-mono text-zinc-300">
-                            {evDate.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' })}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            {(() => {
+                              const evDateStr = `${evDate.getFullYear()}-${String(evDate.getMonth() + 1).padStart(2, '0')}-${String(evDate.getDate()).padStart(2, '0')}`;
+                              const evHoliday = showHolidays ? getHolidayForDate(evDateStr) : undefined;
+                              return evHoliday ? (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 hidden sm:inline-block">
+                                  🏖️ {evHoliday.name}
+                                </span>
+                              ) : null;
+                            })()}
+                            <span className="text-xs font-bold font-mono text-zinc-300">
+                              {evDate.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' })}
+                            </span>
+                          </div>
                         </div>
 
                         <div className="flex items-start justify-between gap-3">
@@ -2153,6 +2257,13 @@ export default function OrganizerPage() {
             onDeleted={loadData}
           />
         )}
+
+        {/* School Holidays (Schulferien) Modal */}
+        <SchoolHolidaysModal
+          isOpen={isSchoolHolidaysModalOpen}
+          onClose={() => setIsSchoolHolidaysModalOpen(false)}
+          onHolidaysChanged={(updatedHolidays) => setHolidays(updatedHolidays)}
+        />
       </main>
     </div>
   );

@@ -1,13 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, File, UploadFile
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from db.session import get_db
-from models import CalendarEvent, PushSubscription, TrainingSession, Team, User, UserRole, Player, PlayerAttendance
+from models import CalendarEvent, PushSubscription, TrainingSession, Team, User, UserRole, Player, PlayerAttendance, SchoolHoliday
 from api.dependencies import get_current_user, require_trainer
 from services.fussball_de_service import fetch_and_parse_fussball_de_team_matches
+from services.ics_parser_service import parse_school_holidays_from_ics
 
 router = APIRouter()
 
@@ -120,6 +121,31 @@ class EventAttendanceOverviewResponse(BaseModel):
     absent_count: int
     excused_count: int
     players: List[EventPlayerAttendanceInfo]
+
+class SchoolHolidayCreate(BaseModel):
+    name: str
+    start_date: datetime
+    end_date: datetime
+    state_or_region: Optional[str] = None
+    source: Optional[str] = "MANUAL"
+
+class SchoolHolidayResponse(BaseModel):
+    id: int
+    name: str
+    start_date: datetime
+    end_date: datetime
+    state_or_region: Optional[str] = None
+    source: str
+    created_by_user_id: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        orm_mode = True
+        from_attributes = True
+
+class SchoolHolidayIcsImportTextRequest(BaseModel):
+    ics_text: str
+
 
 
 # Helper to check if current user is admin or assigned trainer with edit permission for team_id
@@ -751,4 +777,225 @@ def save_event_attendance(
         "message": f"Anwesenheit für {len(payload.attendances)} Spieler erfolgreich aktualisiert.",
         "event_id": event_id
     }
+
+
+# ==========================================
+# School Holidays Endpoints (Schulferien)
+# ==========================================
+
+@router.get("/holidays", response_model=List[SchoolHolidayResponse])
+def get_school_holidays(
+    year: Optional[int] = Query(None),
+    start_date: Optional[datetime] = Query(None),
+    end_date: Optional[datetime] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Liefert alle Schulferien-Zeiträume, optional gefiltert nach Jahr oder Zeitraum.
+    """
+    query = db.query(SchoolHoliday)
+    
+    if year:
+        year_start = datetime(year, 1, 1, 0, 0, 0)
+        year_end = datetime(year, 12, 31, 23, 59, 59)
+        query = query.filter(SchoolHoliday.end_date >= year_start, SchoolHoliday.start_date <= year_end)
+    elif start_date and end_date:
+        query = query.filter(SchoolHoliday.end_date >= start_date, SchoolHoliday.start_date <= end_date)
+    elif start_date:
+        query = query.filter(SchoolHoliday.end_date >= start_date)
+        
+    return query.order_by(SchoolHoliday.start_date.asc()).all()
+
+
+@router.post("/holidays/import-ics")
+async def import_school_holidays_ics(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_trainer)
+):
+    """
+    Importiert Schulferien aus einer hochgeladenen .ics (iCalendar) Datei.
+    """
+    if not file.filename.lower().endswith(('.ics', '.ical')):
+        raise HTTPException(
+            status_code=400,
+            detail="Ungültiges Dateiformat. Bitte eine .ics oder .ical Datei hochladen."
+        )
+        
+    try:
+        content_bytes = await file.read()
+        # Versuche UTF-8, Fallback auf latin-1
+        try:
+            ics_text = content_bytes.decode('utf-8')
+        except UnicodeDecodeError:
+            ics_text = content_bytes.decode('latin-1', errors='replace')
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Fehler beim Lesen der Datei: {str(e)}")
+
+    parsed_events = parse_school_holidays_from_ics(ics_text)
+    if not parsed_events:
+        raise HTTPException(
+            status_code=400,
+            detail="In der hochgeladenen Datei konnten keine gültigen Ferien-Ereignisse (VEVENT) gefunden werden."
+        )
+
+    imported_count = 0
+    updated_count = 0
+    
+    for event_data in parsed_events:
+        # Prüfe ob Ferienzeitraum mit gleichem Namen und Startdatum bereits existiert
+        existing = db.query(SchoolHoliday).filter(
+            SchoolHoliday.name == event_data["name"],
+            SchoolHoliday.start_date == event_data["start_date"]
+        ).first()
+        
+        if existing:
+            existing.end_date = event_data["end_date"]
+            existing.state_or_region = event_data["state_or_region"]
+            updated_count += 1
+        else:
+            new_holiday = SchoolHoliday(
+                name=event_data["name"],
+                start_date=event_data["start_date"],
+                end_date=event_data["end_date"],
+                state_or_region=event_data["state_or_region"],
+                source="ICS_IMPORT",
+                created_by_user_id=current_user.id
+            )
+            db.add(new_holiday)
+            imported_count += 1
+
+    db.commit()
+
+    all_holidays = db.query(SchoolHoliday).order_by(SchoolHoliday.start_date.asc()).all()
+    
+    return {
+        "status": "success",
+        "message": f"{imported_count} Schulferien neu importiert, {updated_count} aktualisiert.",
+        "imported_count": imported_count,
+        "updated_count": updated_count,
+        "total_holidays": len(all_holidays),
+        "holidays": [SchoolHolidayResponse.from_orm(h) for h in all_holidays]
+    }
+
+
+@router.post("/holidays/import-ics-text")
+def import_school_holidays_ics_text(
+    payload: SchoolHolidayIcsImportTextRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_trainer)
+):
+    """
+    Importiert Schulferien aus einem ICS-Textstring.
+    """
+    parsed_events = parse_school_holidays_from_ics(payload.ics_text)
+    if not parsed_events:
+        raise HTTPException(
+            status_code=400,
+            detail="Im angegebenen Text konnten keine gültigen Ferien-Ereignisse (VEVENT) gefunden werden."
+        )
+
+    imported_count = 0
+    updated_count = 0
+    
+    for event_data in parsed_events:
+        existing = db.query(SchoolHoliday).filter(
+            SchoolHoliday.name == event_data["name"],
+            SchoolHoliday.start_date == event_data["start_date"]
+        ).first()
+        
+        if existing:
+            existing.end_date = event_data["end_date"]
+            existing.state_or_region = event_data["state_or_region"]
+            updated_count += 1
+        else:
+            new_holiday = SchoolHoliday(
+                name=event_data["name"],
+                start_date=event_data["start_date"],
+                end_date=event_data["end_date"],
+                state_or_region=event_data["state_or_region"],
+                source="ICS_IMPORT",
+                created_by_user_id=current_user.id
+            )
+            db.add(new_holiday)
+            imported_count += 1
+
+    db.commit()
+    all_holidays = db.query(SchoolHoliday).order_by(SchoolHoliday.start_date.asc()).all()
+
+    return {
+        "status": "success",
+        "message": f"{imported_count} Schulferien neu importiert, {updated_count} aktualisiert.",
+        "imported_count": imported_count,
+        "updated_count": updated_count,
+        "holidays": [SchoolHolidayResponse.from_orm(h) for h in all_holidays]
+    }
+
+
+@router.post("/holidays", response_model=SchoolHolidayResponse)
+def create_school_holiday(
+    payload: SchoolHolidayCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_trainer)
+):
+    """
+    Manuelles Anlegen eines Schulferien-Zeitraums.
+    """
+    if payload.end_date < payload.start_date:
+        raise HTTPException(status_code=400, detail="Das Enddatum darf nicht vor dem Startdatum liegen.")
+
+    new_holiday = SchoolHoliday(
+        name=payload.name.strip(),
+        start_date=payload.start_date,
+        end_date=payload.end_date,
+        state_or_region=payload.state_or_region.strip() if payload.state_or_region else None,
+        source=payload.source or "MANUAL",
+        created_by_user_id=current_user.id
+    )
+    db.add(new_holiday)
+    db.commit()
+    db.refresh(new_holiday)
+    return new_holiday
+
+
+@router.delete("/holidays/{holiday_id}")
+def delete_school_holiday(
+    holiday_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_trainer)
+):
+    """
+    Löscht einen einzelnen Schulferien-Eintrag.
+    """
+    holiday = db.query(SchoolHoliday).filter(SchoolHoliday.id == holiday_id).first()
+    if not holiday:
+        raise HTTPException(status_code=404, detail="Schulferien-Eintrag nicht gefunden.")
+
+    db.delete(holiday)
+    db.commit()
+    return {"status": "success", "message": "Schulferien-Eintrag gelöscht."}
+
+
+@router.delete("/holidays")
+def delete_all_school_holidays(
+    year: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_trainer)
+):
+    """
+    Löscht alle Schulferien oder alle für ein bestimmtes Jahr.
+    """
+    query = db.query(SchoolHoliday)
+    if year:
+        year_start = datetime(year, 1, 1, 0, 0, 0)
+        year_end = datetime(year, 12, 31, 23, 59, 59)
+        query = query.filter(SchoolHoliday.end_date >= year_start, SchoolHoliday.start_date <= year_end)
+        deleted_cnt = query.delete(synchronize_session=False)
+    else:
+        deleted_cnt = query.delete(synchronize_session=False)
+
+    db.commit()
+    return {"status": "success", "message": f"{deleted_cnt} Schulferien-Einträge gelöscht."}
+
 

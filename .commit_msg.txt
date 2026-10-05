@@ -1,11 +1,11 @@
-release: docs(chats): update chat session log with table of contents (dev: d20ef818)
+release: feat(organizer): Schulferien-Import (.ics) als transparente Hintergrund-Ebene im Kalender integriert (dev: 946cc82b)
 
 Letzte Änderungen:
+* feat(organizer): Schulferien-Import (.ics) als transparente Hintergrund-Ebene im Kalender integriert (946cc82b)
+* feat(training): add exercise duplication with custom title, vector sketch copying, and edit modal copy action (87764696)
 * docs(chats): update chat session log with table of contents (d20ef818)
 * refactor(sketch): remove redundant sketch save button in favor of unified exercise save button (53687988)
 * style(training): reorganize exercise form layout into compact two-row structure (2d12bf85)
 * feat(training): add adjustable 3/5/7 column grid and simplify exercise card layout (b60ad34c)
-* feat(training): add bullet list support for provocation rules and exercise description (93b7d645)
-* feat(training): automatically save sketch when saving exercise (1396feeb)
 
-Build-Zeitstempel: 2026-09-25 10:32:26
+Build-Zeitstempel: 2026-10-05 11:16:18

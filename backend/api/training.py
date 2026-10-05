@@ -27,6 +27,9 @@ class ExerciseCreate(BaseModel):
     diagram_data: Optional[dict] = None
     thumbnail_path: Optional[str] = None
 
+class ExerciseDuplicate(BaseModel):
+    title: Optional[str] = None
+
 class ExerciseResponse(BaseModel):
     id: int
     title: str
@@ -196,6 +199,54 @@ def delete_exercise(
     db.delete(exercise)
     db.commit()
     return {"message": "Übung erfolgreich gelöscht"}
+
+
+@router.post("/exercises/{exercise_id}/duplicate", response_model=ExerciseResponse)
+def duplicate_exercise(
+    exercise_id: int,
+    duplicate_in: Optional[ExerciseDuplicate] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_trainer)
+):
+    original = db.query(TrainingExercise).filter(TrainingExercise.id == exercise_id).first()
+    if not original:
+        raise HTTPException(status_code=404, detail="Übung nicht gefunden")
+
+    new_title = (duplicate_in.title.strip() if duplicate_in and duplicate_in.title and duplicate_in.title.strip() else None) or f"{original.title} (Kopie)"
+
+    new_exercise = TrainingExercise(
+        title=new_title,
+        description=original.description,
+        coaching_points=original.coaching_points,
+        provocation_rules=original.provocation_rules,
+        age_group=original.age_group,
+        focus_area=original.focus_area,
+        min_players=original.min_players,
+        max_players=original.max_players,
+        duration_minutes=original.duration_minutes,
+        materials=original.materials,
+        diagram_data=original.diagram_data,
+        thumbnail_path=original.thumbnail_path,
+        created_by_user_id=current_user.id
+    )
+    db.add(new_exercise)
+    db.commit()
+    db.refresh(new_exercise)
+
+    try:
+        from services.activity_service import log_user_activity
+        log_user_activity(
+            db=db,
+            user_id=current_user.id,
+            activity_type="DUPLICATE_EXERCISE",
+            resource_type="exercise",
+            resource_id=str(new_exercise.id),
+            details={"title": new_exercise.title, "original_id": original.id}
+        )
+    except Exception:
+        pass
+
+    return new_exercise
 
 
 # --- Session (Trainingsplan) Endpoints ---
