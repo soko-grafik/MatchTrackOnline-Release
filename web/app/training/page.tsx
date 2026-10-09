@@ -23,7 +23,8 @@ import {
   ListPlus,
   AlertCircle,
   LayoutGrid,
-  Copy
+  Copy,
+  Eye
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import PageHeader from '@/components/PageHeader';
@@ -99,6 +100,7 @@ export default function TrainingPage() {
   const [modalExerciseSearch, setModalExerciseSearch] = useState('');
   const [printingSession, setPrintingSession] = useState<any | null>(null);
   const [printingExercise, setPrintingExercise] = useState<any | null>(null);
+  const [viewingExercise, setViewingExercise] = useState<any | null>(null);
   const [showSketchEditor, setShowSketchEditor] = useState(true);
   const sketchEditorRef = useRef<ExerciseSketchEditorHandle | null>(null);
 
@@ -773,12 +775,16 @@ export default function TrainingPage() {
                     className="flex flex-col rounded-2xl border border-zinc-800 bg-zinc-900/60 overflow-hidden hover:border-zinc-700 transition-all group"
                   >
                     {/* Thumbnail / Diagram */}
-                    <div className="h-44 bg-zinc-950 relative flex items-center justify-center border-b border-zinc-800 overflow-hidden">
+                    <div
+                      onClick={() => setViewingExercise(ex)}
+                      className="h-44 bg-zinc-950 relative flex items-center justify-center border-b border-zinc-800 overflow-hidden cursor-pointer group/thumb"
+                      title="Klicken für Detailansicht"
+                    >
                       {ex.thumbnail_path ? (
                         <img
                           src={ex.thumbnail_path.startsWith('data:') || ex.thumbnail_path.startsWith('http') ? ex.thumbnail_path : getMediaUrl(ex.thumbnail_path)}
                           alt={ex.title}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover group-hover/thumb:scale-105 transition-transform duration-300"
                         />
                       ) : (
                         <div className="text-center p-4 text-zinc-600">
@@ -796,7 +802,13 @@ export default function TrainingPage() {
 
                     <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
                       <div>
-                        <h3 className="text-base font-bold text-white group-hover:text-primary transition-colors">{ex.title}</h3>
+                        <h3
+                          onClick={() => setViewingExercise(ex)}
+                          className="text-base font-bold text-white group-hover:text-primary transition-colors cursor-pointer"
+                          title="Klicken für Detailansicht"
+                        >
+                          {ex.title}
+                        </h3>
                         {ex.description && (
                           <div className="text-xs text-zinc-400 mt-2 space-y-1 line-clamp-3">
                             {ex.description.split('\n').filter((l: string) => l.trim()).slice(0, 3).map((line: string, idx: number) => {
@@ -825,15 +837,27 @@ export default function TrainingPage() {
                         </div>
 
                         <div className="flex items-center justify-between gap-2 pt-1 border-t border-zinc-800/40">
-                          <button
-                            type="button"
-                            onClick={() => setPrintingExercise(ex)}
-                            className="p-2 rounded-lg bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700 transition-all text-xs font-bold flex items-center gap-1.5"
-                            title="Übung drucken / DIN A4 PDF exportieren"
-                          >
-                            <Printer className="w-3.5 h-3.5 text-emerald-400" />
-                            <span>PDF</span>
-                          </button>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setViewingExercise(ex)}
+                              className="p-2 rounded-lg bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700 transition-all text-xs font-bold flex items-center gap-1.5"
+                              title="Übung im Detail ansehen"
+                            >
+                              <Eye className="w-3.5 h-3.5 text-cyan-400" />
+                              <span>Ansehen</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => setPrintingExercise(ex)}
+                              className="p-2 rounded-lg bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700 transition-all text-xs font-bold flex items-center gap-1.5"
+                              title="Übung drucken / DIN A4 PDF exportieren"
+                            >
+                              <Printer className="w-3.5 h-3.5 text-emerald-400" />
+                              <span>PDF</span>
+                            </button>
+                          </div>
 
                           {canEdit && (
                             <div className="flex items-center gap-1.5">
@@ -1146,8 +1170,8 @@ export default function TrainingPage() {
         {/* Modal: Übung anlegen / bearbeiten */}
         {isExerciseModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-2 sm:p-4 backdrop-blur-md overflow-y-auto">
-            <div className="w-[98vw] rounded-2xl border border-zinc-800 bg-zinc-950 p-5 sm:p-7 shadow-2xl space-y-6 max-h-[96vh] overflow-y-auto">
-              <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
+            <div className="w-[98vw] max-w-[1600px] rounded-2xl border border-zinc-800 bg-zinc-950 p-4 sm:p-6 shadow-2xl space-y-4 max-h-[96vh] overflow-y-auto">
+              <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
                 <div className="flex items-center gap-3">
                   <h3 className="text-xl font-bold text-white">
                     {editingExerciseId ? 'Übung bearbeiten' : 'Neue Übung in Wissensdatenbank eintragen'}
@@ -1186,7 +1210,7 @@ export default function TrainingPage() {
               </div>
 
 
-              <form onSubmit={handleSaveExercise} className="space-y-6">
+              <form onSubmit={handleSaveExercise} className="space-y-4">
                 {/* Row 1: Titel, Altersklasse, Schwerpunkt, Min Spieler, Dauer, Coaching-Punkte */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-3 items-end">
                   {/* Titel der Übung */}
@@ -1308,10 +1332,10 @@ export default function TrainingPage() {
                 </div>
 
                 {/* Row 2: Ablauf & Beschreibung NEBEN Provokationsregeln */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {/* Ablauf & Beschreibung */}
                   <div>
-                    <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center justify-between mb-1">
                       <label className="text-xs font-bold text-zinc-400">Ablauf & Beschreibung</label>
                       <button
                         type="button"
@@ -1322,19 +1346,19 @@ export default function TrainingPage() {
                       </button>
                     </div>
                     <textarea
-                      rows={4}
+                      rows={2}
                       value={exerciseForm.description}
                       onKeyDown={(e) => handleBulletKeyDown(e, 'description')}
                       onChange={(e) => setExerciseForm({ ...exerciseForm, description: e.target.value })}
                       placeholder="• Spieler A passt zu Spieler B&#10;• Spieler B lässt klatschen&#10;• Torschuss mit max. 2 Kontakten"
-                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs text-white focus:border-primary focus:outline-none leading-relaxed resize-y"
+                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs text-white focus:border-primary focus:outline-none leading-relaxed resize-y"
                     />
-                    <p className="text-[10px] text-zinc-500 mt-1">Tipp: Drücke Enter für den nächsten Stichpunkt.</p>
+                    <p className="text-[10px] text-zinc-500 mt-0.5">Tipp: Drücke Enter für den nächsten Stichpunkt.</p>
                   </div>
 
                   {/* Provokationsregeln */}
                   <div>
-                    <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center justify-between mb-1">
                       <label className="text-xs font-bold text-zinc-400">Provokationsregeln</label>
                       <button
                         type="button"
@@ -1345,14 +1369,14 @@ export default function TrainingPage() {
                       </button>
                     </div>
                     <textarea
-                      rows={4}
+                      rows={2}
                       value={exerciseForm.provocation_rules}
                       onKeyDown={(e) => handleBulletKeyDown(e, 'provocation_rules')}
                       onChange={(e) => setExerciseForm({ ...exerciseForm, provocation_rules: e.target.value })}
                       placeholder="• Max 2 Kontakte&#10;• Tore zählen doppelt nach Seitenwechsel"
-                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs text-white focus:border-primary focus:outline-none leading-relaxed resize-y"
+                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs text-white focus:border-primary focus:outline-none leading-relaxed resize-y"
                     />
-                    <p className="text-[10px] text-zinc-500 mt-1">Tipp: Drücke Enter für den nächsten Stichpunkt.</p>
+                    <p className="text-[10px] text-zinc-500 mt-0.5">Tipp: Drücke Enter für den nächsten Stichpunkt.</p>
                   </div>
                 </div>
 
@@ -1811,6 +1835,207 @@ export default function TrainingPage() {
             </div>
           </div>
         )}
+        {/* Modal: Übung im Detail ansehen (Read-Only) */}
+        {viewingExercise && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/85 p-2 sm:p-4 backdrop-blur-md overflow-y-auto">
+            <div className="w-[98vw] max-w-5xl rounded-2xl border border-zinc-800 bg-zinc-950 p-5 sm:p-7 shadow-2xl space-y-6 max-h-[96vh] overflow-y-auto custom-scrollbar">
+              {/* Header */}
+              <div className="flex items-start justify-between border-b border-zinc-800 pb-4 gap-4">
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="px-2.5 py-1 rounded-lg bg-primary/20 text-primary border border-primary/30 text-xs font-bold">
+                      {viewingExercise.age_group || 'Alle Altersklassen'}
+                    </span>
+                    <span className="px-2.5 py-1 rounded-lg bg-zinc-800 text-zinc-200 border border-zinc-700 text-xs font-bold">
+                      {viewingExercise.focus_area || 'Allgemein'}
+                    </span>
+                    <span className="px-2.5 py-1 rounded-lg bg-zinc-900 text-zinc-400 border border-zinc-800 text-xs font-medium flex items-center gap-1.5">
+                      <Users className="w-3.5 h-3.5 text-zinc-500" />
+                      {viewingExercise.min_players}-{viewingExercise.max_players} Spieler
+                    </span>
+                    <span className="px-2.5 py-1 rounded-lg bg-zinc-900 text-zinc-400 border border-zinc-800 text-xs font-medium flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-zinc-500" />
+                      {viewingExercise.duration_minutes} Minuten
+                    </span>
+                  </div>
+                  <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                    {viewingExercise.title}
+                  </h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setViewingExercise(null)}
+                  className="rounded-xl p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors text-lg"
+                  title="Schließen"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Main Content: Skizze + Details */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                {/* Visual Sketch (Left / Top) */}
+                <div className="lg:col-span-7 flex flex-col items-center justify-center bg-zinc-900/60 rounded-2xl border border-zinc-800/80 p-3 sm:p-4 min-h-[280px] overflow-hidden">
+                  {viewingExercise.thumbnail_path ? (
+                    <img
+                      src={
+                        viewingExercise.thumbnail_path.startsWith('data:') || viewingExercise.thumbnail_path.startsWith('http')
+                          ? viewingExercise.thumbnail_path
+                          : getMediaUrl(viewingExercise.thumbnail_path)
+                      }
+                      alt={viewingExercise.title}
+                      className="w-full max-h-[480px] object-contain rounded-xl shadow-2xl border border-zinc-800/80"
+                    />
+                  ) : (
+                    <div className="text-center p-12 text-zinc-600">
+                      <Sparkles className="w-12 h-12 mx-auto mb-2 opacity-40" />
+                      <span className="text-xs font-mono uppercase tracking-wider">Keine Taktik-Skizze vorhanden</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Info & Details (Right) */}
+                <div className="lg:col-span-5 space-y-4 flex flex-col justify-between">
+                  <div className="space-y-4">
+                    {/* Coaching-Punkte */}
+                    {viewingExercise.coaching_points && (
+                      <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-4 space-y-1.5">
+                        <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold tracking-wide uppercase">
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>Coaching-Punkte</span>
+                        </div>
+                        <p className="text-xs sm:text-sm text-emerald-200/90 leading-relaxed whitespace-pre-line">
+                          {viewingExercise.coaching_points}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Ablauf & Beschreibung */}
+                    <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4 space-y-2">
+                      <div className="text-xs font-bold text-zinc-300 uppercase tracking-wider">
+                        Ablauf & Organisation
+                      </div>
+                      {viewingExercise.description ? (
+                        <div className="space-y-1.5 text-xs sm:text-sm text-zinc-300 leading-relaxed">
+                          {viewingExercise.description.split('\n').filter((l: string) => l.trim()).map((line: string, idx: number) => {
+                            const cleanLine = line.replace(/^[•\-\*]\s*/, '').trim();
+                            return (
+                              <div key={idx} className="flex items-start gap-2">
+                                <span className="text-primary font-bold text-xs shrink-0 mt-0.5">•</span>
+                                <span>{cleanLine}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-zinc-500 italic">Keine Beschreibung hinterlegt.</p>
+                      )}
+                    </div>
+
+                    {/* Provokationsregeln */}
+                    {viewingExercise.provocation_rules && (
+                      <div className="rounded-xl border border-amber-500/30 bg-amber-950/20 p-4 space-y-2">
+                        <div className="flex items-center gap-2 text-amber-400 text-xs font-bold tracking-wide uppercase">
+                          <Sparkles className="w-4 h-4" />
+                          <span>Provokationsregeln & Variationen</span>
+                        </div>
+                        <div className="space-y-1.5 text-xs sm:text-sm text-amber-200/90 leading-relaxed">
+                          {viewingExercise.provocation_rules.split('\n').filter((l: string) => l.trim()).map((line: string, idx: number) => {
+                            const cleanLine = line.replace(/^[•\-\*]\s*/, '').trim();
+                            return (
+                              <div key={idx} className="flex items-start gap-2">
+                                <span className="text-amber-400 font-bold text-xs shrink-0 mt-0.5">•</span>
+                                <span>{cleanLine}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Material */}
+                    {viewingExercise.materials && viewingExercise.materials.length > 0 && (
+                      <div className="rounded-xl border border-zinc-800/80 bg-zinc-900/30 p-3">
+                        <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block mb-2">
+                          Benötigtes Material:
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {(Array.isArray(viewingExercise.materials)
+                            ? viewingExercise.materials
+                            : String(viewingExercise.materials).split(',')
+                          ).map((mat: string, idx: number) => (
+                            <span
+                              key={idx}
+                              className="px-2.5 py-0.5 rounded-lg bg-zinc-800 text-zinc-300 text-xs font-medium border border-zinc-700/60"
+                            >
+                              {mat.trim()}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer Actions */}
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-800 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const ex = viewingExercise;
+                    setViewingExercise(null);
+                    setPrintingExercise(ex);
+                  }}
+                  className="px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white text-xs font-bold transition-all flex items-center gap-2 border border-zinc-700"
+                  title="DIN A4 Übungskarte drucken / PDF generieren"
+                >
+                  <Printer className="w-4 h-4 text-emerald-400" />
+                  <span>Drucken / PDF</span>
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const ex = viewingExercise;
+                      setViewingExercise(null);
+                      openDuplicateModal(ex);
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5"
+                  >
+                    <Copy className="w-4 h-4 text-blue-400" />
+                    <span>Kopieren</span>
+                  </button>
+
+                  {canEdit && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const ex = viewingExercise;
+                        setViewingExercise(null);
+                        openEditExerciseModal(ex);
+                      }}
+                      className="px-4 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-lg shadow-primary/20"
+                    >
+                      <Pencil className="w-4 h-4" />
+                      <span>Bearbeiten</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setViewingExercise(null)}
+                    className="px-5 py-2.5 rounded-xl bg-zinc-900 text-zinc-400 text-xs font-bold hover:text-white transition-colors"
+                  >
+                    Schließen
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Printable Training Plan / Exercise Modal */}
         {printingSession && (
           <PrintableTrainingModal

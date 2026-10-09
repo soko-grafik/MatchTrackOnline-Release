@@ -1877,12 +1877,12 @@ const ExerciseSketchEditor = forwardRef<ExerciseSketchEditorHandle, ExerciseSket
           )}
         </div>
 
-        {/* Right Canvas Area */}
-        <div className="flex-1 w-full overflow-hidden flex items-center justify-center bg-zinc-900/50 rounded-xl border border-zinc-800/80 p-2">
+        {/* Center Canvas Area */}
+        <div className="flex-1 w-full overflow-hidden flex items-center justify-center bg-zinc-900/60 rounded-2xl border border-zinc-800/80 p-2 sm:p-3 min-h-[360px]">
           {(() => {
-            const isSquarePitch = ['green_full', 'futsal_full', 'futsal_empty'].includes(pitchType);
-            const canvasWidth = isSquarePitch ? 720 : orientation === 'landscape' ? 720 : 480;
-            const canvasHeight = isSquarePitch ? 720 : orientation === 'landscape' ? 480 : 720;
+            const isLandscape = orientation === 'landscape';
+            const canvasWidth = isLandscape ? 720 : 480;
+            const canvasHeight = isLandscape ? 480 : 720;
 
             return (
               <canvas
@@ -1893,12 +1893,12 @@ const ExerciseSketchEditor = forwardRef<ExerciseSketchEditorHandle, ExerciseSket
                 onMouseMove={handleCanvasMouseMove}
                 onMouseUp={handleCanvasMouseUp}
                 className={`w-full ${
-                  isSquarePitch
-                    ? 'aspect-square max-w-[720px]'
-                    : orientation === 'landscape'
-                    ? 'aspect-[3/2] max-w-[720px]'
-                    : 'aspect-[2/3] max-w-[480px]'
-                } rounded-lg shadow-2xl cursor-crosshair touch-none ${isFullscreen ? 'max-w-full max-h-[80vh] w-auto h-auto' : ''}`}
+                  isLandscape
+                    ? 'aspect-[3/2] max-w-[960px] max-h-[min(540px,56vh)]'
+                    : 'aspect-[2/3] max-w-[500px] max-h-[min(580px,60vh)]'
+                } rounded-xl shadow-2xl cursor-crosshair touch-none transition-all object-contain ${
+                  isFullscreen ? '!max-w-full !max-h-[85vh] !w-auto !h-auto' : ''
+                }`}
               />
             );
           })()}

@@ -1,0 +1,11 @@
+release: feat(training): add exercise detail view modal, optimize sketch editor canvas and modernize scrollbars (dev: 3944d429)
+
+Letzte Änderungen:
+* feat(training): add exercise detail view modal, optimize sketch editor canvas and modernize scrollbars (0dae38f2)
+* update futsal fields (cceb5286)
+* feat(organizer): Schulferien-Import (.ics) als transparente Hintergrund-Ebene im Kalender integriert (946cc82b)
+* feat(training): add exercise duplication with custom title, vector sketch copying, and edit modal copy action (87764696)
+* refactor(sketch): remove redundant sketch save button in favor of unified exercise save button (53687988)
+* style(training): reorganize exercise form layout into compact two-row structure (2d12bf85)
+
+Build-Zeitstempel: 2026-10-09 13:55:59
