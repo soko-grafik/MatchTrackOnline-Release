@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { getMatchDetails, getMatchAnalytics, addMatchEvent, deleteMatchEvent, updateMatchEvent, updateMatchPasswordProtection, verifyMatchPassword, generateHeatmap, deleteHeatmap, getHeatmapStatus, getMediaUrl, detectMatchHighlights, getMatchHighlightStatus, trackUserPing, getPlayers } from '@/services/api';
 import MatchPlayer from '@/components/MatchPlayer';
@@ -49,6 +49,8 @@ export default function MatchDetailContent() {
   const [loading, setLoading] = useState(true);
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [currentTimeMs, setCurrentTimeMs] = useState(0);
+  const currentTimeMsRef = useRef(0);
+  const lastStateUpdateTimeRef = useRef(0);
   const [seekTo, setSeekTo] = useState<number | null>(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [heatmapStatus, setHeatmapStatus] = useState<string>('none');
@@ -75,6 +77,17 @@ export default function MatchDetailContent() {
   const [isCalibrationModalOpen, setIsCalibrationModalOpen] = useState(false);
   const [fieldCalibration, setFieldCalibration] = useState<any>(null);
   const [isEventListOpen, setIsEventListOpen] = useState(false); // Default to closed on mobile
+
+  const handleTimeUpdate = useCallback((ms: number) => {
+    currentTimeMsRef.current = ms;
+    if (isEventListOpen) {
+      const now = Date.now();
+      if (now - lastStateUpdateTimeRef.current > 300) {
+        lastStateUpdateTimeRef.current = now;
+        setCurrentTimeMs(ms);
+      }
+    }
+  }, [isEventListOpen]);
   const [isToolbarOpen, setIsToolbarOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
@@ -440,7 +453,7 @@ export default function MatchDetailContent() {
     setEditingEventId(null);
     setEditingMarkerText("");
     setEditingMarkerCategory(undefined);
-    setMarkerTimeMs(currentTimeMs);
+    setMarkerTimeMs(currentTimeMsRef.current);
     setIsModalOpen(true);
   };
 
@@ -507,7 +520,7 @@ export default function MatchDetailContent() {
       if (editingEventId) {
         await updateMatchEvent(id as string, editingEventId, eventData);
       } else {
-        await addMatchEvent(id as string, 'drawing', currentTimeMs, eventData);
+        await addMatchEvent(id as string, 'drawing', currentTimeMsRef.current, eventData);
       }
       getMatchDetails(id as string).then(data => setMatchData(data));
     } catch (error) {
@@ -520,7 +533,7 @@ export default function MatchDetailContent() {
   const handleDrawingSaveRequest = (shapes: any[]) => {
     if (!canEdit) return;
     setDrawingShapesToSave(shapes);
-    setMarkerTimeMs(currentTimeMs);
+    setMarkerTimeMs(currentTimeMsRef.current);
     const existingEvent = editingEventId ? matchData?.events.find((e:any) => e.id === editingEventId) : null;
     setEditingMarkerText(existingEvent?.details?.text || "");
     setEditingMarkerCategory(existingEvent?.details?.category);
@@ -679,7 +692,7 @@ export default function MatchDetailContent() {
 
   const handleSwitchStream = (streamId: string) => {
     if (streamId === activeStream?.id) return;
-    const savedTime = currentTimeMs;
+    const savedTime = currentTimeMsRef.current;
     setSelectedStreamId(streamId);
     setTimeout(() => {
       setSeekTo(savedTime);
@@ -949,7 +962,11 @@ export default function MatchDetailContent() {
             <div className="flex items-center">
               <div className="w-px h-6 bg-zinc-800 mx-2"></div>
               <button
-                onClick={() => setIsEventListOpen(!isEventListOpen)}
+                onClick={() => {
+                  const next = !isEventListOpen;
+                  setIsEventListOpen(next);
+                  if (next) setCurrentTimeMs(currentTimeMsRef.current);
+                }}
                 className={`p-2 rounded-md transition-all ${isEventListOpen ? 'text-blue-400 bg-blue-500/10 hover:bg-blue-500/20' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
                 title={isEventListOpen ? "Event-Liste ausblenden" : "Event-Liste einblenden"}
               >
@@ -1123,7 +1140,7 @@ export default function MatchDetailContent() {
                 hlsPlaylistUrl={currentHlsUrl}
                 trackingUrl={firstChunk.tracking_path ? getMediaUrl(firstChunk.tracking_path) : ''}
                 events={matchData.events || []}
-                onTimeUpdate={(ms) => setCurrentTimeMs(ms)}
+                onTimeUpdate={handleTimeUpdate}
                 seekTo={seekTo}
                 isDrawingMode={isDrawingMode}
                 initialDrawingShapes={initialDrawingShapes}

@@ -152,7 +152,9 @@ const MatchPlayer = ({
           crossOrigin="anonymous"
           className="w-full h-full object-contain cursor-pointer"
           style={{
-            filter: adjustments ? `brightness(${adjustments.brightness}%) contrast(${adjustments.contrast}%) saturate(${adjustments.saturation}%) hue-rotate(${adjustments.hue}deg)` : 'none'
+            filter: (adjustments && (adjustments.brightness !== 100 || adjustments.contrast !== 100 || adjustments.saturation !== 100 || adjustments.hue !== 0))
+              ? `brightness(${adjustments.brightness}%) contrast(${adjustments.contrast}%) saturate(${adjustments.saturation}%) hue-rotate(${adjustments.hue}deg)`
+              : 'none'
           }}
           onTimeUpdate={() => {
             const time = videoRef.current?.currentTime || 0;
@@ -258,4 +260,4 @@ const MatchPlayer = ({
   );
 }
 
-export default MatchPlayer;
+export default React.memo(MatchPlayer);

@@ -2,7 +2,8 @@ import os
 import traceback
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.gzip import GZipMiddleware
+from starlette.middleware.gzip import GZipMiddleware
+from starlette.types import ASGIApp, Receive, Scope, Send
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from api import upload, matches, analytics, auth, admin, videos, install, teams, users, training, organizer, players, ai, tactics, public
@@ -90,8 +91,34 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# GZip-Kompression für alle Payloads ab 1KB (reduziert JSON-Transferzeiten um 75-85%)
-app.add_middleware(GZipMiddleware, minimum_size=1000)
+class SelectiveGZipMiddleware:
+    """
+    Führt GZip-Kompression selektiv für JSON-, Text- und API-Payloads durch.
+    Schließt Video-, Audio-, Bild-Streams und statische Uploads strikt aus,
+    da GZip bei Videos/Range-Requests (HTTP 206) CPU blockiert, Range-Streaming
+    zerstört und massives Playback-Ruckeln im Browser verursacht.
+    """
+    EXCLUDED_PATH_PREFIXES = ("/uploads", "/backend/uploads", "/api/uploads")
+    EXCLUDED_EXTENSIONS = (
+        ".mp4", ".m4v", ".webm", ".ts", ".m3u8", ".mp3", ".ogg",
+        ".jpg", ".jpeg", ".png", ".webp", ".gif", ".zip", ".tar", ".gz"
+    )
+
+    def __init__(self, app: ASGIApp, minimum_size: int = 1000, compresslevel: int = 5):
+        self.app = app
+        self.gzip_app = GZipMiddleware(app, minimum_size=minimum_size, compresslevel=compresslevel)
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "http":
+            path = scope.get("path", "").lower()
+            if any(path.startswith(prefix) for prefix in self.EXCLUDED_PATH_PREFIXES) or \
+               any(path.endswith(ext) for ext in self.EXCLUDED_EXTENSIONS):
+                await self.app(scope, receive, send)
+                return
+        await self.gzip_app(scope, receive, send)
+
+# Selektive GZip-Kompression ab 1KB (API & JSON komprimieren, Videos & Uploads unberührt lassen)
+app.add_middleware(SelectiveGZipMiddleware, minimum_size=1000)
 
 from db.session import UPLOAD_DIR, engine, SessionLocal
 

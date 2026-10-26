@@ -35,7 +35,12 @@ export function useVideoRenderDims({ videoRef }: UseVideoRenderDimsProps): Video
           oX = 0;
           oY = (video.clientHeight - drawH) / 2;
         }
-        setVideoRenderDims({ width: drawW, height: drawH, offsetX: oX, offsetY: oY });
+        setVideoRenderDims(prev => {
+          if (prev.width === drawW && prev.height === drawH && prev.offsetX === oX && prev.offsetY === oY) {
+            return prev;
+          }
+          return { width: drawW, height: drawH, offsetX: oX, offsetY: oY };
+        });
      };
      window.addEventListener('resize', updateDims);
      videoRef.current?.addEventListener('loadedmetadata', updateDims);

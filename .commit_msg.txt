@@ -1,11 +1,11 @@
-release: fix(services): restore generate_thumbnail in thumbnail_service for video uploads (dev: b50be305)
+release: fix(player): resolve video playback stuttering and optimize streaming performance (dev: 1df21433)
 
 Letzte Änderungen:
+* fix(player): resolve video playback stuttering and optimize streaming performance (1df21433)
 * fix(services): restore generate_thumbnail in thumbnail_service for video uploads (b50be305)
 * feat(perf): implement comprehensive caching masterplan (client SWR, backend TTL RAM cache, and thumbnail offload) (41cb9609)
 * perf(core): eliminate N+1 queries, add GZip compression, pool tuning, and DB indexes (73e5831f)
 * fix(db): widen thumbnail_path to LONGTEXT for base64 canvas images (c5ed68cb)
 * fix(db): handle nullable column fallbacks and allow null evaluation_date (fe48aadf)
-* fix(db): serialize JSON dict/list objects to strings for PyMySQL in migration script (45730421)
 
-Build-Zeitstempel: 2026-10-26 15:45:01
+Build-Zeitstempel: 2026-10-26 17:00:47

@@ -10,6 +10,24 @@ interface TrackingOverlayProps {
   events: any[];
 }
 
+function findCurrentFrame(frames: any[], timeMs: number) {
+  if (!frames || frames.length === 0) return null;
+  let low = 0;
+  let high = frames.length - 1;
+  let best = null;
+  while (low <= high) {
+    const mid = (low + high) >> 1;
+    const f = frames[mid];
+    if (f.videoTimeMs <= timeMs) {
+      best = f;
+      low = mid + 1;
+    } else {
+      high = mid - 1;
+    }
+  }
+  return best;
+}
+
 function hexToRgba(hex: string, alpha: number) {
   let r = 0, g = 0, b = 0;
   if (hex.startsWith('#')) {
@@ -80,16 +98,18 @@ const TrackingOverlay = ({
       offsetY = (video.clientHeight - drawH) / 2;
     }
 
-    canvas.width = video.clientWidth * scale;
-    canvas.height = video.clientHeight * scale;
-    ctx.scale(scale, scale);
-    ctx.clearRect(0, 0, video.clientWidth, video.clientHeight);
+    const targetW = Math.round(video.clientWidth * scale);
+    const targetH = Math.round(video.clientHeight * scale);
+    if (canvas.width !== targetW || canvas.height !== targetH) {
+      canvas.width = targetW;
+      canvas.height = targetH;
+      ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    } else {
+      ctx.clearRect(0, 0, video.clientWidth, video.clientHeight);
+    }
 
     const timeMs = video.currentTime * 1000;
-    const currentFrame = trackingData.find((f, i) => {
-      const next = trackingData[i+1];
-      return timeMs >= f.videoTimeMs && (!next || timeMs < next.videoTimeMs);
-    });
+    const currentFrame = findCurrentFrame(trackingData, timeMs);
 
     if (currentFrame && currentFrame.detections) {
       currentFrame.detections.forEach((det: any) => {
@@ -197,13 +217,46 @@ const TrackingOverlay = ({
       });
     }
 
-    if (isMounted.current) animationRef.current = requestAnimationFrame(renderCanvas);
+    // Request next frame only if playing or in drawing mode to conserve GPU/CPU
+    if (isMounted.current && (isDrawingMode || (video && !video.paused))) {
+      animationRef.current = requestAnimationFrame(renderCanvas);
+    } else {
+      animationRef.current = undefined;
+    }
   }, [trackingData, selectedTrackId, isDrawingMode, events]);
 
   useEffect(() => {
-    animationRef.current = requestAnimationFrame(renderCanvas);
-    return () => { if (animationRef.current) cancelAnimationFrame(animationRef.current); };
-  }, [renderCanvas]);
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handlePlay = () => {
+      if (!animationRef.current) {
+        animationRef.current = requestAnimationFrame(renderCanvas);
+      }
+    };
+    const handlePause = () => {
+      renderCanvas();
+    };
+    const handleSeeked = () => {
+      renderCanvas();
+    };
+
+    video.addEventListener('play', handlePlay);
+    video.addEventListener('pause', handlePause);
+    video.addEventListener('seeked', handleSeeked);
+    video.addEventListener('loadedmetadata', handleSeeked);
+
+    // Initial render
+    renderCanvas();
+
+    return () => {
+      video.removeEventListener('play', handlePlay);
+      video.removeEventListener('pause', handlePause);
+      video.removeEventListener('seeked', handleSeeked);
+      video.removeEventListener('loadedmetadata', handleSeeked);
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
+    };
+  }, [renderCanvas, videoRef]);
 
   return (
     <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-10" />
