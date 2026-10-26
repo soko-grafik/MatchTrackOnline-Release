@@ -86,7 +86,7 @@ export default function DashboardLandingPage() {
     try {
       const [eventsData, exercisesData] = await Promise.all([
         getCalendarEvents(),
-        getExercises()
+        getExercises({ limit: 7 })
       ]);
 
       if (Array.isArray(eventsData)) {

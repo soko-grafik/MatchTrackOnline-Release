@@ -2,6 +2,7 @@
 # ==============================================================================
 # MatchTrack Online - Admin Update Execution Script
 # Runs git fetch, git pull, DB migration, Next.js build & PM2 reload
+# Bulletproofed against .env overwrites, missing dependencies & directory issues
 # ==============================================================================
 
 set -e
@@ -14,6 +15,26 @@ LOG_FILE="/tmp/matchtrack_update.log"
 exec > >(tee -a "$LOG_FILE") 2>&1
 
 echo "--- UPDATE STARTED AT $(date) ---"
+
+# ==============================================================================
+# 0. SICHERHEITS-BACKUP ALLER .env DATEIEN VOR GIT-OPERATIONEN
+# ==============================================================================
+ENV_BACKUP_DIR="/tmp/matchtrack_env_backup_$$"
+mkdir -p "$ENV_BACKUP_DIR"
+
+if [ -f "$BACKEND_DIR/.env" ]; then
+    cp "$BACKEND_DIR/.env" "$ENV_BACKUP_DIR/backend.env"
+    cp "$BACKEND_DIR/.env" "$BACKEND_DIR/.env.pre_update_backup" 2>/dev/null || true
+    echo "🔒 [Safety] backend/.env gesichert vor Update."
+fi
+if [ -f "$PROJECT_DIR/.env" ]; then
+    cp "$PROJECT_DIR/.env" "$ENV_BACKUP_DIR/root.env"
+    cp "$PROJECT_DIR/.env" "$PROJECT_DIR/.env.pre_update_backup" 2>/dev/null || true
+fi
+if [ -f "$WEB_DIR/.env" ]; then
+    cp "$WEB_DIR/.env" "$ENV_BACKUP_DIR/web.env"
+fi
+
 echo "[1/4] Checking out Git & pulling latest changes..."
 cd "$PROJECT_DIR"
 
@@ -22,10 +43,10 @@ export GIT_TERMINAL_PROMPT=0
 if [ -d ".git" ]; then
     CURRENT_REMOTE=$(git remote get-url origin 2>/dev/null || echo "")
     if [ -z "$CURRENT_REMOTE" ]; then
-        git remote add origin "${UPDATE_REPO_URL:-https://github.com/soko-grafik/MatchTrackOnline-Public.git}" 2>/dev/null || true
+        git remote add origin "${UPDATE_REPO_URL:-https://github.com/soko-grafik/MatchTrackOnline-Release.git}" 2>/dev/null || true
     fi
 
-    # Sparse-Checkout konfigurieren (schließt chats, docs, scripts, plans & Release-Skripte aus)
+    # Sparse-Checkout konfigurieren (schließt Entwickler-Ordner aus, behält aber Live-Skripte)
     git config core.sparseCheckout true
     mkdir -p .git/info
     cat << 'EOF' > .git/info/sparse-checkout
@@ -38,7 +59,6 @@ if [ -d ".git" ]; then
 !/.idea/
 !/build_production.bat
 !/build_production.sh
-!/update_live.sh
 !/delete_organizer_matches.py
 EOF
 
@@ -46,14 +66,29 @@ EOF
     git fetch origin main || true
     git reset --hard origin/main || git pull origin main
 
-    # Sicherstellen, dass ausgeschlossene Dateien/Ordner nicht im Dateisystem liegen
-    rm -rf chats chat docs scripts plans .idea build_production.bat build_production.sh update_live.sh delete_organizer_matches.py 2>/dev/null || true
+    # Ausgeschlossene Entwickler-Ordner bereinigen (update_live.sh bleibt erhalten!)
+    rm -rf chats chat docs scripts plans .idea build_production.bat build_production.sh delete_organizer_matches.py 2>/dev/null || true
 
     chmod +x "$PROJECT_DIR"/*.sh "$BACKEND_DIR"/*.sh 2>/dev/null || true
     echo "Git pull completed successfully."
 else
     echo "No .git repository found. Skipping git pull."
 fi
+
+# ==============================================================================
+# RESTORE .env DATEIEN SOFORT NACH GIT PULL (Verhindert Verlust von DB-Settings)
+# ==============================================================================
+if [ -f "$ENV_BACKUP_DIR/backend.env" ]; then
+    cp "$ENV_BACKUP_DIR/backend.env" "$BACKEND_DIR/.env"
+    echo "✅ [Safety] backend/.env erfolgreich wiederhergestellt (DB-Settings geschützt)."
+fi
+if [ -f "$ENV_BACKUP_DIR/root.env" ]; then
+    cp "$ENV_BACKUP_DIR/root.env" "$PROJECT_DIR/.env"
+fi
+if [ -f "$ENV_BACKUP_DIR/web.env" ]; then
+    cp "$ENV_BACKUP_DIR/web.env" "$WEB_DIR/.env"
+fi
+rm -rf "$ENV_BACKUP_DIR" 2>/dev/null || true
 
 echo "[2/4] Updating Backend & Database..."
 cd "$BACKEND_DIR"
@@ -62,6 +97,20 @@ if [ -d "venv" ]; then
     source venv/bin/activate
 elif [ -d "../venv" ]; then
     source ../venv/bin/activate
+fi
+
+# Python Interpreter aus aktivem venv bevorzugen
+PYTHON_BIN="python"
+if [ -n "$VIRTUAL_ENV" ] && [ -f "$VIRTUAL_ENV/bin/python" ]; then
+    PYTHON_BIN="$VIRTUAL_ENV/bin/python"
+elif [ -f "venv/bin/python" ]; then
+    PYTHON_BIN="venv/bin/python"
+elif [ -f "../venv/bin/python" ]; then
+    PYTHON_BIN="../venv/bin/python"
+elif command -v python &>/dev/null; then
+    PYTHON_BIN="python"
+elif command -v python3 &>/dev/null; then
+    PYTHON_BIN="python3"
 fi
 
 REQ_HASH_FILE="$PROJECT_DIR/.backend_requirements_hash"
@@ -82,7 +131,10 @@ else
     fi
 fi
 
-python3 -c "from db.session import engine; from db.migrate import run_migrations; run_migrations(engine)" || true
+echo "Running database migrations..."
+$PYTHON_BIN -c "from db.session import engine; from db.migrate import run_migrations; run_migrations(engine)" || {
+    echo "⚠️ Warnung: Migration meldete Fehler, prüfe Logs."
+}
 
 echo "Backend & DB updated successfully."
 
@@ -110,6 +162,8 @@ fi
 npm run build
 
 echo "[4/4] Restarting PM2 live services..."
+cd "$PROJECT_DIR"
+
 for srv in matchtrack.service matchtrack-backend.service; do
     if command -v systemctl &>/dev/null && (systemctl is-active --quiet "$srv" 2>/dev/null || systemctl is-enabled --quiet "$srv" 2>/dev/null); then
         systemctl stop "$srv" 2>/dev/null || true

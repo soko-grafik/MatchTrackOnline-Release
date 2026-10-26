@@ -1,18 +1,18 @@
 # 📋 MatchTrack Online - Versions-Changelog
 
-## Release: 2026-10-09 13:55:59 (Dev Commit: `3944d429`)
+## Release: 2026-10-26 15:45:01 (Dev Commit: `b50be305`)
 
 ### 🚀 Letzte Änderungen aus dem Entwicklungs-Repository:
+* fix(services): restore generate_thumbnail in thumbnail_service for video uploads (b50be305 - 2026-10-26)
+* feat(perf): implement comprehensive caching masterplan (client SWR, backend TTL RAM cache, and thumbnail offload) (41cb9609 - 2026-10-26)
+* perf(core): eliminate N+1 queries, add GZip compression, pool tuning, and DB indexes (73e5831f - 2026-10-26)
+* fix(db): widen thumbnail_path to LONGTEXT for base64 canvas images (c5ed68cb - 2026-10-26)
+* fix(db): handle nullable column fallbacks and allow null evaluation_date (fe48aadf - 2026-10-26)
+* fix(db): serialize JSON dict/list objects to strings for PyMySQL in migration script (45730421 - 2026-10-26)
+* fix(db): support DB_PORT and utf8mb4 in session.py and update dev defaults (c9407589 - 2026-10-26)
+* feat(db): add bulletproof SQLite to MySQL migration and validation script (3b1f3c67 - 2026-10-26)
 * feat(training): add exercise detail view modal, optimize sketch editor canvas and modernize scrollbars (0dae38f2 - 2026-10-09)
 * update futsal fields (cceb5286 - 2026-10-09)
-* feat(organizer): Schulferien-Import (.ics) als transparente Hintergrund-Ebene im Kalender integriert (946cc82b - 2026-10-05)
-* feat(training): add exercise duplication with custom title, vector sketch copying, and edit modal copy action (87764696 - 2026-09-29)
-* refactor(sketch): remove redundant sketch save button in favor of unified exercise save button (53687988 - 2026-09-25)
-* style(training): reorganize exercise form layout into compact two-row structure (2d12bf85 - 2026-09-25)
-* feat(training): add adjustable 3/5/7 column grid and simplify exercise card layout (b60ad34c - 2026-09-25)
-* feat(training): add bullet list support for provocation rules and exercise description (93b7d645 - 2026-09-25)
-* feat(training): automatically save sketch when saving exercise (1396feeb - 2026-09-25)
-* feat(sketch): add layer ordering (send to back / bring to front) (626d9de0 - 2026-09-25)
 
 ---
 *Automatisch generiert durch die MatchTrack Release Pipeline.*

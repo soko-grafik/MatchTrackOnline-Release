@@ -17,9 +17,77 @@ export const api = axios.create({
   withCredentials: true,
 });
 
+// --- In-Memory Stale-While-Revalidate Cache Adapter ---
+interface CacheEntry {
+  data: any;
+  timestamp: number;
+  ttl: number;
+}
+
+const memoryCache = new Map<string, CacheEntry>();
+
+export const invalidateCache = (pattern?: string) => {
+  if (!pattern) {
+    memoryCache.clear();
+    return;
+  }
+  for (const key of Array.from(memoryCache.keys())) {
+    if (key.includes(pattern)) {
+      memoryCache.delete(key);
+    }
+  }
+};
+
+const getCacheTtl = (url: string): number => {
+  // Stammdaten: 5 Minuten Cache
+  if (url.includes('/admin/settings') || url.includes('/teams') || url.includes('/holidays')) {
+    return 300000;
+  }
+  // Listen & Übersichten: 30 Sekunden Cache (beschleunigt Tab- & Menüwechsel drastisch)
+  if (url.includes('/organizer/events') || url.includes('/organizer/trainers') || url.includes('/matches') || url.includes('/training') || url.includes('/players')) {
+    return 30000;
+  }
+  return 0;
+};
+
+const shouldCacheUrl = (url?: string): boolean => {
+  if (!url) return false;
+  // Bypassed URLs (Status-Polling, Ping, Stream-Chunks, Auth)
+  if (
+    url.includes('/status') ||
+    url.includes('/progress') ||
+    url.includes('/heatmap-status') ||
+    url.includes('/track-ping') ||
+    url.includes('/auth') ||
+    url.includes('/health') ||
+    url.includes('/verify-password')
+  ) {
+    return false;
+  }
+  return getCacheTtl(url) > 0;
+};
+
 // Add a request interceptor to include the token and match password in all requests
 api.interceptors.request.use(
   (config) => {
+    // In-Memory Caching für GET-Anfragen (0ms Latenz bei Seitenwechseln)
+    const method = (config.method || 'get').toLowerCase();
+    if (method === 'get' && shouldCacheUrl(config.url)) {
+      const cacheKey = `${config.url}?${JSON.stringify(config.params || {})}`;
+      const entry = memoryCache.get(cacheKey);
+      const now = Date.now();
+
+      if (entry && (now - entry.timestamp < entry.ttl)) {
+        // Cache Hit! Sofort aus dem Speicher auflösen ohne Netzwerkverkehr
+        config.adapter = () => Promise.resolve({
+          data: JSON.parse(JSON.stringify(entry.data)),
+          status: 200,
+          statusText: 'OK (memory-cached)',
+          headers: { 'x-cache': 'HIT' },
+          config,
+        });
+      }
+    }
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('matchtracker_token');
       if (token) {
@@ -46,9 +114,37 @@ api.interceptors.request.use(
   }
 );
 
-// Add a response interceptor to handle 401 Unauthorized errors
+// Add a response interceptor to handle caching & 401 Unauthorized errors
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const method = (response.config.method || 'get').toLowerCase();
+    const url = response.config.url || '';
+
+    if (method === 'get' && shouldCacheUrl(url)) {
+      if (response.headers?.['x-cache'] !== 'HIT' && response.status >= 200 && response.status < 300) {
+        const cacheKey = `${url}?${JSON.stringify(response.config.params || {})}`;
+        memoryCache.set(cacheKey, {
+          data: response.data,
+          timestamp: Date.now(),
+          ttl: getCacheTtl(url)
+        });
+      }
+    } else if (method !== 'get') {
+      // Auto-Invalidierung bei allen schreibenden Aktionen (POST, PUT, DELETE, PATCH)
+      if (url.includes('/matches')) invalidateCache('/matches');
+      if (url.includes('/training') || url.includes('/exercises') || url.includes('/sessions')) {
+        invalidateCache('/training');
+      }
+      if (url.includes('/organizer') || url.includes('/events') || url.includes('/holidays')) {
+        invalidateCache('/organizer');
+      }
+      if (url.includes('/players')) invalidateCache('/players');
+      if (url.includes('/teams')) invalidateCache('/teams');
+      if (url.includes('/admin/settings')) invalidateCache('/admin/settings');
+    }
+
+    return response;
+  },
   (error) => {
     // Check if the error is a 401 Unauthorized
     if (error.response && error.response.status === 401) {
@@ -486,12 +582,13 @@ export const sendTeamRequest = async (teamId: string, message?: string) => {
 };
 
 // Training API
-export const getExercises = async (params?: { age_group?: string; focus_area?: string; min_players?: number; search?: string }) => {
+export const getExercises = async (params?: { age_group?: string; focus_area?: string; min_players?: number; search?: string; limit?: number }) => {
   const query = new URLSearchParams();
   if (params?.age_group) query.append('age_group', params.age_group);
   if (params?.focus_area) query.append('focus_area', params.focus_area);
   if (params?.min_players) query.append('min_players', params.min_players.toString());
   if (params?.search) query.append('search', params.search);
+  if (params?.limit) query.append('limit', params.limit.toString());
   const response = await api.get(`/training/exercises${query.toString() ? `?${query.toString()}` : ''}`);
   return safeJsonParse(response.data);
 };
@@ -699,10 +796,11 @@ export const deleteAllSchoolHolidays = async (year?: number) => {
 
 // --- Player Management API ---
 
-export const getPlayers = async (params?: { team_id?: string; search?: string }) => {
+export const getPlayers = async (params?: { team_id?: string; search?: string; limit?: number }) => {
   const query = new URLSearchParams();
   if (params?.team_id) query.append('team_id', params.team_id);
   if (params?.search) query.append('search', params.search);
+  if (params?.limit) query.append('limit', params.limit.toString());
   const response = await api.get(`/players${query.toString() ? `?${query.toString()}` : ''}`);
   return safeJsonParse(response.data);
 };

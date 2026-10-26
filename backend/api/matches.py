@@ -145,25 +145,69 @@ async def get_matches(
             # Also support comma-separated matching for team filter
             query = query.filter(Match.team_id.contains(team_id))
 
+        from sqlalchemy.orm import joinedload
+        from sqlalchemy import func
+
+        # Eager load Team relationship
+        query = query.options(joinedload(Match.team))
         matches = query.order_by(Match.created_at.desc()).all()
 
-        # Für jedes Match prüfen, ob der User es abonniert hat
+        if not matches:
+            return []
+
+        match_ids = [m.id for m in matches]
+
+        # 1. BATCH: User Subscriptions
+        user_subs = set()
+        if current_user and match_ids:
+            subs = db.query(Subscription.match_id).filter(
+                Subscription.match_id.in_(match_ids),
+                Subscription.user_id == current_user.id
+            ).all()
+            user_subs = {s[0] for s in subs}
+
+        # 2. BATCH: Video Chunks
+        chunks_by_match = {}
+        all_chunks = db.query(VideoChunk).filter(
+            VideoChunk.match_id.in_(match_ids)
+        ).order_by(VideoChunk.created_at.asc()).all()
+        for c in all_chunks:
+            chunks_by_match.setdefault(c.match_id, []).append(c)
+
+        # 3. BATCH: Match Events Count
+        events_count_map = {}
+        event_counts = db.query(
+            MatchEvent.match_id, func.count(MatchEvent.id)
+        ).filter(
+            MatchEvent.match_id.in_(match_ids)
+        ).group_by(MatchEvent.match_id).all()
+        for mid, cnt in event_counts:
+            events_count_map[mid] = cnt
+
+        # 4. BATCH: Video Stitch Jobs
+        stitch_jobs_by_match = {}
+        all_stitch_jobs = db.query(VideoStitchJob).filter(
+            VideoStitchJob.match_id.in_(match_ids)
+        ).order_by(VideoStitchJob.created_at.desc()).all()
+        for sj in all_stitch_jobs:
+            if sj.match_id not in stitch_jobs_by_match:
+                stitch_jobs_by_match[sj.match_id] = sj
+
         result = []
         for match in matches:
-            is_sub = False
-            if current_user:
-                sub = db.query(Subscription).filter(Subscription.match_id == match.id, Subscription.user_id == current_user.id).first()
-                is_sub = sub is not None
+            is_sub = match.id in user_subs
 
-            # Alle Video-Chunks des Spiels laden
-            chunks = db.query(VideoChunk).filter(VideoChunk.match_id == match.id).order_by(VideoChunk.created_at.asc()).all()
+            # Video-Chunks aus Batch-Cache
+            chunks = chunks_by_match.get(match.id, [])
             first_chunk = chunks[0] if chunks else None
             file_size_mb = first_chunk.file_size_mb if first_chunk else None
 
             # Video-Typen (Panorama / Standard) ermitteln
-            match_folder = os.path.join(UPLOAD_DIR, match.id)
-            has_pano_file = os.path.exists(os.path.join(match_folder, "panorama_32x9.mp4"))
-            has_32x9 = has_pano_file or any("panorama_32x9" in (c.video_path or "") for c in chunks)
+            has_32x9 = any("panorama_32x9" in (c.video_path or "") for c in chunks)
+            if not has_32x9:
+                match_folder = os.path.join(UPLOAD_DIR, match.id)
+                has_32x9 = os.path.exists(os.path.join(match_folder, "panorama_32x9.mp4"))
+
             has_16x9 = any("panorama_32x9" not in (c.video_path or "") for c in chunks)
             if not has_16x9 and not has_32x9 and chunks:
                 has_16x9 = True
@@ -175,20 +219,20 @@ async def get_matches(
                 video_types.append("Standard")
             video_type_label = " | ".join(video_types) if video_types else None
 
-            # Anzahl der MatchEvents ermitteln
-            events_count = db.query(MatchEvent).filter(MatchEvent.match_id == match.id).count()
+            # Anzahl der MatchEvents aus Batch-Cache
+            events_count = events_count_map.get(match.id, 0)
 
-            # Team-Name auflösen (bei komma-getrennten team_ids direkt team_name nutzen)
+            # Team-Name auflösen (bereits eager geladen)
             if match.team_id and "," in (match.team_id or ""):
                 effective_team_name = match.team_name or match.team_id
             else:
                 effective_team_name = match.team.name if match.team else match.team_name
 
-            # Stitch-Job & Hintergrund-Status ermitteln
+            # Stitch-Job aus Batch-Cache
             stitch_info = None
             is_stitching = False
             try:
-                stitch_job = db.query(VideoStitchJob).filter(VideoStitchJob.match_id == match.id).order_by(VideoStitchJob.created_at.desc()).first()
+                stitch_job = stitch_jobs_by_match.get(match.id)
                 if stitch_job:
                     status_str = str(stitch_job.status.value if hasattr(stitch_job.status, 'value') else stitch_job.status or '').upper()
                     is_stitching = status_str in ["PENDING", "SYNCING", "STITCHING", "TRACKING", "REFRAMING", "PROCESSING"]

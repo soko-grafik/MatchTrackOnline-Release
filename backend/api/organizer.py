@@ -9,6 +9,7 @@ from models import CalendarEvent, PushSubscription, TrainingSession, Team, User,
 from api.dependencies import get_current_user, require_trainer
 from services.fussball_de_service import fetch_and_parse_fussball_de_team_matches
 from services.ics_parser_service import parse_school_holidays_from_ics
+from services.cache_service import backend_cache
 
 router = APIRouter()
 
@@ -227,6 +228,10 @@ def get_available_trainers(
     current_user: User = Depends(get_current_user)
 ):
     """Returns all trainers, team admins, and club admins for event attendee selection."""
+    cached = backend_cache.get("available_trainers")
+    if cached is not None:
+        return cached
+
     users = db.query(User).filter(
         User.role.in_([UserRole.ADMIN, UserRole.TEAM_ADMIN, UserRole.TRAINER, UserRole.CO_TRAINER])
     ).order_by(User.first_name, User.last_name, User.username).all()
@@ -234,6 +239,7 @@ def get_available_trainers(
     if not users:
         users = db.query(User).order_by(User.username).all()
 
+    backend_cache.set("available_trainers", users, ttl_seconds=300)
     return users
 
 
@@ -245,7 +251,12 @@ def get_events(
     current_user: User = Depends(get_current_user)
 ):
     from sqlalchemy import or_
-    query = db.query(CalendarEvent)
+    from sqlalchemy.orm import selectinload, joinedload
+    query = db.query(CalendarEvent).options(
+        selectinload(CalendarEvent.teams),
+        selectinload(CalendarEvent.attendees),
+        joinedload(CalendarEvent.training_session)
+    )
 
     role = current_user.role.value if hasattr(current_user.role, 'value') else str(current_user.role)
     user_team_ids = [t.id for t in current_user.teams]
@@ -535,7 +546,12 @@ def cleanup_match_events(
             detail="Nur Administratoren können Spieltermine aller Teams gleichzeitig bereinigen."
         )
 
-    query = db.query(CalendarEvent)
+    from sqlalchemy.orm import selectinload, joinedload
+    query = db.query(CalendarEvent).options(
+        selectinload(CalendarEvent.teams),
+        selectinload(CalendarEvent.attendees),
+        joinedload(CalendarEvent.training_session)
+    )
     if target_only_fussball_de:
         query = query.filter(CalendarEvent.fussball_de_match_id.isnot(None))
     else:
@@ -794,6 +810,11 @@ def get_school_holidays(
     """
     Liefert alle Schulferien-Zeiträume, optional gefiltert nach Jahr oder Zeitraum.
     """
+    cache_key = f"holidays_{year}_{start_date}_{end_date}"
+    cached = backend_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     query = db.query(SchoolHoliday)
     
     if year:
@@ -805,7 +826,9 @@ def get_school_holidays(
     elif start_date:
         query = query.filter(SchoolHoliday.end_date >= start_date)
         
-    return query.order_by(SchoolHoliday.start_date.asc()).all()
+    result = query.order_by(SchoolHoliday.start_date.asc()).all()
+    backend_cache.set(cache_key, result, ttl_seconds=3600)
+    return result
 
 
 @router.post("/holidays/import-ics")
@@ -956,6 +979,7 @@ def create_school_holiday(
     db.add(new_holiday)
     db.commit()
     db.refresh(new_holiday)
+    backend_cache.invalidate("holidays_")
     return new_holiday
 
 
@@ -974,6 +998,7 @@ def delete_school_holiday(
 
     db.delete(holiday)
     db.commit()
+    backend_cache.invalidate("holidays_")
     return {"status": "success", "message": "Schulferien-Eintrag gelöscht."}
 
 
@@ -996,6 +1021,7 @@ def delete_all_school_holidays(
         deleted_cnt = query.delete(synchronize_session=False)
 
     db.commit()
+    backend_cache.invalidate("holidays_")
     return {"status": "success", "message": f"{deleted_cnt} Schulferien-Einträge gelöscht."}
 
 

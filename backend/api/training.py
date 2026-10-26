@@ -7,6 +7,7 @@ from datetime import datetime
 from db.session import get_db
 from models import TrainingExercise, TrainingSession, TrainingSessionExercise, User, UserRole
 from api.dependencies import get_current_user, require_trainer
+from services.thumbnail_service import offload_base64_thumbnail
 
 
 router = APIRouter()
@@ -109,6 +110,7 @@ def get_exercises(
     focus_area: Optional[str] = Query(None),
     min_players: Optional[int] = Query(None),
     search: Optional[str] = Query(None),
+    limit: Optional[int] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -126,7 +128,10 @@ def get_exercises(
             (TrainingExercise.description.ilike(search_pattern)) |
             (TrainingExercise.coaching_points.ilike(search_pattern))
         )
-    return query.order_by(TrainingExercise.updated_at.desc()).all()
+    q = query.order_by(TrainingExercise.updated_at.desc())
+    if limit and limit > 0:
+        q = q.limit(limit)
+    return q.all()
 
 
 @router.post("/exercises", response_model=ExerciseResponse)
@@ -135,6 +140,7 @@ def create_exercise(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_trainer)
 ):
+    thumb = offload_base64_thumbnail(exercise_in.thumbnail_path, "thumbnails", "exercise")
     exercise = TrainingExercise(
         title=exercise_in.title,
         description=exercise_in.description,
@@ -146,7 +152,7 @@ def create_exercise(
         duration_minutes=exercise_in.duration_minutes,
         materials=exercise_in.materials,
         diagram_data=exercise_in.diagram_data,
-        thumbnail_path=exercise_in.thumbnail_path,
+        thumbnail_path=thumb,
         created_by_user_id=current_user.id
     )
     db.add(exercise)
@@ -179,6 +185,8 @@ def update_exercise(
         raise HTTPException(status_code=404, detail="Übung nicht gefunden")
 
     for field, value in exercise_in.dict(exclude_unset=True).items():
+        if field == "thumbnail_path" and value:
+            value = offload_base64_thumbnail(value, "thumbnails", f"exercise_{exercise_id}")
         setattr(exercise, field, value)
 
     exercise.updated_at = datetime.utcnow()
@@ -214,6 +222,7 @@ def duplicate_exercise(
 
     new_title = (duplicate_in.title.strip() if duplicate_in and duplicate_in.title and duplicate_in.title.strip() else None) or f"{original.title} (Kopie)"
 
+    dup_thumb = offload_base64_thumbnail(original.thumbnail_path, "thumbnails", "exercise")
     new_exercise = TrainingExercise(
         title=new_title,
         description=original.description,
@@ -226,7 +235,7 @@ def duplicate_exercise(
         duration_minutes=original.duration_minutes,
         materials=original.materials,
         diagram_data=original.diagram_data,
-        thumbnail_path=original.thumbnail_path,
+        thumbnail_path=dup_thumb,
         created_by_user_id=current_user.id
     )
     db.add(new_exercise)
@@ -257,7 +266,11 @@ def get_sessions(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    query = db.query(TrainingSession)
+    from sqlalchemy.orm import selectinload, joinedload
+    query = db.query(TrainingSession).options(
+        joinedload(TrainingSession.created_by),
+        selectinload(TrainingSession.exercises).joinedload(TrainingSessionExercise.exercise)
+    )
     if team_id:
         query = query.filter(TrainingSession.team_id == team_id)
     

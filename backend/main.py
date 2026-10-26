@@ -2,7 +2,9 @@ import os
 import traceback
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import text
 from api import upload, matches, analytics, auth, admin, videos, install, teams, users, training, organizer, players, ai, tactics, public
 from db.session import engine, SessionLocal
 from models import Base
@@ -88,6 +90,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# GZip-Kompression für alle Payloads ab 1KB (reduziert JSON-Transferzeiten um 75-85%)
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
 from db.session import UPLOAD_DIR, engine, SessionLocal
 
 os.makedirs(os.path.join(UPLOAD_DIR, "avatars"), exist_ok=True)
@@ -154,4 +159,3 @@ async def health_check():
         "database": db_status,
         "engine": str(engine.url.drivername)
     }
-

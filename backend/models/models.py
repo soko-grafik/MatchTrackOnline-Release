@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, JSON, Enum, Boolean, Table, Float
+from sqlalchemy.dialects.mysql import LONGTEXT
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from sqlalchemy.ext.declarative import declarative_base
@@ -125,7 +126,7 @@ class Match(Base):
     age_group = Column(String(10), nullable=True) # Legacy field
     recording_date = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
-    thumbnail_path = Column(String(500), nullable=True)
+    thumbnail_path = Column(Text().with_variant(LONGTEXT, "mysql"), nullable=True)
     heatmap_status = Column(Enum(HeatmapStatus), default=HeatmapStatus.NONE, nullable=False)
     heatmap_path = Column(String(500), nullable=True)
     heatmap_progress = Column(Float, default=0.0, nullable=True)
@@ -275,7 +276,7 @@ class TrainingExercise(Base):
     duration_minutes = Column(Integer, default=15, nullable=False)
     materials = Column(JSON, nullable=True)  # List of required items
     diagram_data = Column(JSON, nullable=True)  # Canvas vector elements & drawings
-    thumbnail_path = Column(String(500), nullable=True)
+    thumbnail_path = Column(Text().with_variant(LONGTEXT, "mysql"), nullable=True)
     created_by_user_id = Column(String(50), ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -449,7 +450,7 @@ class PlayerEvaluation(Base):
     __tablename__ = "player_evaluations"
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     player_id = Column(String(50), ForeignKey("players.id", ondelete="CASCADE"), nullable=False)
-    evaluation_date = Column(DateTime, default=datetime.utcnow, nullable=False)
+    evaluation_date = Column(DateTime, default=datetime.utcnow, nullable=True)
     eval_year = Column(Integer, nullable=True)
     eval_quarter = Column(String(10), nullable=True) # Q1, Q2, Q3, Q4
     created_by_user_id = Column(String(50), ForeignKey("users.id"), nullable=True)
@@ -526,7 +527,7 @@ class TacticsBoard(Base):
     pitch_style = Column(String(50), default="grass_classic", nullable=False)
     is_shared = Column(Boolean, default=False, nullable=False)
     frames_data = Column(JSON, nullable=False)
-    thumbnail_path = Column(String(255), nullable=True)
+    thumbnail_path = Column(Text().with_variant(LONGTEXT, "mysql"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

@@ -154,9 +154,14 @@ class SystemSettingsUpdate(BaseModel):
     legal_register_info: Optional[str] = None
 
 from .dependencies import require_admin, require_viewer
+from services.cache_service import backend_cache
 
 @router.get("/settings", response_model=SystemSettingsOut)
 def get_settings(db: Session = Depends(get_db), current_user: User = Depends(require_viewer)):
+    cached = backend_cache.get("system_settings")
+    if cached is not None:
+        return cached
+
     try:
         settings = db.query(SystemSettings).first()
         if not settings:
@@ -188,6 +193,7 @@ def get_settings(db: Session = Depends(get_db), current_user: User = Depends(req
             except Exception:
                 db.rollback()
 
+        backend_cache.set("system_settings", settings, ttl_seconds=300)
         return settings
     except Exception as e:
         import traceback
@@ -210,6 +216,7 @@ def update_settings(settings_update: SystemSettingsUpdate, db: Session = Depends
     
     db.commit()
     db.refresh(settings)
+    backend_cache.invalidate("system_settings")
     return settings
 
 class TestEmailRequest(BaseModel):
@@ -1218,7 +1225,7 @@ async def check_system_updates(current_user: User = Depends(require_admin)):
         # Aktuelles Remote ermitteln (nicht überschreiben)
         current_remote = subprocess.run(["git", "remote", "get-url", "origin"], cwd=project_dir, capture_output=True, text=True, check=False, env=env).stdout.strip()
         if not current_remote:
-            fallback_url = os.environ.get("UPDATE_REPO_URL", "https://github.com/soko-grafik/MatchTrackOnline-Public.git")
+            fallback_url = os.environ.get("UPDATE_REPO_URL", "https://github.com/soko-grafik/MatchTrackOnline-Release.git")
             subprocess.run(["git", "remote", "add", "origin", fallback_url], cwd=project_dir, capture_output=True, text=True, check=False, env=env)
 
         # Git fetch ausführen

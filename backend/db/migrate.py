@@ -219,6 +219,18 @@ MIGRATION_COLUMNS = [
     ("school_holidays", "created_at", "DATETIME"),
 ]
 
+PERFORMANCE_INDEXES = [
+    ("matches", "idx_matches_team_id", "team_id"),
+    ("matches", "idx_matches_created_at", "created_at"),
+    ("video_chunks", "idx_video_chunks_match_id", "match_id"),
+    ("match_events", "idx_match_events_match_id", "match_id"),
+    ("calendar_events", "idx_cal_start_time", "start_time"),
+    ("calendar_events", "idx_cal_team_id", "team_id"),
+    ("player_attendances", "idx_att_player_id", "player_id"),
+    ("player_attendances", "idx_att_event_date", "event_date"),
+    ("training_exercises", "idx_exercises_updated_at", "updated_at"),
+]
+
 def run_migrations(engine=None):
     """
     Bulletproof migration runner:
@@ -256,6 +268,10 @@ def run_migrations(engine=None):
         try:
             with engine.connect() as conn:
                 conn.execute(text("SET FOREIGN_KEY_CHECKS=1;"))
+                conn.execute(text("ALTER TABLE `training_exercises` MODIFY `thumbnail_path` LONGTEXT NULL;"))
+                conn.execute(text("ALTER TABLE `tactics_boards` MODIFY `thumbnail_path` LONGTEXT NULL;"))
+                conn.execute(text("ALTER TABLE `matches` MODIFY `thumbnail_path` LONGTEXT NULL;"))
+                conn.execute(text("ALTER TABLE `player_evaluations` MODIFY `evaluation_date` DATETIME NULL;"))
                 conn.commit()
         except Exception:
             pass
@@ -266,6 +282,18 @@ def run_migrations(engine=None):
         existing_tables = set(inspector.get_table_names())
     except Exception:
         existing_tables = set()
+
+    # 3b. Performance-Indizes anlegen
+    for tbl, idx_name, col_name in PERFORMANCE_INDEXES:
+        if tbl in existing_tables:
+            try:
+                existing_idx_names = {idx["name"] for idx in inspector.get_indexes(tbl) if idx.get("name")}
+                if idx_name not in existing_idx_names:
+                    with engine.connect() as conn:
+                        conn.execute(text(f"CREATE INDEX `{idx_name}` ON `{tbl}` ({col_name});"))
+                        conn.commit()
+            except Exception:
+                pass
 
     table_columns_cache = {}
     if existing_tables:
@@ -387,5 +415,24 @@ def run_migrations(engine=None):
                     pass
     except Exception as up_err:
         print(f"Hinweis bei Upload-Verzeichnis-Check: {up_err}")
+
+    # 8. Base64 Thumbnails zu statischen Dateien auslagern (DB-Erleichterung)
+    try:
+        from services.thumbnail_service import offload_base64_thumbnail
+        from models.models import TrainingExercise, TacticsBoard
+        with Session(bind=engine) as db:
+            ex_to_offload = db.query(TrainingExercise).filter(TrainingExercise.thumbnail_path.like("data:image/%")).all()
+            for ex in ex_to_offload:
+                ex.thumbnail_path = offload_base64_thumbnail(ex.thumbnail_path, "thumbnails", f"exercise_{ex.id}")
+            
+            tac_to_offload = db.query(TacticsBoard).filter(TacticsBoard.thumbnail_path.like("data:image/%")).all()
+            for tac in tac_to_offload:
+                tac.thumbnail_path = offload_base64_thumbnail(tac.thumbnail_path, "thumbnails", f"tactics_{tac.id}")
+            
+            if ex_to_offload or tac_to_offload:
+                db.commit()
+                print(f"✅ [Thumbnail-Offload] {len(ex_to_offload)} Übungs- und {len(tac_to_offload)} Taktik-Thumbnails in statische Dateien ausgelagert.")
+    except Exception as offload_err:
+        print(f"Hinweis bei Thumbnail-Auslagerung: {offload_err}")
 
     print("✅ Datenbank-Migrationen und Tabellenprüfung erfolgreich abgeschlossen.")

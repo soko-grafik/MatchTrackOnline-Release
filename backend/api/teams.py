@@ -7,6 +7,7 @@ import uuid
 
 from db.session import get_db
 from models import Team, User, UserRole, Match
+from services.cache_service import backend_cache
 from .dependencies import require_viewer, require_admin, get_current_user, get_optional_user
 
 router = APIRouter()
@@ -33,6 +34,12 @@ class TeamUpdate(BaseModel):
 @router.get("/", response_model=List[TeamOut])
 def get_all_teams(db: Session = Depends(get_db), current_user: Optional[User] = Depends(get_optional_user)):
     """Gibt alle registrierten Mannschaften zurück (inklusive can_edit Rechte für den aktuellen User, falls angemeldet)."""
+    user_id = current_user.id if current_user else "anon"
+    cache_key = f"teams_all_{user_id}"
+    cached = backend_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     from sqlalchemy import text
     user_role_str = str(current_user.role.value if hasattr(current_user.role, 'value') else current_user.role).upper() if current_user else "VIEWER"
     all_teams = db.query(Team).order_by(Team.name.asc()).all()
@@ -52,11 +59,17 @@ def get_all_teams(db: Session = Depends(get_db), current_user: Optional[User] = 
             "can_edit": can_edit_map.get(t.id, default_edit),
             "created_at": t.created_at
         })
+    backend_cache.set(cache_key, result, ttl_seconds=300)
     return result
 
 @router.get("/my", response_model=List[TeamOut])
 def get_my_teams(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Gibt nur die Mannschaften zurück, die dem aktuellen Trainer zugewiesen sind (Admins erhalten alle)."""
+    cache_key = f"teams_my_{current_user.id}"
+    cached = backend_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     from sqlalchemy import text
     user_role_str = str(current_user.role.value if hasattr(current_user.role, 'value') else current_user.role).upper()
     
@@ -74,6 +87,7 @@ def get_my_teams(db: Session = Depends(get_db), current_user: User = Depends(get
             "can_edit": can_edit_map.get(t.id, default_edit),
             "created_at": t.created_at
         })
+    backend_cache.set(cache_key, result, ttl_seconds=300)
     return result
 
 @router.post("", response_model=TeamOut)
@@ -96,6 +110,7 @@ def create_team(team_in: TeamCreate, db: Session = Depends(get_db), current_user
     db.add(team)
     db.commit()
     db.refresh(team)
+    backend_cache.invalidate("teams_")
     return team
 
 @router.put("/{team_id}", response_model=TeamOut)
@@ -117,6 +132,7 @@ def update_team(team_id: str, team_in: TeamUpdate, db: Session = Depends(get_db)
 
     db.commit()
     db.refresh(team)
+    backend_cache.invalidate("teams_")
     return team
 
 @router.delete("/{team_id}")
@@ -133,4 +149,5 @@ def delete_team(team_id: str, db: Session = Depends(get_db), current_user: User 
     
     db.delete(team)
     db.commit()
+    backend_cache.invalidate("teams_")
     return {"status": "success", "message": f"Mannschaft '{team.name}' wurde gelöscht."}

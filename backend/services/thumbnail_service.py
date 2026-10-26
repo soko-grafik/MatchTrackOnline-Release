@@ -1,9 +1,12 @@
 import os
 import subprocess
 import logging
+import uuid
+import base64
+from typing import Optional
 from sqlalchemy.orm import Session
 from models import Match, VideoChunk
-from db.session import ROOT_DIR, SessionLocal
+from db.session import ROOT_DIR, UPLOAD_DIR, SessionLocal
 from services.video_service import FFMPEG_PATH
 
 # Konfiguration
@@ -75,3 +78,36 @@ def generate_thumbnail(match_id: str):
         logger.error(f"Ein unerwarteter Fehler ist aufgetreten: {e}")
     finally:
         db.close()
+
+
+def offload_base64_thumbnail(data_uri: Optional[str], subfolder: str = "thumbnails", prefix: str = "thumb") -> Optional[str]:
+    """
+    Falls data_uri eine Base64 Data-URL (data:image/...) ist, wird das Bild dekodiert,
+    als Datei unter uploads/{subfolder}/{prefix}_{uuid}.png gespeichert und der
+    statische relative Pfad (/uploads/{subfolder}/{filename}) zurückgegeben.
+    Bereits ausgelagerte Pfade oder None bleiben unverändert.
+    """
+    if not data_uri or not isinstance(data_uri, str) or not data_uri.startswith("data:image/"):
+        return data_uri
+
+    try:
+        header, encoded = data_uri.split(",", 1)
+        ext = "png"
+        if "webp" in header.lower():
+            ext = "webp"
+        elif "jpeg" in header.lower() or "jpg" in header.lower():
+            ext = "jpg"
+
+        file_bytes = base64.b64decode(encoded)
+        filename = f"{prefix}_{uuid.uuid4().hex[:12]}.{ext}"
+        target_dir = os.path.join(UPLOAD_DIR, subfolder)
+        os.makedirs(target_dir, exist_ok=True)
+        file_path = os.path.join(target_dir, filename)
+
+        with open(file_path, "wb") as f:
+            f.write(file_bytes)
+
+        return f"/uploads/{subfolder}/{filename}"
+    except Exception as e:
+        print(f"[ThumbnailService] Fehler beim Auslagern der Base64-Vorschau: {e}")
+        return data_uri

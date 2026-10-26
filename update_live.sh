@@ -16,6 +16,23 @@ WEB_DIR="$PROJECT_DIR/web"
 
 cd "$PROJECT_DIR"
 
+# 0. Sicherheits-Backup der .env Dateien
+ENV_BACKUP_DIR="/tmp/matchtrack_env_backup_$$"
+mkdir -p "$ENV_BACKUP_DIR"
+
+if [ -f "$BACKEND_DIR/.env" ]; then
+    cp "$BACKEND_DIR/.env" "$ENV_BACKUP_DIR/backend.env"
+    cp "$BACKEND_DIR/.env" "$BACKEND_DIR/.env.pre_update_backup" 2>/dev/null || true
+    echo "🔒 [Safety] backend/.env vor dem Update gesichert."
+fi
+if [ -f "$PROJECT_DIR/.env" ]; then
+    cp "$PROJECT_DIR/.env" "$ENV_BACKUP_DIR/root.env"
+    cp "$PROJECT_DIR/.env" "$PROJECT_DIR/.env.pre_update_backup" 2>/dev/null || true
+fi
+if [ -f "$WEB_DIR/.env" ]; then
+    cp "$WEB_DIR/.env" "$ENV_BACKUP_DIR/web.env"
+fi
+
 # 1. Git Pull (aus dem öffentlichen MatchTrackOnline-Release Repo)
 RELEASE_REPO_URL="https://github.com/soko-grafik/MatchTrackOnline-Release.git"
 if [ -d ".git" ]; then
@@ -30,6 +47,19 @@ else
     echo "ℹ️  [1/4] Kein Git-Repository erkannt. Fahre mit vorhandenen Quellcodedateien fort."
 fi
 
+# Restore .env Dateien sofort nach Git-Pull
+if [ -f "$ENV_BACKUP_DIR/backend.env" ]; then
+    cp "$ENV_BACKUP_DIR/backend.env" "$BACKEND_DIR/.env"
+    echo "✅ [Safety] backend/.env erfolgreich verifiziert & geschützt."
+fi
+if [ -f "$ENV_BACKUP_DIR/root.env" ]; then
+    cp "$ENV_BACKUP_DIR/root.env" "$PROJECT_DIR/.env"
+fi
+if [ -f "$ENV_BACKUP_DIR/web.env" ]; then
+    cp "$ENV_BACKUP_DIR/web.env" "$WEB_DIR/.env"
+fi
+rm -rf "$ENV_BACKUP_DIR" 2>/dev/null || true
+
 # 2. Backend aktualisieren & DB migrieren
 echo "🐍 [2/4] Aktualisiere Backend & Datenbank..."
 cd "$BACKEND_DIR"
@@ -41,6 +71,20 @@ elif [ -d "../venv" ]; then
     source ../venv/bin/activate
 else
     echo "⚠️  Kein 'venv' Ordner gefunden. Verwende System-Python."
+fi
+
+# Python Interpreter ermitteln
+PYTHON_BIN="python"
+if [ -n "$VIRTUAL_ENV" ] && [ -f "$VIRTUAL_ENV/bin/python" ]; then
+    PYTHON_BIN="$VIRTUAL_ENV/bin/python"
+elif [ -f "venv/bin/python" ]; then
+    PYTHON_BIN="venv/bin/python"
+elif [ -f "../venv/bin/python" ]; then
+    PYTHON_BIN="../venv/bin/python"
+elif command -v python &>/dev/null; then
+    PYTHON_BIN="python"
+elif command -v python3 &>/dev/null; then
+    PYTHON_BIN="python3"
 fi
 
 # Nur Pakete installieren, wenn requirements.txt sich geändert hat
@@ -64,7 +108,7 @@ else
 fi
 
 echo "   -> Führe Datenbank-Tabellenerstellung und Mannschafts-Migration aus..."
-python -c "from db.session import engine; from db.migrate import run_migrations; run_migrations(engine)"
+$PYTHON_BIN -c "from db.session import engine; from db.migrate import run_migrations; run_migrations(engine)"
 echo "   ✅ Datenbank & Mannschaften auf neuestem Stand."
 
 # 3. Frontend Pakete installieren & Next.js kompilieren
@@ -97,6 +141,7 @@ echo "   ✅ Frontend erfolgreich kompiliert."
 
 # 4. PM2 Dienste neu starten
 echo "🔄 [4/4] Starte PM2-Dienste neu..."
+cd "$PROJECT_DIR"
 
 # Verhindern, dass alte Systemd-Dienste Port 8000 blockieren
 for srv in matchtrack.service matchtrack-backend.service; do
