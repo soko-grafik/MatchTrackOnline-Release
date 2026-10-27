@@ -31,7 +31,7 @@ class SetupDependenciesRequest(BaseModel):
     hosting_type: str = Field(..., description="Either 'cgi' or 'vps'")
 
 class ConfigureModulesRequest(BaseModel):
-    module_stitching_enabled: bool
+    module_stitching_enabled: Optional[bool] = False
     module_heatmap_enabled: bool
     module_video_color_enabled: bool
     module_hls_enabled: bool
@@ -194,7 +194,7 @@ def check_prerequisites(custom_ffmpeg_path: Optional[str] = None):
         "id": "ffmpeg",
         "name": "FFmpeg Installation",
         "status": "success" if ffmpeg_ok else "error",
-        "details": f"FFmpeg gefunden unter '{tested_path}' ({ffmpeg_ver})" if ffmpeg_ok else "FFmpeg konnte nicht ausgeführt werden (wird für HLS & Stitching benötigt)"
+        "details": f"FFmpeg gefunden unter '{tested_path}' ({ffmpeg_ver})" if ffmpeg_ok else "FFmpeg konnte nicht ausgeführt werden (wird für HLS & Videoverarbeitung benötigt)"
     })
     
     return {
@@ -265,14 +265,6 @@ def configure_modules(body: ConfigureModulesRequest):
     """Verifies module packages importability and advises which modules can be enabled."""
     results = {}
     
-    # Check cv2 + ultralytics
-    stitching_ok = True
-    try:
-        import cv2
-        import ultralytics
-    except ImportError:
-        stitching_ok = False
-    results["stitching"] = {"available": stitching_ok, "packages": ["opencv-python-headless", "ultralytics"]}
     
     # Check numpy + matplotlib
     heatmap_ok = True

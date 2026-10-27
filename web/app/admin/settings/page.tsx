@@ -76,7 +76,6 @@ export default function AdminSettingsPage() {
   const [legalSubTab, setLegalSubTab] = useState<'imprint' | 'privacy' | 'terms' | 'club'>('imprint');
 
   const [settings, setSettings] = useState<any>({
-    module_stitching_enabled: true,
     module_heatmap_enabled: true,
     module_video_color_enabled: true,
     module_hls_enabled: true,
@@ -86,7 +85,6 @@ export default function AdminSettingsPage() {
     default_video_quality: "High",
     default_storage_path: "backend/uploads",
     auto_hls_conversion: true,
-    auto_stitching: false,
     show_push_test_button: false,
     show_match_cleanup_button: false,
     smtp_enabled: false,
@@ -520,7 +518,6 @@ export default function AdminSettingsPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {[
-                  { id: 'module_stitching_enabled', label: 'Video Stitching', desc: 'Panorama-Zusammenführung von Kameras', icon: Layers, color: 'text-emerald-500' },
                   { id: 'module_heatmap_enabled', label: 'Heatmap Engine', desc: 'Spieler-Tracking & Visualisierung', icon: Activity, color: 'text-orange-500' },
                   { id: 'module_video_color_enabled', label: 'Color Core', desc: 'Farbkorrektur & Filter', icon: Monitor, color: 'text-blue-500' },
                   { id: 'module_hls_enabled', label: 'HLS Streamer', desc: 'Adaptives Web-Streaming', icon: UploadCloud, color: 'text-purple-500' },
@@ -640,10 +637,10 @@ export default function AdminSettingsPage() {
                 </div>
               </div>
 
-              <div className="border-t border-zinc-800/80 pt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="border-t border-zinc-800/80 pt-6">
                 <div
                   onClick={() => handleToggle('auto_hls_conversion')}
-                  className={`flex cursor-pointer items-center justify-between rounded-2xl border p-4 transition-all ${
+                  className={`flex cursor-pointer items-center justify-between rounded-2xl border p-4 transition-all max-w-md ${
                     settings.auto_hls_conversion ? 'border-zinc-700 bg-zinc-950/80' : 'border-zinc-900 bg-zinc-950/30 opacity-50'
                   }`}
                 >
@@ -653,21 +650,6 @@ export default function AdminSettingsPage() {
                   </div>
                   <div className={`relative h-6 w-11 rounded-full transition-all duration-300 ${settings.auto_hls_conversion ? 'bg-emerald-500' : 'bg-zinc-800'}`}>
                     <div className={`absolute top-1 h-4 w-4 rounded-full bg-white transition-all duration-300 ${settings.auto_hls_conversion ? 'left-6' : 'left-1'}`} />
-                  </div>
-                </div>
-
-                <div
-                  onClick={() => handleToggle('auto_stitching')}
-                  className={`flex cursor-pointer items-center justify-between rounded-2xl border p-4 transition-all ${
-                    settings.auto_stitching ? 'border-zinc-700 bg-zinc-950/80' : 'border-zinc-900 bg-zinc-950/30 opacity-50'
-                  }`}
-                >
-                  <div>
-                    <p className="text-xs font-bold text-white">Auto Stitching</p>
-                    <p className="text-[11px] font-medium text-zinc-500">Videos direkt zusammenfügen</p>
-                  </div>
-                  <div className={`relative h-6 w-11 rounded-full transition-all duration-300 ${settings.auto_stitching ? 'bg-emerald-500' : 'bg-zinc-800'}`}>
-                    <div className={`absolute top-1 h-4 w-4 rounded-full bg-white transition-all duration-300 ${settings.auto_stitching ? 'left-6' : 'left-1'}`} />
                   </div>
                 </div>
               </div>

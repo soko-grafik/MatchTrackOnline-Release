@@ -999,15 +999,6 @@ export const deleteTacticsFormation = async (id: string) => {
   return safeJsonParse(response.data);
 };
 
-// --- 2-Kamera Video-Stitching & Dynamic Reframing API ---
-
-export const createStitchJob = async (formData: FormData, onUploadProgress?: (progressEvent: any) => void) => {
-  const response = await api.post('/videos/stitch-job', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-    onUploadProgress
-  });
-  return safeJsonParse(response.data);
-};
 
 export const detectMatchHighlights = async (matchId: string, speed: 'fast' | 'normal' | 'slow' = 'normal') => {
   const response = await api.post(`/videos/matches/${matchId}/detect-highlights`, null, { params: { speed } });

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Body, Query
 from sqlalchemy.orm import Session
 from db.session import get_db
-from models import Match, User, SystemSettings, VideoStitchJob, StitchingStatus, Team
+from models import Match, User, SystemSettings, Team
 from .dependencies import require_admin
 from services.fisheye_service import get_preview_frame, process_fisheye_correction_task
 from typing import List, Optional, Dict

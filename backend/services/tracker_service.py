@@ -9,7 +9,7 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 
 from db.session import SessionLocal, UPLOAD_DIR, BASE_DIR
-from models import VideoStitchJob, Match, VideoChunk, MatchEvent, SystemSettings
+from models import Match, VideoChunk, MatchEvent, SystemSettings
 from services.video_service import FFMPEG_PATH, FFPROBE_PATH
 
 # Geschwindigkeits-/Qualitätsstufen für die (nachträgliche) KI-Highlight-Erkennung.
@@ -391,6 +391,7 @@ def process_tracking_and_reframing(
     # 3. Automatische Match-Events speichern
     db = SessionLocal()
     try:
+        from models import VideoStitchJob
         job = db.query(VideoStitchJob).filter(VideoStitchJob.id == job_id).first()
         if job and job.match_id and detect_events_auto:
             detect_match_events_from_tracking(sampled_tracking, fps, pano_w, pano_h, db, job.match_id)

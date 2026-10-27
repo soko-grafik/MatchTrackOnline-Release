@@ -746,11 +746,33 @@ async def generate_heatmap(match_id: str, background_tasks: BackgroundTasks, db:
     db.commit()
 
     # Job-Status im Speicher initialisieren
-    from services.ai.heatmap_generator import update_heatmap_job_status, run_heatmap_generation
+    from services.ai.heatmap_generator import update_heatmap_job_status
     update_heatmap_job_status(match_id, "QUEUED", 0.0, "In Warteschlange...", force_db=True)
 
-    # Hintergrundtask starten
-    background_tasks.add_task(run_heatmap_generation, match_id)
+    # Ausführung via isoliertem Subprozess (verhindert ~750MB PyTorch-Speicherbelastung im Web-Server).
+    # Wenn der PM2 matchtrack-worker aktiv ist, übernimmt er den QUEUED-Job direkt.
+    def spawn_heatmap_subprocess_fallback(m_id: str):
+        import time, subprocess, sys
+        time.sleep(2)
+        sub_db = SessionLocal()
+        try:
+            m = sub_db.query(Match).filter(Match.id == m_id).first()
+            if m and m.heatmap_status == HeatmapStatus.QUEUED:
+                m.heatmap_status = HeatmapStatus.PROCESSING
+                sub_db.commit()
+                backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                venv_py = os.path.join(backend_dir, "venv", "bin", "python")
+                py_bin = venv_py if os.path.exists(venv_py) else sys.executable
+                subprocess.Popen([
+                    py_bin, "-c",
+                    f"from services.ai.heatmap_generator import run_heatmap_generation; run_heatmap_generation({repr(m_id)})"
+                ], cwd=backend_dir)
+        except Exception as e:
+            print(f"[Heatmap] Subprocess spawn error: {e}")
+        finally:
+            sub_db.close()
+
+    background_tasks.add_task(spawn_heatmap_subprocess_fallback, match_id)
 
     return {"status": "success", "message": "Heatmap-Generierung im Hintergrund gestartet."}
 

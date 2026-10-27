@@ -5,7 +5,6 @@ from typing import Dict, Any, Optional
 from sqlalchemy.orm import Session
 from models import Match, HeatmapStatus, VideoChunk
 from db.session import SessionLocal, BASE_DIR
-from .tracker import process_video_for_heatmap
 
 logger = logging.getLogger(__name__)
 
@@ -144,6 +143,7 @@ def run_heatmap_generation(match_id: str):
         def progress_callback(pct: float, text: str):
             update_heatmap_job_status(match_id, "PROCESSING", pct, text)
 
+        from .tracker import process_video_for_heatmap
         process_video_for_heatmap(video_path_abs, output_dir_abs, match_id=match_id, progress_callback=progress_callback)
 
         # 3. Pfade für DB vorbereiten (relativ zum Frontend)

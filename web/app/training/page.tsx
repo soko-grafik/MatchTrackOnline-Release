@@ -96,6 +96,8 @@ export default function TrainingPage() {
   const [isSessionModalOpen, setIsSessionModalOpen] = useState(false);
   const [editingSessionId, setEditingSessionId] = useState<number | null>(null);
   const [draggedExerciseId, setDraggedExerciseId] = useState<number | null>(null);
+  const [activeAssignDropdownId, setActiveAssignDropdownId] = useState<number | null>(null);
+  const [selectedExerciseForTouch, setSelectedExerciseForTouch] = useState<number | null>(null);
   const [expandedSessionIds, setExpandedSessionIds] = useState<number[]>([]);
   const [modalExerciseSearch, setModalExerciseSearch] = useState('');
   const [printingSession, setPrintingSession] = useState<any | null>(null);
@@ -290,12 +292,12 @@ export default function TrainingPage() {
   const getGridClass = (cols: 3 | 5 | 7) => {
     switch (cols) {
       case 3:
-        return 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5';
+        return 'grid grid-cols-1 min-[1260px]:grid-cols-3 gap-4 min-[1260px]:gap-5';
       case 7:
-        return 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-7 gap-3';
+        return 'grid grid-cols-1 min-[1260px]:grid-cols-5 2xl:grid-cols-7 gap-3';
       case 5:
       default:
-        return 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4';
+        return 'grid grid-cols-1 min-[1260px]:grid-cols-4 xl:grid-cols-5 gap-3.5 min-[1260px]:gap-4';
     }
   };
 
@@ -449,6 +451,8 @@ export default function TrainingPage() {
 
   const openNewSessionModal = () => {
     setEditingSessionId(null);
+    setActiveAssignDropdownId(null);
+    setSelectedExerciseForTouch(null);
     setSessionForm({
       title: '',
       methodology: 'Trainingsphilosophie Deutschland',
@@ -463,6 +467,8 @@ export default function TrainingPage() {
 
   const openEditSessionModal = (ses: any) => {
     setEditingSessionId(ses.id);
+    setActiveAssignDropdownId(null);
+    setSelectedExerciseForTouch(null);
     const assigned = (ses.exercises || []).map((e: any, idx: number) => ({
       exercise_id: e.exercise_id,
       section_name: e.section_name || 'Aktivierung',
@@ -697,7 +703,7 @@ export default function TrainingPage() {
                 </div>
 
                 {/* Grid Switcher 3, 5, 7 */}
-                <div className="flex items-center gap-1.5 bg-zinc-950/70 p-1 rounded-xl border border-zinc-800">
+                <div className="hidden min-[1260px]:flex items-center gap-1.5 bg-zinc-950/70 p-1 rounded-xl border border-zinc-800">
                   <span className="text-[10px] font-bold text-zinc-500 uppercase px-1.5 flex items-center gap-1">
                     <LayoutGrid className="w-3.5 h-3.5 text-zinc-400" /> Spalten:
                   </span>
@@ -772,12 +778,12 @@ export default function TrainingPage() {
                 {filteredExercises.map((ex) => (
                   <div
                     key={ex.id}
-                    className="flex flex-col rounded-2xl border border-zinc-800 bg-zinc-900/60 overflow-hidden hover:border-zinc-700 transition-all group"
+                    className="flex flex-row min-[1260px]:flex-col rounded-2xl border border-zinc-800 bg-zinc-900/60 overflow-hidden hover:border-zinc-700 transition-all group"
                   >
-                    {/* Thumbnail / Diagram */}
+                    {/* Thumbnail / Diagram (links bei <1260px, oben bei >=1260px) */}
                     <div
                       onClick={() => setViewingExercise(ex)}
-                      className="h-44 bg-zinc-950 relative flex items-center justify-center border-b border-zinc-800 overflow-hidden cursor-pointer group/thumb"
+                      className="w-32 xs:w-40 sm:w-56 md:w-64 shrink-0 min-[1260px]:w-full h-auto min-[1260px]:h-44 bg-zinc-950 relative flex items-center justify-center border-r min-[1260px]:border-r-0 min-[1260px]:border-b border-zinc-800 overflow-hidden cursor-pointer group/thumb self-stretch"
                       title="Klicken für Detailansicht"
                     >
                       {ex.thumbnail_path ? (
@@ -787,30 +793,40 @@ export default function TrainingPage() {
                           className="w-full h-full object-cover group-hover/thumb:scale-105 transition-transform duration-300"
                         />
                       ) : (
-                        <div className="text-center p-4 text-zinc-600">
-                          <Sparkles className="w-8 h-8 mx-auto mb-1 opacity-40" />
+                        <div className="text-center p-3 text-zinc-600">
+                          <Sparkles className="w-7 h-7 mx-auto mb-1 opacity-40" />
                           <span className="text-[10px] font-mono uppercase tracking-wider">Taktik-Skizze</span>
                         </div>
                       )}
-                      <span className="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-zinc-900/90 backdrop-blur-md text-[10px] font-bold text-primary border border-primary/20">
+                      <span className="hidden min-[1260px]:inline-block absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-zinc-900/90 backdrop-blur-md text-[10px] font-bold text-primary border border-primary/20">
                         {ex.age_group}
                       </span>
-                      <span className="absolute top-3 right-3 px-2.5 py-1 rounded-lg bg-zinc-900/90 backdrop-blur-md text-[10px] font-bold text-zinc-300 border border-zinc-700">
+                      <span className="hidden min-[1260px]:inline-block absolute top-3 right-3 px-2.5 py-1 rounded-lg bg-zinc-900/90 backdrop-blur-md text-[10px] font-bold text-zinc-300 border border-zinc-700">
                         {ex.focus_area}
                       </span>
                     </div>
 
-                    <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
+                    <div className="p-3.5 sm:p-5 flex-1 min-w-0 flex flex-col justify-between space-y-3 min-[1260px]:space-y-4">
                       <div>
+                        {/* Badges in Listenansicht (<1260px) */}
+                        <div className="flex items-center gap-1.5 flex-wrap min-[1260px]:hidden mb-1.5">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-primary/20 text-primary border border-primary/30">
+                            {ex.age_group}
+                          </span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-zinc-800 text-zinc-300 border border-zinc-700">
+                            {ex.focus_area}
+                          </span>
+                        </div>
+
                         <h3
                           onClick={() => setViewingExercise(ex)}
-                          className="text-base font-bold text-white group-hover:text-primary transition-colors cursor-pointer"
+                          className="text-sm sm:text-base font-bold text-white group-hover:text-primary transition-colors cursor-pointer"
                           title="Klicken für Detailansicht"
                         >
                           {ex.title}
                         </h3>
                         {ex.description && (
-                          <div className="text-xs text-zinc-400 mt-2 space-y-1 line-clamp-3">
+                          <div className="text-xs text-zinc-400 mt-1.5 sm:mt-2 space-y-1 line-clamp-2 sm:line-clamp-3">
                             {ex.description.split('\n').filter((l: string) => l.trim()).slice(0, 3).map((line: string, idx: number) => {
                               const cleanLine = line.replace(/^[•\-\*]\s*/, '').trim();
                               return (
@@ -824,7 +840,7 @@ export default function TrainingPage() {
                         )}
                       </div>
 
-                      <div className="space-y-3 border-t border-zinc-800/80 pt-3">
+                      <div className="space-y-2.5 sm:space-y-3 border-t border-zinc-800/80 pt-2.5 sm:pt-3">
                         <div className="flex items-center justify-between text-xs text-zinc-400">
                           <div className="flex items-center gap-1.5">
                             <Users className="w-3.5 h-3.5 text-zinc-500" />
@@ -836,12 +852,12 @@ export default function TrainingPage() {
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-between gap-2 pt-1 border-t border-zinc-800/40">
+                        <div className="flex items-center justify-between gap-2 pt-1 border-t border-zinc-800/40 flex-wrap">
                           <div className="flex items-center gap-1.5">
                             <button
                               type="button"
                               onClick={() => setViewingExercise(ex)}
-                              className="p-2 rounded-lg bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700 transition-all text-xs font-bold flex items-center gap-1.5"
+                              className="p-1.5 sm:p-2 rounded-lg bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700 transition-all text-xs font-bold flex items-center gap-1.5"
                               title="Übung im Detail ansehen"
                             >
                               <Eye className="w-3.5 h-3.5 text-cyan-400" />
@@ -851,7 +867,7 @@ export default function TrainingPage() {
                             <button
                               type="button"
                               onClick={() => setPrintingExercise(ex)}
-                              className="p-2 rounded-lg bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700 transition-all text-xs font-bold flex items-center gap-1.5"
+                              className="p-1.5 sm:p-2 rounded-lg bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700 transition-all text-xs font-bold flex items-center gap-1.5"
                               title="Übung drucken / DIN A4 PDF exportieren"
                             >
                               <Printer className="w-3.5 h-3.5 text-emerald-400" />
@@ -860,11 +876,11 @@ export default function TrainingPage() {
                           </div>
 
                           {canEdit && (
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
                               <button
                                 type="button"
                                 onClick={() => openDuplicateModal(ex)}
-                                className="p-2 rounded-lg bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700 transition-all text-xs font-bold flex items-center gap-1"
+                                className="p-1.5 sm:p-2 rounded-lg bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700 transition-all text-xs font-bold flex items-center gap-1"
                                 title="Übung duplizieren"
                               >
                                 <Copy className="w-3.5 h-3.5 text-blue-400" />
@@ -872,15 +888,16 @@ export default function TrainingPage() {
                               <button
                                 type="button"
                                 onClick={() => openEditExerciseModal(ex)}
-                                className="p-2 rounded-lg bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700 transition-all text-xs font-bold flex items-center gap-1"
+                                className="p-1.5 sm:p-2 rounded-lg bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700 transition-all text-xs font-bold flex items-center gap-1"
                                 title="Übung bearbeiten"
                               >
-                                <Pencil className="w-3.5 h-3.5" /> Bearbeiten
+                                <Pencil className="w-3.5 h-3.5" />
+                                <span className="hidden sm:inline">Bearbeiten</span>
                               </button>
                               <button
                                 type="button"
                                 onClick={() => handleDeleteExercise(ex.id)}
-                                className="p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-all text-xs"
+                                className="p-1.5 sm:p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-all text-xs"
                                 title="Übung löschen"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -938,7 +955,7 @@ export default function TrainingPage() {
                 </div>
 
                 {/* Grid Switcher 3, 5, 7 */}
-                <div className="flex items-center gap-1.5 bg-zinc-950/70 p-1 rounded-xl border border-zinc-800">
+                <div className="hidden min-[1260px]:flex items-center gap-1.5 bg-zinc-950/70 p-1 rounded-xl border border-zinc-800">
                   <span className="text-[10px] font-bold text-zinc-500 uppercase px-1.5 flex items-center gap-1">
                     <LayoutGrid className="w-3.5 h-3.5 text-zinc-400" /> Spalten:
                   </span>
@@ -969,97 +986,131 @@ export default function TrainingPage() {
               </div>
             ) : (
               <div className={getGridClass(gridColumns)}>
-                {filteredSessions.map((ses) => (
-                  <div key={ses.id} id={`session-pdf-${ses.id}`} className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 space-y-4">
-                    <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
-                      <div>
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="px-2.5 py-0.5 rounded text-[10px] font-bold uppercase bg-primary/20 text-primary border border-primary/30">
-                            {ses.age_group}
-                          </span>
-                          {ses.is_shared ? (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1" title="Für alle Trainer freigegeben">
-                              <Globe className="w-3 h-3" /> Freigegeben
-                            </span>
+                {filteredSessions.map((ses) => {
+                  const firstExerciseWithThumb = ses.exercises?.find((e: any) => {
+                    const ex = e.exercise || exercises.find((x: any) => x.id === e.exercise_id);
+                    return ex?.thumbnail_path;
+                  });
+                  const thumbPath = firstExerciseWithThumb
+                    ? (firstExerciseWithThumb.exercise?.thumbnail_path || exercises.find((x: any) => x.id === firstExerciseWithThumb.exercise_id)?.thumbnail_path)
+                    : null;
+                  const isExpanded = expandedSessionIds.includes(ses.id);
+                  const exerciseCount = ses.exercises?.length || 0;
+
+                  return (
+                    <div
+                      key={ses.id}
+                      id={`session-pdf-${ses.id}`}
+                      className="rounded-2xl border border-zinc-800 bg-zinc-900/60 overflow-hidden hover:border-zinc-700 transition-all flex flex-col"
+                    >
+                      <div className="flex flex-row min-[1260px]:block flex-1">
+                        {/* Thumbnail links (<1260px) */}
+                        <div className="w-32 xs:w-40 sm:w-56 md:w-64 shrink-0 min-[1260px]:hidden bg-zinc-950 relative flex items-center justify-center border-r border-zinc-800 overflow-hidden self-stretch">
+                          {thumbPath ? (
+                            <img
+                              src={thumbPath.startsWith('data:') || thumbPath.startsWith('http') ? thumbPath : getMediaUrl(thumbPath)}
+                              alt={ses.title}
+                              className="w-full h-full object-cover"
+                            />
                           ) : (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-zinc-800 text-zinc-400 border border-zinc-700 flex items-center gap-1" title="Nur für dich sichtbar">
-                              <Lock className="w-3 h-3 text-zinc-500" /> Privat
-                            </span>
+                            <div className="w-full h-full flex flex-col items-center justify-center p-3 text-center bg-zinc-950/80">
+                              <Layers className="w-7 h-7 sm:w-8 sm:h-8 text-primary/60 mb-1" />
+                              <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">Trainingsplan</span>
+                              <span className="text-[9px] text-zinc-500 mt-0.5">{exerciseCount} Übungen</span>
+                            </div>
                           )}
                         </div>
-                        <h3 className="text-lg font-bold text-white mt-1.5">{ses.title}</h3>
-                        <p className="text-xs text-zinc-400">
-                          {ses.methodology}
-                          {ses.created_by_user_id !== user?.id && (
-                            <span className="text-[10px] text-zinc-400 font-semibold block mt-0.5">
-                              👤 von {ses.creator_name || 'Trainer'}
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                      <div className="session-actions flex items-center gap-2">
-                        {canEdit && (ses.created_by_user_id === user?.id || user?.role?.toUpperCase() === 'ADMIN') && (
-                          <button
-                            onClick={() => handleToggleShareSession(ses.id)}
-                            className={`p-2 rounded-lg transition-all text-xs border ${
-                              ses.is_shared
-                                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/30'
-                                : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:text-white'
-                            }`}
-                            title={ses.is_shared ? "Für Trainer freigegeben (Klicken zum Aufheben)" : "Privat (Klicken zum Teilen mit Trainern)"}
-                          >
-                            <Globe className="w-4 h-4" />
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleExportPDF(ses)}
-                          className="p-2 rounded-lg bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700 transition-all text-xs"
-                          title="Als PDF exportieren"
-                        >
-                          <Printer className="w-4 h-4" />
-                        </button>
-                        {canEdit && (
-                          <div className="flex items-center gap-2">
+
+                        {/* Inhaltsbereich: Titel, Badges, Aktionen, Ausklapp-Button */}
+                        <div className="flex-1 p-4 sm:p-6 min-w-0 flex flex-col justify-between">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800/80 pb-3">
+                            <div>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="px-2.5 py-0.5 rounded text-[10px] font-bold uppercase bg-primary/20 text-primary border border-primary/30">
+                                  {ses.age_group}
+                                </span>
+                                {ses.is_shared ? (
+                                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1" title="Für alle Trainer freigegeben">
+                                    <Globe className="w-3 h-3" /> Freigegeben
+                                  </span>
+                                ) : (
+                                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-zinc-800 text-zinc-400 border border-zinc-700 flex items-center gap-1" title="Nur für dich sichtbar">
+                                    <Lock className="w-3 h-3 text-zinc-500" /> Privat
+                                  </span>
+                                )}
+                              </div>
+                              <h3 className="text-base sm:text-lg font-bold text-white mt-1.5">{ses.title}</h3>
+                              <p className="text-xs text-zinc-400">
+                                {ses.methodology}
+                                {ses.created_by_user_id !== user?.id && (
+                                  <span className="text-[10px] text-zinc-400 font-semibold block mt-0.5">
+                                    👤 von {ses.creator_name || 'Trainer'}
+                                  </span>
+                                )}
+                              </p>
+                            </div>
+                            <div className="session-actions flex items-center gap-2 self-start sm:self-center shrink-0">
+                              {canEdit && (ses.created_by_user_id === user?.id || user?.role?.toUpperCase() === 'ADMIN') && (
+                                <button
+                                  onClick={() => handleToggleShareSession(ses.id)}
+                                  className={`p-2 rounded-lg transition-all text-xs border ${
+                                    ses.is_shared
+                                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/30'
+                                      : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:text-white'
+                                  }`}
+                                  title={ses.is_shared ? "Für Trainer freigegeben (Klicken zum Aufheben)" : "Privat (Klicken zum Teilen mit Trainern)"}
+                                >
+                                  <Globe className="w-4 h-4" />
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleExportPDF(ses)}
+                                className="p-2 rounded-lg bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700 transition-all text-xs"
+                                title="Als PDF exportieren"
+                              >
+                                <Printer className="w-4 h-4" />
+                              </button>
+                              {canEdit && (
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => openEditSessionModal(ses)}
+                                    className="p-2 rounded-lg bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700 transition-all text-xs"
+                                    title="Bearbeiten"
+                                  >
+                                    <Pencil className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteSession(ses.id)}
+                                    className="p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-all text-xs"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="space-y-3 pt-2">
                             <button
-                              onClick={() => openEditSessionModal(ses)}
-                              className="p-2 rounded-lg bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700 transition-all text-xs"
-                              title="Bearbeiten"
+                              type="button"
+                              onClick={() => toggleSessionAccordion(ses.id)}
+                              className="w-full flex items-center justify-between text-xs font-bold text-zinc-300 hover:text-white transition-colors py-1 group/acc"
                             >
-                              <Pencil className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteSession(ses.id)}
-                              className="p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-all text-xs"
-                            >
-                              <Trash2 className="w-4 h-4" />
+                              <span className="flex items-center gap-1.5">
+                                <ChevronRight className={`w-3.5 h-3.5 text-primary transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
+                                Enthaltene Übungen ({exerciseCount})
+                              </span>
+                              <span className="text-[10px] text-zinc-500 font-normal group-hover/acc:text-zinc-300">
+                                {isExpanded ? 'Einklappen ▲' : 'Ausklappen ▼'}
+                              </span>
                             </button>
                           </div>
-                        )}
+                        </div>
                       </div>
-                    </div>
 
-                    {(() => {
-                      const isExpanded = expandedSessionIds.includes(ses.id);
-                      const exerciseCount = ses.exercises?.length || 0;
-
-                      return (
-                        <div className="space-y-3 pt-2 border-t border-zinc-800/80">
-                          <button
-                            type="button"
-                            onClick={() => toggleSessionAccordion(ses.id)}
-                            className="w-full flex items-center justify-between text-xs font-bold text-zinc-300 hover:text-white transition-colors py-1 group/acc"
-                          >
-                            <span className="flex items-center gap-1.5">
-                              <ChevronRight className={`w-3.5 h-3.5 text-primary transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
-                              Enthaltene Übungen ({exerciseCount})
-                            </span>
-                            <span className="text-[10px] text-zinc-500 font-normal group-hover/acc:text-zinc-300">
-                              {isExpanded ? 'Einklappen ▲' : 'Ausklappen ▼'}
-                            </span>
-                          </button>
-
-                          {isExpanded && (
-                            <div className="space-y-3 pt-1 animate-in fade-in duration-200">
+                      {/* Ausgeklappte Übungen */}
+                      {isExpanded && (
+                        <div className="p-4 sm:p-6 pt-3 border-t border-zinc-800/80 bg-zinc-950/40">
                               {(() => {
                                 const grouped: { [key: string]: any[] } = {};
                                 (ses.exercises || []).forEach((exItem: any) => {
@@ -1157,11 +1208,9 @@ export default function TrainingPage() {
                               })()}
                             </div>
                           )}
-                        </div>
-                      );
-                    })()}
-                  </div>
-                ))}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -1611,6 +1660,9 @@ export default function TrainingPage() {
                               <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-wider">
                                 Verfügbare Übungen ({filteredModalExercises.length})
                               </h4>
+                              <span className="text-[10px] text-zinc-500 hidden sm:inline">
+                                Antippen oder Ziehen
+                              </span>
                             </div>
 
                             <div className="relative">
@@ -1625,37 +1677,122 @@ export default function TrainingPage() {
                             </div>
                           </div>
 
-                          <div className="max-h-[440px] overflow-y-auto space-y-2.5 pr-1">
+                          <div className="max-h-[440px] overflow-y-auto space-y-2.5 pr-1 relative">
+                            {/* Backdrop to close dropdown on click outside */}
+                            {activeAssignDropdownId && (
+                              <div
+                                className="fixed inset-0 z-30"
+                                onClick={() => setActiveAssignDropdownId(null)}
+                              />
+                            )}
+
                             {filteredModalExercises.length === 0 ? (
                               <div className="text-center py-8 text-xs text-zinc-500 border border-dashed border-zinc-800 rounded-xl">
                                 Keine Übung für "{modalExerciseSearch}" gefunden.
                               </div>
                             ) : (
-                              filteredModalExercises.map((ex) => (
-                                <div
-                                  key={ex.id}
-                                  draggable
-                                  onDragStart={(e) => {
-                                    setDraggedExerciseId(ex.id);
-                                    e.dataTransfer.setData('text/plain', ex.id.toString());
-                                  }}
-                                  onDragEnd={() => setDraggedExerciseId(null)}
-                                  className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-primary/50 cursor-grab active:cursor-grabbing transition-all group select-none flex items-center justify-between gap-2"
-                                >
-                                  <div className="flex items-center gap-2.5 min-w-0">
-                                    <GripVertical className="w-4 h-4 text-zinc-600 group-hover:text-primary transition-colors shrink-0" />
-                                    <div className="min-w-0">
-                                      <h5 className="font-bold text-xs text-white truncate">{ex.title}</h5>
-                                      <span className="text-[10px] text-zinc-400 block truncate">
-                                        {ex.duration_minutes} Min. • {ex.focus_area} ({ex.age_group})
-                                      </span>
+                              filteredModalExercises.map((ex) => {
+                                const isSelected = selectedExerciseForTouch === ex.id;
+                                const isDropdownOpen = activeAssignDropdownId === ex.id;
+
+                                return (
+                                  <div
+                                    key={ex.id}
+                                    draggable
+                                    onDragStart={(e) => {
+                                      setDraggedExerciseId(ex.id);
+                                      e.dataTransfer.setData('text/plain', ex.id.toString());
+                                    }}
+                                    onDragEnd={() => setDraggedExerciseId(null)}
+                                    onClick={() => {
+                                      setSelectedExerciseForTouch(prev => prev === ex.id ? null : ex.id);
+                                      if (activeAssignDropdownId) setActiveAssignDropdownId(null);
+                                    }}
+                                    className={`p-3 rounded-xl border transition-all select-none flex items-center justify-between gap-2.5 cursor-pointer relative ${
+                                      isSelected
+                                        ? 'bg-primary/15 border-primary shadow-lg shadow-primary/20 ring-2 ring-primary/40 z-20'
+                                        : isDropdownOpen
+                                        ? 'bg-zinc-900 border-primary z-40'
+                                        : 'bg-zinc-900 border-zinc-800 hover:border-primary/50'
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-2.5 min-w-0">
+                                      <GripVertical className={`w-4 h-4 shrink-0 transition-colors ${isSelected ? 'text-primary' : 'text-zinc-600 group-hover:text-primary'}`} />
+                                      <div className="min-w-0">
+                                        <div className="flex items-center gap-1.5">
+                                          <h5 className="font-bold text-xs text-white truncate">{ex.title}</h5>
+                                          {isSelected && (
+                                            <span className="text-[9px] font-bold text-primary bg-primary/20 px-1.5 py-0.2 rounded border border-primary/30 shrink-0">
+                                              Ausgewählt
+                                            </span>
+                                          )}
+                                        </div>
+                                        <span className="text-[10px] text-zinc-400 block truncate">
+                                          {ex.duration_minutes} Min. • {ex.focus_area} ({ex.age_group})
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    {/* Touch-Friendly Action Button */}
+                                    <div className="relative shrink-0" onClick={(e) => e.stopPropagation()}>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          if (sessionForm.methodology !== 'Trainingsphilosophie Deutschland') {
+                                            addExerciseToSection(ex.id, 'Hauptteil');
+                                            toast.success(`"${ex.title}" hinzugefügt`);
+                                          } else {
+                                            setActiveAssignDropdownId(prev => prev === ex.id ? null : ex.id);
+                                          }
+                                        }}
+                                        className={`px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition-all active:scale-95 shadow-sm ${
+                                          isDropdownOpen
+                                            ? 'bg-primary text-white border border-primary shadow-primary/30'
+                                            : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700/80 hover:text-white'
+                                        }`}
+                                        title="Übung zu einem Trainingsblock zuordnen"
+                                      >
+                                        <Plus className="w-3.5 h-3.5 text-primary" />
+                                        <span className="text-[11px]">Zuordnen</span>
+                                      </button>
+
+                                      {/* Quick Assign Dropdown Menu */}
+                                      {isDropdownOpen && (
+                                        <div className="absolute right-0 top-full mt-1.5 z-50 w-52 rounded-xl bg-zinc-950 border border-zinc-700 shadow-2xl p-1.5 space-y-1 animate-in fade-in zoom-in-95 duration-150">
+                                          <div className="text-[10px] font-bold text-zinc-400 px-2 py-1 uppercase tracking-wider border-b border-zinc-800/80 flex items-center justify-between">
+                                            <span>Block auswählen</span>
+                                            <span className="text-[9px] text-zinc-500 font-normal">Antippen</span>
+                                          </div>
+                                          {[
+                                            { name: 'Aktivierung', label: '1. Aktivierung', dot: 'bg-blue-400', hover: 'hover:bg-blue-500/20 hover:text-blue-300' },
+                                            { name: 'Spielblock 1', label: '2. Spielblock 1', dot: 'bg-emerald-400', hover: 'hover:bg-emerald-500/20 hover:text-emerald-300' },
+                                            { name: 'Zwischenblock', label: '3. Zwischenblock', dot: 'bg-amber-400', hover: 'hover:bg-amber-500/20 hover:text-amber-300' },
+                                            { name: 'Spielblock 2', label: '4. Spielblock 2', dot: 'bg-purple-400', hover: 'hover:bg-purple-500/20 hover:text-purple-300' }
+                                          ].map((sec) => (
+                                            <button
+                                              key={sec.name}
+                                              type="button"
+                                              onClick={() => {
+                                                addExerciseToSection(ex.id, sec.name);
+                                                setActiveAssignDropdownId(null);
+                                                setSelectedExerciseForTouch(null);
+                                                toast.success(`"${ex.title}" zu "${sec.label}" hinzugefügt`);
+                                              }}
+                                              className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold text-zinc-200 transition-colors flex items-center justify-between ${sec.hover}`}
+                                            >
+                                              <span className="flex items-center gap-2">
+                                                <span className={`w-2 h-2 rounded-full ${sec.dot}`} />
+                                                {sec.label}
+                                              </span>
+                                              <Plus className="w-3 h-3 text-zinc-500" />
+                                            </button>
+                                          ))}
+                                        </div>
+                                      )}
                                     </div>
                                   </div>
-                                  <span className="text-[9px] font-bold text-zinc-400 uppercase px-2 py-1 rounded bg-zinc-800/80 border border-zinc-700/50 shrink-0">
-                                    Ziehen ↗
-                                  </span>
-                                </div>
-                              ))
+                                );
+                              })
                             )}
                           </div>
                         </>
@@ -1709,8 +1846,18 @@ export default function TrainingPage() {
                                   setDraggedExerciseId(null);
                                 }
                               }}
+                              onClick={() => {
+                                if (selectedExerciseForTouch) {
+                                  addExerciseToSection(selectedExerciseForTouch, sec.name);
+                                  const exObj = exercises.find(x => x.id === selectedExerciseForTouch);
+                                  setSelectedExerciseForTouch(null);
+                                  toast.success(`"${exObj?.title || 'Übung'}" zu "${sec.label}" hinzugefügt`);
+                                }
+                              }}
                               className={`p-3.5 rounded-xl bg-zinc-900 border transition-all space-y-2 ${
-                                draggedExerciseId
+                                selectedExerciseForTouch
+                                  ? 'border-primary/80 bg-primary/10 shadow-lg shadow-primary/10 cursor-pointer ring-1 ring-primary/40'
+                                  : draggedExerciseId
                                   ? 'border-dashed border-primary/70 bg-primary/10 shadow-lg shadow-primary/10'
                                   : 'border-zinc-800'
                               }`}
@@ -1719,14 +1866,27 @@ export default function TrainingPage() {
                                 <span className="text-xs font-bold text-primary flex items-center gap-1.5">
                                   <span>{sec.label}</span>
                                 </span>
-                                <span className={`text-[11px] font-bold ${secDuration >= sec.targetMin ? 'text-emerald-400' : 'text-zinc-400'}`}>
-                                  {secDuration} / {sec.targetMin} Min.
-                                </span>
+                                <div className="flex items-center gap-2">
+                                  {selectedExerciseForTouch && (
+                                    <span className="px-2 py-0.5 rounded-md bg-primary text-white text-[10px] font-bold animate-pulse flex items-center gap-1">
+                                      <Plus className="w-3 h-3" /> Hier einfügen
+                                    </span>
+                                  )}
+                                  <span className={`text-[11px] font-bold ${secDuration >= sec.targetMin ? 'text-emerald-400' : 'text-zinc-400'}`}>
+                                    {secDuration} / {sec.targetMin} Min.
+                                  </span>
+                                </div>
                               </div>
 
                               {assignedInSec.length === 0 ? (
-                                <div className="text-[11px] text-zinc-500 italic py-2 text-center border border-dashed border-zinc-800/60 rounded-lg">
-                                  Übung hierher ziehen oder unten zuweisen
+                                <div className={`text-[11px] py-2 text-center border border-dashed rounded-lg transition-all ${
+                                  selectedExerciseForTouch
+                                    ? 'border-primary/60 bg-primary/20 text-primary font-bold'
+                                    : 'border-zinc-800/60 text-zinc-500 italic'
+                                }`}>
+                                  {selectedExerciseForTouch
+                                    ? '👉 Antippen zum Zuweisen (+)'
+                                    : 'Übung hierher ziehen oder links antippen'}
                                 </div>
                               ) : (
                                 <div className="space-y-1.5 pt-1">
@@ -1740,7 +1900,10 @@ export default function TrainingPage() {
                                         </div>
                                         <button
                                           type="button"
-                                          onClick={() => removeExerciseFromSession(item.tempId)}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            removeExerciseFromSession(item.tempId);
+                                          }}
                                           className="p-1 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-all"
                                           title="Entfernen"
                                         >
@@ -1769,10 +1932,28 @@ export default function TrainingPage() {
                             setDraggedExerciseId(null);
                           }
                         }}
+                        onClick={() => {
+                          if (selectedExerciseForTouch) {
+                            addExerciseToSection(selectedExerciseForTouch, 'Hauptteil');
+                            const exObj = exercises.find(x => x.id === selectedExerciseForTouch);
+                            setSelectedExerciseForTouch(null);
+                            toast.success(`"${exObj?.title || 'Übung'}" hinzugefügt`);
+                          }
+                        }}
                         className={`space-y-3 max-h-[460px] overflow-y-auto pr-1 p-2 rounded-xl border transition-all ${
-                          draggedExerciseId ? 'border-dashed border-primary/70 bg-primary/10' : 'border-transparent'
+                          selectedExerciseForTouch
+                            ? 'border-primary/80 bg-primary/10 shadow-lg shadow-primary/10 cursor-pointer ring-1 ring-primary/40'
+                            : draggedExerciseId
+                            ? 'border-dashed border-primary/70 bg-primary/10'
+                            : 'border-transparent'
                         }`}
                       >
+                        {selectedExerciseForTouch && (
+                          <div className="p-3 rounded-xl bg-primary/20 border border-primary/50 text-center font-bold text-xs text-primary flex items-center justify-center gap-1.5 animate-pulse cursor-pointer">
+                            <Plus className="w-4 h-4" />
+                            <span>Hier antippen, um die ausgewählte Übung einzufügen</span>
+                          </div>
+                        )}
                         {sessionForm.assignedExercises.length === 0 ? (
                           <div className="text-center py-8 text-xs text-zinc-500 border border-dashed border-zinc-800 rounded-xl">
                             Wähle links Übungen aus oder ziehe sie hierher, um sie deinem Trainingsplan zuzuweisen.
@@ -1789,7 +1970,10 @@ export default function TrainingPage() {
                                 </div>
                                 <button
                                   type="button"
-                                  onClick={() => removeExerciseFromSession(item.tempId)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    removeExerciseFromSession(item.tempId);
+                                  }}
                                   className="p-1 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-all"
                                 >
                                   ✕

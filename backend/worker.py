@@ -4,7 +4,7 @@ import subprocess
 from sqlalchemy.orm import Session
 from db.session import SessionLocal
 from models.models import Match, HeatmapStatus, VideoChunk
-from services.ai.tracker import process_video_for_heatmap
+import gc
 
 def run_worker():
     while True:
@@ -84,6 +84,7 @@ def run_worker():
             if 'db' in locals():
                 db.close()
 
+            gc.collect()
             # Sleep at the end of every loop
             time.sleep(60)
 

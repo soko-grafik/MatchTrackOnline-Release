@@ -5,7 +5,7 @@ import { getSystemSettings } from '@/services/api';
 import { useAuth } from './AuthContext';
 
 interface SystemSettings {
-  module_stitching_enabled: boolean;
+  module_stitching_enabled?: boolean;
   module_heatmap_enabled: boolean;
   module_video_color_enabled: boolean;
   module_hls_enabled: boolean;
@@ -15,7 +15,7 @@ interface SystemSettings {
   default_video_quality: string;
   default_storage_path: string;
   auto_hls_conversion: boolean;
-  auto_stitching: boolean;
+  auto_stitching?: boolean;
   show_push_test_button?: boolean;
   show_match_cleanup_button?: boolean;
 }

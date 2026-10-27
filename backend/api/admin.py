@@ -18,7 +18,7 @@ from core.security import get_password_hash
 from services.notification_service import notify_user_approved, notify_users_new_video
 from services.thumbnail_service import generate_thumbnail
 from services.hls_service import generate_hls_playlist
-from services.stitching_service import run_stitching
+
 from services.backup_service import generate_sql_dump, upload_to_ftp, run_ftp_backup_job
 from services.logger_service import create_system_log, generate_test_logs
 

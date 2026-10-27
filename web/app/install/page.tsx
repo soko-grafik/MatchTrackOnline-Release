@@ -47,7 +47,6 @@ export default function InstallWizard() {
   const [prereqsSuccess, setPrereqsSuccess] = useState(false);
 
   // Step 4: Modules Configuration
-  const [moduleStitching, setModuleStitching] = useState(true);
   const [moduleHeatmap, setModuleHeatmap] = useState(true);
   const [moduleVideoColor, setModuleVideoColor] = useState(true);
   const [moduleHls, setModuleHls] = useState(true);
@@ -263,7 +262,7 @@ export default function InstallWizard() {
     setCheckingModules(true);
     try {
       const response = await api.post('/install/configure-modules', {
-        module_stitching_enabled: moduleStitching,
+        module_stitching_enabled: false,
         module_heatmap_enabled: moduleHeatmap,
         module_video_color_enabled: moduleVideoColor,
         module_hls_enabled: moduleHls,
@@ -273,7 +272,6 @@ export default function InstallWizard() {
       
       // Auto-toggle off modules that aren't available
       if (response.data.availability) {
-        if (!response.data.availability.stitching.available) setModuleStitching(false);
         if (!response.data.availability.heatmap.available) setModuleHeatmap(false);
         if (!response.data.availability.video_color.available) setModuleVideoColor(false);
         if (!response.data.availability.fisheye.available) setModuleFisheye(false);
@@ -356,7 +354,7 @@ export default function InstallWizard() {
     try {
       // First seed modules to DB
       await api.post('/install/seed-db', {
-        module_stitching_enabled: moduleStitching,
+        module_stitching_enabled: false,
         module_heatmap_enabled: moduleHeatmap,
         module_video_color_enabled: moduleVideoColor,
         module_hls_enabled: moduleHls,
@@ -712,29 +710,6 @@ export default function InstallWizard() {
                   </div>
                 ) : (
                   <div className="space-y-4 mt-6">
-                    {/* Stitching */}
-                    <div className="p-4 rounded-2xl border border-zinc-850 bg-zinc-950/20 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h4 className="text-xs font-bold text-zinc-200">{activeT.module_stitching}</h4>
-                          {moduleAvailability && (
-                            <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold ${
-                              moduleAvailability.stitching.available ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
-                            }`}>
-                              {moduleAvailability.stitching.available ? activeT.module_available : activeT.module_unavailable}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[10px] text-zinc-400 mt-1">{activeT.module_stitching_desc}</p>
-                      </div>
-                      <input 
-                        type="checkbox"
-                        checked={moduleStitching}
-                        onChange={(e) => setModuleStitching(e.target.checked)}
-                        className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-zinc-800 bg-zinc-900 cursor-pointer self-start md:self-center"
-                      />
-                    </div>
-
                     {/* Heatmap */}
                     <div className="p-4 rounded-2xl border border-zinc-850 bg-zinc-950/20 flex flex-col md:flex-row md:items-center justify-between gap-4">
                       <div>

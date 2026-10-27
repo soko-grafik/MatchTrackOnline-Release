@@ -1,7 +1,5 @@
 import cv2
 import numpy as np
-from ultralytics import YOLO
-import supervision as sv
 import os
 import json
 import math
@@ -148,6 +146,11 @@ def classify_team_by_color(
         return "away"
 
 def process_video_for_heatmap(video_path: str, output_path: str, match_id: str = None, progress_callback=None):
+    from ultralytics import YOLO
+    try:
+        import supervision as sv
+    except ImportError:
+        sv = None
     print(f"[HeatmapDebug] Starting tracker for {video_path}")
     if progress_callback:
         progress_callback(2.0, "Lade YOLOv8 Tracking-Modell...")
