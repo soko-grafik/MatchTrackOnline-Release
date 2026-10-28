@@ -259,6 +259,11 @@ class SystemSettings(Base):
     legal_register_info = Column(String(255), nullable=True, default="")
     log_irrelevant_patterns = Column(JSON, default=list, nullable=True)
 
+    # Livestream Settings
+    livestream_is_protected = Column(Boolean, default=False)
+    livestream_password = Column(String(255), nullable=True)
+    livestream_title = Column(String(255), default="MatchTrack Livestream")
+
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 

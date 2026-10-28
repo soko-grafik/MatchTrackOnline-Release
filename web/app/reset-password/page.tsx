@@ -62,8 +62,8 @@ function ResetPasswordForm() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-950 p-4 font-sans text-white">
-      <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900/50 p-8 shadow-2xl backdrop-blur-md">
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-zinc-950 p-4 font-sans text-gray-900 dark:text-white">
+      <div className="w-full max-w-md rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-8 shadow-xl dark:shadow-2xl backdrop-blur-md text-gray-900 dark:text-white">
         <div className="mb-8 flex justify-center">
           <Image
             src="/logo_light_wide.png"
@@ -104,7 +104,7 @@ function ResetPasswordForm() {
                 placeholder="Neues Passwort"
                 required
                 minLength={6}
-                className="w-full rounded-lg border-zinc-800 bg-zinc-900 p-3 text-sm text-white shadow-sm focus:border-primary focus:ring-primary focus:outline-none"
+                className="w-full rounded-lg border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900 p-3 text-sm text-gray-900 dark:text-white shadow-sm focus:border-primary focus:ring-primary focus:outline-none"
               />
             </div>
             <div>
@@ -117,7 +117,7 @@ function ResetPasswordForm() {
                 placeholder="Passwort bestätigen"
                 required
                 minLength={6}
-                className="w-full rounded-lg border-zinc-800 bg-zinc-900 p-3 text-sm text-white shadow-sm focus:border-primary focus:ring-primary focus:outline-none"
+                className="w-full rounded-lg border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900 p-3 text-sm text-gray-900 dark:text-white shadow-sm focus:border-primary focus:ring-primary focus:outline-none"
               />
             </div>
 
@@ -142,7 +142,7 @@ function ResetPasswordForm() {
 export default function ResetPasswordPage() {
   return (
     <Suspense fallback={
-      <div className="flex min-h-screen items-center justify-center bg-zinc-950 text-white font-sans">
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-zinc-950 text-gray-900 dark:text-white font-sans">
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary/20 border-t-primary"></div>
       </div>
     }>

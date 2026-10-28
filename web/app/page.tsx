@@ -115,21 +115,21 @@ export default function DashboardLandingPage() {
     .slice(0, 7);
 
   return (
-    <div className="relative flex min-h-screen flex-col bg-zinc-950 font-sans text-white">
+    <div className="relative flex min-h-screen flex-col bg-gray-50 dark:bg-zinc-950 font-sans text-gray-900 dark:text-white">
       <Navbar />
 
       <main className="flex-1 w-full px-4 py-6 sm:px-6 lg:px-8 space-y-6 sm:space-y-10">
         {/* Compact Hero Banner */}
-        <section className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-zinc-800/80 bg-gradient-to-r from-zinc-900 via-zinc-900/90 to-primary/10 p-5 sm:p-8 shadow-2xl">
+        <section className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-gray-200 dark:border-zinc-800/80 bg-gradient-to-r from-slate-100 via-emerald-50/40 to-emerald-100/20 dark:from-zinc-900 dark:via-zinc-900/90 dark:to-primary/10 p-5 sm:p-8 shadow-xs dark:shadow-2xl">
           <div className="relative z-10 flex items-center justify-between gap-4">
             <div className="space-y-1 sm:space-y-2">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/20 border border-primary/30 text-primary text-[10px] sm:text-xs font-bold uppercase tracking-wider">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 dark:bg-primary/20 border border-emerald-500/20 dark:border-primary/30 text-emerald-700 dark:text-primary text-[10px] sm:text-xs font-bold uppercase tracking-wider">
                 <Sparkles className="w-3 h-3" /> MatchTrack Online
               </div>
-              <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-tight">
+              <h1 className="text-xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
                 Hallo, {user?.first_name || user?.username || 'Trainer'}
               </h1>
-              <p className="text-zinc-400 text-xs sm:text-sm hidden sm:block">
+              <p className="text-gray-600 dark:text-zinc-400 text-xs sm:text-sm hidden sm:block">
                 Verwalte Spielanalysen, plane Trainingseinheiten und behalte alle Termine im Blick.
               </p>
             </div>
@@ -151,48 +151,48 @@ export default function DashboardLandingPage() {
           {hasModule('ORGANIZER') && (
             <Link
               href="/organizer"
-              className="p-4 rounded-2xl border border-zinc-800 bg-zinc-900/60 hover:border-zinc-700 hover:bg-zinc-900 text-center space-y-1.5 transition-all group backdrop-blur-md shadow-md"
+              className="p-4 rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 hover:border-gray-300 dark:hover:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-900 text-center space-y-1.5 transition-all group backdrop-blur-md shadow-xs dark:shadow-md"
             >
               <div className="w-10 h-10 mx-auto rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform">
                 <CalendarIcon className="w-5 h-5" />
               </div>
-              <span className="text-xs font-bold block text-zinc-300 group-hover:text-white truncate">Organizer</span>
+              <span className="text-xs font-bold block text-gray-700 dark:text-zinc-300 group-hover:text-gray-900 dark:group-hover:text-white truncate">Organizer</span>
             </Link>
           )}
 
           {hasModule('MATCHES') && (
             <Link
               href="/matches"
-              className="p-4 rounded-2xl border border-zinc-800 bg-zinc-900/60 hover:border-zinc-700 hover:bg-zinc-900 text-center space-y-1.5 transition-all group backdrop-blur-md shadow-md"
+              className="p-4 rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 hover:border-gray-300 dark:hover:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-900 text-center space-y-1.5 transition-all group backdrop-blur-md shadow-xs dark:shadow-md"
             >
               <div className="w-10 h-10 mx-auto rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Video className="w-5 h-5" />
               </div>
-              <span className="text-xs font-bold block text-zinc-300 group-hover:text-white truncate">Spiele</span>
+              <span className="text-xs font-bold block text-gray-700 dark:text-zinc-300 group-hover:text-gray-900 dark:group-hover:text-white truncate">Spiele</span>
             </Link>
           )}
 
           {hasModule('TRAINING') && (
             <Link
               href="/training"
-              className="p-4 rounded-2xl border border-zinc-800 bg-zinc-900/60 hover:border-zinc-700 hover:bg-zinc-900 text-center space-y-1.5 transition-all group backdrop-blur-md shadow-md"
+              className="p-4 rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 hover:border-gray-300 dark:hover:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-900 text-center space-y-1.5 transition-all group backdrop-blur-md shadow-xs dark:shadow-md"
             >
               <div className="w-10 h-10 mx-auto rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Dumbbell className="w-5 h-5" />
               </div>
-              <span className="text-xs font-bold block text-zinc-300 group-hover:text-white truncate">Übungen</span>
+              <span className="text-xs font-bold block text-gray-700 dark:text-zinc-300 group-hover:text-gray-900 dark:group-hover:text-white truncate">Übungen</span>
             </Link>
           )}
         </section>
 
         {/* Mobile Tab Selector Switcher (Visible ONLY on Mobile < md) */}
-        <div className="flex md:hidden items-center p-1 bg-zinc-950 border border-zinc-800 rounded-xl">
+        <div className="flex md:hidden items-center p-1 bg-gray-200 dark:bg-zinc-950 border border-gray-300 dark:border-zinc-800 rounded-xl">
           <button
             onClick={() => setActiveMobileTab('EVENTS')}
             className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all text-center flex items-center justify-center gap-1.5 ${
               activeMobileTab === 'EVENTS'
                 ? 'bg-emerald-600 text-white shadow-md'
-                : 'text-zinc-400 hover:text-white'
+                : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white'
             }`}
           >
             <CalendarIcon className="w-3.5 h-3.5" />
@@ -204,7 +204,7 @@ export default function DashboardLandingPage() {
             className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all text-center flex items-center justify-center gap-1.5 ${
               activeMobileTab === 'MATCHES'
                 ? 'bg-primary text-white shadow-md'
-                : 'text-zinc-400 hover:text-white'
+                : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white'
             }`}
           >
             <Video className="w-3.5 h-3.5" />
@@ -216,7 +216,7 @@ export default function DashboardLandingPage() {
             className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all text-center flex items-center justify-center gap-1.5 ${
               activeMobileTab === 'EXERCISES'
                 ? 'bg-blue-600 text-white shadow-md'
-                : 'text-zinc-400 hover:text-white'
+                : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white'
             }`}
           >
             <Dumbbell className="w-3.5 h-3.5" />
@@ -232,8 +232,8 @@ export default function DashboardLandingPage() {
                 <CalendarIcon className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-base sm:text-xl font-bold text-white">Nächste Ereignisse</h2>
-                <p className="text-xs text-zinc-400 hidden sm:block">Kommende Spiele & Trainingstermine deines Teams</p>
+                <h2 className="text-base sm:text-xl font-bold text-gray-900 dark:text-white">Nächste Ereignisse</h2>
+                <p className="text-xs text-gray-500 dark:text-zinc-400 hidden sm:block">Kommende Spiele & Trainingstermine deines Teams</p>
               </div>
             </div>
 
@@ -246,7 +246,7 @@ export default function DashboardLandingPage() {
           </div>
 
           {upcomingEvents.length === 0 ? (
-            <div className="p-6 rounded-2xl border border-zinc-800/80 bg-zinc-900/40 text-center text-zinc-500 text-xs">
+            <div className="p-6 rounded-2xl border border-gray-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/40 text-center text-gray-500 dark:text-zinc-500 text-xs">
               Keine anstehenden Termine im Kalender eingetragen.
             </div>
           ) : (
@@ -272,36 +272,36 @@ export default function DashboardLandingPage() {
                         onEventEditRequest(ev);
                       }
                     }}
-                    className="p-3.5 sm:p-4 rounded-2xl border border-zinc-800/80 bg-zinc-900/50 hover:border-zinc-700 hover:bg-zinc-900 transition-all space-y-2.5 block group shadow-lg cursor-pointer text-left focus:outline-none focus:border-primary select-none"
+                    className="p-3.5 sm:p-4 rounded-2xl border border-gray-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/50 hover:border-gray-300 dark:hover:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-900 transition-all space-y-2.5 block group shadow-xs dark:shadow-lg cursor-pointer text-left focus:outline-none focus:border-primary select-none"
                   >
                     <div className="flex items-center justify-between">
                       <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase border ${badgeColor}`}>
                         {ev.event_type}
                       </span>
-                      <span className="text-[10px] text-zinc-400 font-mono font-bold">
+                      <span className="text-[10px] text-gray-500 dark:text-zinc-400 font-mono font-bold">
                         {new Date(ev.start_time).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' })}
                       </span>
                     </div>
 
-                    <h3 className="font-bold text-white text-xs sm:text-sm truncate group-hover:text-primary transition-colors">
+                    <h3 className="font-bold text-gray-900 dark:text-white text-xs sm:text-sm truncate group-hover:text-primary transition-colors">
                       {ev.title}
                     </h3>
 
                     {isTraining && (ev.training_session?.title || ev.training_session_id) && (
-                      <div className="flex items-center gap-1.5 text-[11px] text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-1 rounded-xl font-medium">
+                      <div className="flex items-center gap-1.5 text-[11px] text-blue-600 dark:text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-1 rounded-xl font-medium">
                         <Dumbbell className="w-3 h-3 shrink-0 text-blue-400" />
-                        <span className="truncate">Plan: <strong className="text-white">{ev.training_session?.title || 'Zugewiesen'}</strong></span>
+                        <span className="truncate">Plan: <strong className="text-gray-900 dark:text-white">{ev.training_session?.title || 'Zugewiesen'}</strong></span>
                       </div>
                     )}
 
-                    <div className="space-y-1 text-[11px] sm:text-xs text-zinc-400">
+                    <div className="space-y-1 text-[11px] sm:text-xs text-gray-500 dark:text-zinc-400">
                       <div className="flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                        <Clock className="w-3.5 h-3.5 text-gray-400 dark:text-zinc-500 shrink-0" />
                         <span>{new Date(ev.start_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr</span>
                       </div>
                       {ev.location && (
                         <div className="flex items-center gap-1.5">
-                          <MapPin className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                          <MapPin className="w-3.5 h-3.5 text-gray-400 dark:text-zinc-500 shrink-0" />
                           <span className="truncate">{ev.location}</span>
                         </div>
                       )}
@@ -321,8 +321,8 @@ export default function DashboardLandingPage() {
                 <Video className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-base sm:text-xl font-bold text-white">Neueste Spiel-Analysen</h2>
-                <p className="text-xs text-zinc-400 hidden sm:block">Zuletzt hochgeladene Match-Videos & KI-Analysen</p>
+                <h2 className="text-base sm:text-xl font-bold text-gray-900 dark:text-white">Neueste Spiel-Analysen</h2>
+                <p className="text-xs text-gray-500 dark:text-zinc-400 hidden sm:block">Zuletzt hochgeladene Match-Videos & KI-Analysen</p>
               </div>
             </div>
 
@@ -335,7 +335,7 @@ export default function DashboardLandingPage() {
           </div>
 
           {recentMatches.length === 0 ? (
-            <div className="p-8 rounded-2xl border border-zinc-800/80 bg-zinc-900/40 text-center text-zinc-500 text-xs">
+            <div className="p-8 rounded-2xl border border-gray-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/40 text-center text-gray-500 dark:text-zinc-500 text-xs">
               Noch keine Videos hochgeladen.
             </div>
           ) : (
@@ -362,8 +362,8 @@ export default function DashboardLandingPage() {
                 <Dumbbell className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-base sm:text-xl font-bold text-white">Neueste Übungen</h2>
-                <p className="text-xs text-zinc-400 hidden sm:block">Übungen aus der Wissensdatenbank mit Taktik-Skizzen</p>
+                <h2 className="text-base sm:text-xl font-bold text-gray-900 dark:text-white">Neueste Übungen</h2>
+                <p className="text-xs text-gray-500 dark:text-zinc-400 hidden sm:block">Übungen aus der Wissensdatenbank mit Taktik-Skizzen</p>
               </div>
             </div>
 
@@ -376,7 +376,7 @@ export default function DashboardLandingPage() {
           </div>
 
           {recentExercises.length === 0 ? (
-            <div className="p-8 rounded-2xl border border-zinc-800/80 bg-zinc-900/40 text-center text-zinc-500 text-xs">
+            <div className="p-8 rounded-2xl border border-gray-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/40 text-center text-gray-500 dark:text-zinc-500 text-xs">
               Noch keine Übungen in der Datenbank angelegt.
             </div>
           ) : (
@@ -385,9 +385,9 @@ export default function DashboardLandingPage() {
                 <Link
                   key={ex.id}
                   href="/training"
-                  className="rounded-2xl border border-zinc-800 bg-zinc-900/50 overflow-hidden hover:border-zinc-700 transition-all flex flex-col group shadow-lg"
+                  className="rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 overflow-hidden hover:border-gray-300 dark:hover:border-zinc-700 transition-all flex flex-col group shadow-xs dark:shadow-lg"
                 >
-                  <div className="aspect-[3/2] bg-zinc-950 relative overflow-hidden flex items-center justify-center border-b border-zinc-800/80">
+                  <div className="aspect-[3/2] bg-gray-100 dark:bg-zinc-950 relative overflow-hidden flex items-center justify-center border-b border-gray-200 dark:border-zinc-800/80">
                     {ex.thumbnail_path ? (
                       <img
                         src={ex.thumbnail_path.startsWith('data:') || ex.thumbnail_path.startsWith('http') ? ex.thumbnail_path : getMediaUrl(ex.thumbnail_path)}
@@ -397,17 +397,17 @@ export default function DashboardLandingPage() {
                     ) : (
                       <Dumbbell className="w-8 h-8 text-zinc-700" />
                     )}
-                    <span className="absolute top-2 left-2 px-2 py-0.5 rounded bg-zinc-900/90 text-primary text-[10px] font-bold border border-zinc-800">
+                    <span className="absolute top-2 left-2 px-2 py-0.5 rounded bg-white/90 dark:bg-zinc-900/90 text-primary text-[10px] font-bold border border-gray-200 dark:border-zinc-800 shadow-xs">
                       {ex.focus_area}
                     </span>
                   </div>
 
                   <div className="p-3.5 flex-1 flex flex-col justify-between space-y-2">
-                    <h3 className="font-bold text-xs sm:text-sm text-white truncate group-hover:text-primary transition-colors">
+                    <h3 className="font-bold text-xs sm:text-sm text-gray-900 dark:text-white truncate group-hover:text-primary transition-colors">
                       {ex.title}
                     </h3>
 
-                    <div className="flex items-center justify-between text-[11px] text-zinc-400 border-t border-zinc-800/60 pt-2">
+                    <div className="flex items-center justify-between text-[11px] text-gray-500 dark:text-zinc-400 border-t border-gray-200 dark:border-zinc-800/60 pt-2">
                       <span>{ex.age_group}</span>
                       <span>⏱️ {ex.duration_minutes} Min</span>
                     </div>

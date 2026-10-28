@@ -105,9 +105,9 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col justify-between bg-zinc-950 font-sans text-white">
+    <div className="flex min-h-screen flex-col justify-between bg-gray-50 dark:bg-zinc-950 font-sans text-gray-900 dark:text-white">
       <div className="flex flex-1 items-center justify-center p-4">
-        <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900/50 p-8 shadow-2xl backdrop-blur-md">
+        <div className="w-full max-w-md rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-8 shadow-xl dark:shadow-2xl backdrop-blur-md text-gray-900 dark:text-white">
           <div className="mb-8 flex justify-center">
             <Image
               src="/logo_light_wide.png"
@@ -134,7 +134,7 @@ export default function LoginPage() {
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="Benutzername"
                 required
-                className="w-full rounded-lg border-zinc-800 bg-zinc-900 p-3 text-sm text-white shadow-sm focus:border-primary focus:ring-primary"
+                className="w-full rounded-lg border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900 p-3 text-sm text-gray-900 dark:text-white shadow-sm focus:border-primary focus:ring-primary"
               />
             </div>
             <div>
@@ -146,7 +146,7 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Passwort"
                 required
-                className="w-full rounded-lg border-zinc-800 bg-zinc-900 p-3 text-sm text-white shadow-sm focus:border-primary focus:ring-primary"
+                className="w-full rounded-lg border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900 p-3 text-sm text-gray-900 dark:text-white shadow-sm focus:border-primary focus:ring-primary"
               />
             </div>
 
@@ -179,7 +179,7 @@ export default function LoginPage() {
           </div>
 
           {/* Android App APK Download */}
-          <div className="mt-6 pt-5 border-t border-zinc-800/80 text-center">
+          <div className="mt-6 pt-5 border-t border-gray-200 dark:border-zinc-800/80 text-center">
             <a
               href="/downloads/MatchTrack.apk"
               download="MatchTrack.apk"
@@ -204,7 +204,7 @@ export default function LoginPage() {
       {/* Modal: Passwort vergessen */}
       {isForgotModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950 p-6 shadow-2xl">
+          <div className="w-full max-w-md rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-6 shadow-2xl text-gray-900 dark:text-white">
             <h3 className="mb-2 text-lg font-bold text-white">
               Passwort zurücksetzen
             </h3>
@@ -220,7 +220,7 @@ export default function LoginPage() {
                   value={forgotEmail}
                   onChange={(e) => setForgotEmail(e.target.value)}
                   required
-                  className="mt-1 w-full rounded-lg border border-zinc-800 bg-zinc-900 p-2.5 text-sm text-white focus:border-primary focus:ring-primary focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900 p-2.5 text-sm text-gray-900 dark:text-white focus:border-primary focus:ring-primary focus:outline-none"
                   placeholder="name@beispiel.de"
                 />
               </div>

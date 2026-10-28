@@ -11,6 +11,7 @@ module.exports = {
     "./hooks/**/*.{js,ts,jsx,tsx,mdx}",
     "./lib/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/**/*.{js,ts,jsx,tsx,mdx}", // Falls du einen src-Ordner nutzt
+    "./node_modules/preline/preline.js",
   ],
   theme: {
     extend: {
@@ -37,18 +38,9 @@ module.exports = {
           hover: '#1d4ed8',
         }
       },
-      borderRadius: {
-        'none': '0px',
-        'sm': '0.125rem',
-        'DEFAULT': '0.25rem',
-        'md': '0.25rem',
-        'lg': '0.25rem',
-        'xl': '0.25rem',
-        '2xl': '0.25rem',
-        '3xl': '0.25rem',
-        'full': '0.25rem',
-      },
     },
   },
-  plugins: [],
+  plugins: [
+    require("preline/plugin"),
+  ],
 }

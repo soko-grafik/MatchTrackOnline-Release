@@ -1,11 +1,11 @@
-release: fix(backend): eliminate 750MB PyTorch RAM leak in backend webserver process (dev: fc70e7ad)
+release: fix(streaming): use regex flag -E for mediamtx sed replacements and activate api (dev: dee6a7a9)
 
 Letzte Änderungen:
-* fix(backend): eliminate 750MB PyTorch RAM leak in backend webserver process (fc70e7ad)
-* fix(worker): eliminate 700MB idle RAM usage and remove obsolete stitching service files (0a692340)
-* feat(training): add touch-friendly tap-to-assign and block dropdown for iPad/tablets (9e6e1e0c)
-* feat(training): responsive single-column list view below 1260px with left thumbnail (02b33521)
-* refactor(admin): remove legacy stitching options from system settings (dbb14597)
-* fix(player): resolve video playback stuttering and optimize streaming performance (1df21433)
+* fix(streaming): use regex flag -E for mediamtx sed replacements and activate api (dee6a7a9)
+* fix(live): resolve /login redirect for external viewers and optimize HLS playback with MPEG-TS (ed7f4ec8)
+* fix(backend): replace undefined require_role with require_trainer in admin livestream routes (6c275b37)
+* feat(streaming): add role-based access for stream credentials, password protection, and dedicated public /live player page (196619e5)
+* fix(streaming): extract official mediamtx.yml to guarantee 100% valid configuration (c20a8cd3)
+* feat(streaming): switch setup_rtmp.sh to MediaMTX standalone engine to prevent apt conflicts on HestiaCP (23a54c1b)
 
-Build-Zeitstempel: 2026-10-27 11:14:56
+Build-Zeitstempel: 2026-10-28 13:33:33

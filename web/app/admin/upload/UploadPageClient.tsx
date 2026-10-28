@@ -303,7 +303,7 @@ export default function AdminUploadPage() {
   if (authLoading || (user && user.role.toUpperCase() !== 'ADMIN' && user.role.toUpperCase() !== 'TRAINER')) return null;
 
   return (
-    <div className="relative flex flex-col min-h-screen bg-zinc-950 text-white font-sans text-[13px]">
+    <div className="relative flex flex-col min-h-screen bg-gray-50 dark:bg-zinc-950 text-gray-900 dark:text-white font-sans text-[13px]">
       <Navbar />
 
       <main className="w-full px-4 sm:px-6 lg:px-8 py-8 flex-1">
@@ -402,7 +402,7 @@ export default function AdminUploadPage() {
 
             {/* Column 1: Metadata & Format Selection */}
             <div className="lg:col-span-4 space-y-6">
-              <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6 space-y-8">
+              <div className="bg-white dark:bg-zinc-900/40 border border-gray-200 dark:border-zinc-800 rounded-2xl p-6 space-y-8">
                 <div className="flex items-center gap-3 border-b border-zinc-800/50 pb-5">
                   <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 shadow-inner">
                     <FileText className="w-5 h-5" />
@@ -421,7 +421,7 @@ export default function AdminUploadPage() {
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="z. B. FC Bayern vs. Dortmund"
-                      className="w-full h-11 bg-black/60 border border-zinc-800 rounded-xl px-5 text-white font-bold focus:outline-none focus:border-blue-500 transition-all text-sm placeholder:text-zinc-700 flex items-center"
+                      className="w-full h-11 bg-gray-50 dark:bg-black/60 border border-gray-300 dark:border-zinc-800 rounded-xl px-5 text-gray-900 dark:text-white font-bold focus:outline-none focus:border-blue-500 transition-all text-sm placeholder:text-gray-400 dark:placeholder:text-zinc-700 flex items-center"
                       required
                     />
                   </div>
@@ -468,7 +468,7 @@ export default function AdminUploadPage() {
                     <select
                       value={category}
                       onChange={(e) => setCategory(e.target.value)}
-                      className="w-full h-11 bg-black/40 border border-zinc-800 rounded-xl px-4 text-white focus:outline-none focus:border-blue-500 transition-all text-sm"
+                      className="w-full h-11 bg-gray-50 dark:bg-black/40 border border-gray-300 dark:border-zinc-800 rounded-xl px-4 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all text-sm"
                     >
                       <option value="Punktspiel">Punktspiel</option>
                       <option value="Pokalspiel">Pokalspiel</option>
@@ -486,7 +486,7 @@ export default function AdminUploadPage() {
                         type="datetime-local"
                         value={recordingDate}
                         onChange={(e) => setRecordingDate(e.target.value)}
-                        className="w-full h-11 bg-black/40 border border-zinc-800 rounded-xl pl-11 pr-4 text-white focus:outline-none focus:border-blue-500 transition-all text-sm font-mono flex items-center text-scheme-dark"
+                        className="w-full h-11 bg-gray-50 dark:bg-black/40 border border-gray-300 dark:border-zinc-800 rounded-xl pl-11 pr-4 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all text-sm font-mono flex items-center"
                       />
                     </div>
                   </div>
@@ -494,7 +494,7 @@ export default function AdminUploadPage() {
               </div>
 
               {/* Video Format Selection: 16:9 vs Panorama vs Dual */}
-              <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6 space-y-6">
+              <div className="bg-white dark:bg-zinc-900/40 border border-gray-200 dark:border-zinc-800 rounded-2xl p-6 space-y-6">
                 <div className="flex items-center gap-3 border-b border-zinc-800/50 pb-5">
                   <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
                     <Layers className="w-5 h-5" />
@@ -946,7 +946,7 @@ export default function AdminUploadPage() {
               </div>
 
               {/* Submit Section & Queue */}
-              <div className="bg-zinc-900/40 border border-zinc-800 rounded-3xl p-6 space-y-6">
+              <div className="bg-white dark:bg-zinc-900/40 border border-gray-200 dark:border-zinc-800 rounded-3xl p-6 space-y-6">
                 <div className="space-y-4">
                   {error && (
                     <div className="bg-red-500/10 border border-red-500/40 p-4 rounded-2xl flex items-center gap-3 text-red-400 animate-in fade-in slide-in-from-top-2 duration-500 shadow-xl shadow-red-950/20">

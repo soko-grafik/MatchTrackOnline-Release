@@ -43,10 +43,11 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
     const isResetPasswordPage = pathname === '/reset-password' || pathname === '/reset-password/';
     const isLegalPage = pathname?.startsWith('/impressum') || pathname?.startsWith('/datenschutz') || pathname?.startsWith('/terms') || pathname?.startsWith('/privacy');
     const isInstallPage = pathname?.startsWith('/install');
+    const isLivePage = pathname?.startsWith('/live');
     const matchId = searchParams.get('id');
     const isMatchPageWithId = (pathname === '/matches' || pathname === '/matches/') && !!matchId;
 
-    const isPublicRoute = isLoginPage || isRegisterPage || isResetPasswordPage || isLegalPage || isMatchPageWithId;
+    const isPublicRoute = isLoginPage || isRegisterPage || isResetPasswordPage || isLegalPage || isMatchPageWithId || isLivePage;
 
     if (isInstalled === false) {
       if (!isInstallPage) {
@@ -82,10 +83,11 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
   const isResetPasswordPage = pathname === '/reset-password' || pathname === '/reset-password/';
   const isLegalPage = pathname?.startsWith('/impressum') || pathname?.startsWith('/datenschutz') || pathname?.startsWith('/terms') || pathname?.startsWith('/privacy');
   const isInstallPage = pathname?.startsWith('/install');
+  const isLivePage = pathname?.startsWith('/live');
   const matchId = searchParams.get('id');
   const isMatchPageWithId = (pathname === '/matches' || pathname === '/matches/') && !!matchId;
 
-  const isPublicRoute = isLoginPage || isRegisterPage || isResetPasswordPage || isLegalPage || isMatchPageWithId;
+  const isPublicRoute = isLoginPage || isRegisterPage || isResetPasswordPage || isLegalPage || isMatchPageWithId || isLivePage;
 
   if (isInstalled === false) {
     if (isInstallPage) {

@@ -1,8 +1,11 @@
 "use client";
 
-import { AlertTriangle, X } from 'lucide-react';
+import React from 'react';
+import { AlertTriangle } from 'lucide-react';
+import { Modal, ModalHeader, ModalTitle, ModalBody, ModalFooter } from '@/components/ui/Modal';
+import { Button } from '@/components/ui/Button';
 
-interface ConfirmModalProps {
+export interface ConfirmModalProps {
   isOpen: boolean;
   title: string;
   message: string;
@@ -19,51 +22,33 @@ export default function ConfirmModal({
   confirmText = "Löschen",
   cancelText = "Abbrechen",
   onConfirm,
-  onCancel
+  onCancel,
 }: ConfirmModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
-      <div className="w-full max-w-sm rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-        
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-zinc-800 p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500/10">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
-            </div>
-            <h2 className="text-lg font-bold text-white">{title}</h2>
+    <Modal isOpen={isOpen} onClose={onCancel} size="sm">
+      <ModalHeader onClose={onCancel}>
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-950/60 dark:text-red-400">
+            <AlertTriangle className="h-5 w-5" />
           </div>
-          <button
-            onClick={onCancel}
-            className="rounded-full p-1 text-zinc-400 hover:bg-zinc-800 hover:text-white transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
+          <ModalTitle className="text-red-600 dark:text-red-400">{title}</ModalTitle>
         </div>
-        
-        {/* Body */}
-        <div className="p-6">
-          <p className="text-sm text-zinc-300">{message}</p>
-        </div>
-        
-        {/* Footer */}
-        <div className="flex justify-end gap-3 border-t border-zinc-800 bg-zinc-900/50 p-4">
-          <button
-            onClick={onCancel}
-            className="rounded-lg px-5 py-2.5 text-sm font-medium text-zinc-300 hover:bg-zinc-800 transition-colors"
-          >
-            {cancelText}
-          </button>
-          <button
-            onClick={onConfirm}
-            className="rounded-lg bg-red-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-red-700"
-          >
-            {confirmText}
-          </button>
-        </div>
-      </div>
-    </div>
+      </ModalHeader>
+
+      <ModalBody>
+        <p className="text-sm text-gray-600 dark:text-zinc-300 leading-relaxed">{message}</p>
+      </ModalBody>
+
+      <ModalFooter>
+        <Button variant="secondary" size="md" onClick={onCancel}>
+          {cancelText}
+        </Button>
+        <Button variant="destructive" size="md" onClick={onConfirm}>
+          {confirmText}
+        </Button>
+      </ModalFooter>
+    </Modal>
   );
 }

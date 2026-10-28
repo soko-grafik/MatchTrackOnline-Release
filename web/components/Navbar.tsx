@@ -284,7 +284,7 @@ export default function Navbar() {
 
   return (
     <>
-      <header className="bg-zinc-950 border-b border-zinc-800 sticky top-0 z-50">
+      <header className="bg-white/95 dark:bg-zinc-950 border-b border-gray-200 dark:border-zinc-800 sticky top-0 z-50 backdrop-blur-md">
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             <div className="flex-1 flex items-center gap-4">
@@ -292,7 +292,7 @@ export default function Navbar() {
                 <button
                   type="button"
                   onClick={() => setIsDrawerOpen(true)}
-                  className="rounded-xl p-2.5 bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 active:scale-95 transition-all shadow-sm"
+                  className="rounded-xl p-2.5 bg-gray-100 hover:bg-gray-200 border border-gray-200 text-gray-700 hover:text-gray-900 dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-300 dark:hover:text-white dark:hover:bg-zinc-800 active:scale-95 transition-all shadow-xs"
                   aria-label="Menü öffnen"
                 >
                   <Menu className="w-6 h-6" />
@@ -318,14 +318,14 @@ export default function Navbar() {
 
                 {user && (
                   <>
-                    <div className="hidden sm:flex items-center gap-3 bg-zinc-900/50 p-1 rounded-xl border border-zinc-800/50 backdrop-blur-sm">
+                    <div className="hidden sm:flex items-center gap-3 bg-gray-100 dark:bg-zinc-900/50 p-1 rounded-xl border border-gray-200 dark:border-zinc-800/50 backdrop-blur-sm">
                       {isAdmin && onlineStats && (
                         <>
                           <div
                             className="flex flex-col items-center px-3 cursor-pointer"
                             title={`Aktuell online (letzte 15 Min):\n${onlineStats.online_users.map(u => `• ${u.username} (${u.first_name || ''} ${u.last_name || ''})`).join('\n') || 'Keine aktiven User'}`}
                           >
-                            <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest leading-none flex items-center gap-1">
+                            <span className="text-[8px] font-black text-gray-500 dark:text-zinc-500 uppercase tracking-widest leading-none flex items-center gap-1">
                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                               Online
                             </span>
@@ -333,16 +333,16 @@ export default function Navbar() {
                               {onlineStats.online_count} {onlineStats.online_count === 1 ? 'USER' : 'USER'}
                             </span>
                           </div>
-                          <div className="w-px h-6 bg-zinc-800" />
+                          <div className="w-px h-6 bg-gray-300 dark:bg-zinc-800" />
                         </>
                       )}
                       <div className="flex flex-col items-end px-3">
-                         <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest leading-none">System Load</span>
+                         <span className="text-[8px] font-black text-gray-500 dark:text-zinc-500 uppercase tracking-widest leading-none">System Load</span>
                          <span className="text-emerald-500 font-mono font-bold text-[10px] mt-1">OPTIMAL</span>
                       </div>
-                      <div className="w-px h-6 bg-zinc-800" />
+                      <div className="w-px h-6 bg-gray-300 dark:bg-zinc-800" />
                       <div className="flex flex-col items-start px-3">
-                         <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest leading-none">Storage</span>
+                         <span className="text-[8px] font-black text-gray-500 dark:text-zinc-500 uppercase tracking-widest leading-none">Storage</span>
                          <span className="text-blue-500 font-mono font-bold text-[10px] mt-1">92% FREE</span>
                       </div>
                     </div>
@@ -351,7 +351,7 @@ export default function Navbar() {
 
                     <button
                       onClick={() => logout()}
-                      className="inline-flex items-center gap-2 rounded-xl bg-zinc-900 border border-zinc-800 p-2 sm:px-4 sm:py-2 text-xs font-bold uppercase tracking-wider text-red-500 transition-all hover:bg-red-500/10 hover:text-red-400 active:scale-95 shrink-0"
+                      className="inline-flex items-center gap-2 rounded-xl bg-gray-100 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 p-2 sm:px-4 sm:py-2 text-xs font-bold uppercase tracking-wider text-red-600 dark:text-red-500 transition-all hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-700 dark:hover:text-red-400 active:scale-95 shrink-0"
                       title="Abmelden"
                     >
                       <LogOut className="w-4 h-4 shrink-0" />
@@ -375,14 +375,14 @@ export default function Navbar() {
 
       {/* Left Slide-over Drawer */}
       <aside
-        className={`fixed top-0 bottom-0 start-0 z-[100] w-72 bg-zinc-950 border-r border-zinc-800 shadow-2xl transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 bottom-0 start-0 z-[100] w-72 bg-white dark:bg-zinc-950 border-r border-gray-200 dark:border-zinc-800 shadow-2xl transition-transform duration-300 ease-in-out ${
           isDrawerOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         <div className="flex flex-col h-full justify-between">
           <div className="flex flex-col flex-1 overflow-y-auto">
             {/* Drawer Header */}
-            <div className="h-16 flex items-center justify-between px-6 border-b border-zinc-800">
+            <div className="h-16 flex items-center justify-between px-6 border-b border-gray-200 dark:border-zinc-800">
               <Link href="/" className="flex items-center gap-2" onClick={() => setIsDrawerOpen(false)}>
                 <Image
                   src="/logo_light_wide_full.png"
@@ -396,7 +396,7 @@ export default function Navbar() {
               <button
                 type="button"
                 onClick={() => setIsDrawerOpen(false)}
-                className="rounded-lg p-1.5 bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white transition-colors"
+                className="rounded-lg p-1.5 bg-gray-100 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -404,9 +404,9 @@ export default function Navbar() {
 
             {/* Drawer User Profile (At top before menu) */}
             {user && (
-              <div className="p-4 border-b border-zinc-800 bg-zinc-900/40">
+              <div className="p-4 border-b border-gray-200 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900/40">
                 <div className="flex items-center gap-3 px-2 py-1">
-                  <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center font-bold uppercase text-white overflow-hidden shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-zinc-800 flex items-center justify-center font-bold uppercase text-gray-800 dark:text-white overflow-hidden shrink-0">
                     {user.avatar_path ? (
                       <Image
                         src={getMediaUrl(user.avatar_path)}
@@ -420,7 +420,7 @@ export default function Navbar() {
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-bold text-white truncate">{user.username}</p>
+                    <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{user.username}</p>
                     <p className="text-xs text-zinc-500 truncate">{user.email || user.role}</p>
                   </div>
                 </div>
@@ -438,7 +438,7 @@ export default function Navbar() {
                       key={item.href}
                       href={item.href}
                       onClick={() => setIsDrawerOpen(false)}
-                      className="flex items-center gap-3 px-4 py-3 rounded-xl text-zinc-400 hover:bg-zinc-900 hover:text-white transition-all"
+                      className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-900 hover:text-gray-900 dark:hover:text-white transition-all"
                     >
                       <Icon className="w-5 h-5 shrink-0" />
                       <span className="text-sm font-medium">{item.label}</span>
@@ -449,7 +449,7 @@ export default function Navbar() {
           </div>
 
           {/* Drawer Footer (PWA Install & Build Info) */}
-          <div className="p-4 border-t border-zinc-800 bg-zinc-950 text-center space-y-3">
+          <div className="p-4 border-t border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-center space-y-3">
             {canInstallPwa && (
               <button
                 onClick={handleInstallPwa}
@@ -472,7 +472,7 @@ export default function Navbar() {
 
             <button
               onClick={handleOpenChangelog}
-              className="w-full text-center text-[10px] text-zinc-500 hover:text-primary font-mono tracking-wider transition-colors flex items-center justify-center gap-1.5 py-1"
+              className="w-full text-center text-[10px] text-gray-500 dark:text-zinc-500 hover:text-primary font-mono tracking-wider transition-colors flex items-center justify-center gap-1.5 py-1"
               title="Klicken, um Versions-Changelog & Git-Historie anzuzeigen"
             >
               <History className="w-3 h-3 text-zinc-500 group-hover:text-primary" />

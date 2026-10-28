@@ -453,7 +453,7 @@ export default function PlayersPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white selection:bg-primary selection:text-white">
+    <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 text-gray-900 dark:text-white selection:bg-primary selection:text-white">
       <Navbar />
 
       <main className="w-full px-4 sm:px-6 lg:px-8 py-8">
@@ -474,35 +474,35 @@ export default function PlayersPage() {
               <div className="relative" ref={moreActionsMenuRef}>
                 <button
                   onClick={() => setIsMoreActionsMenuOpen(!isMoreActionsMenuOpen)}
-                  className="p-2 sm:p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 transition-all flex items-center justify-center"
+                  className="p-2 sm:p-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-zinc-800 transition-all flex items-center justify-center shadow-xs"
                   title="Optionen & Aktionen"
                 >
                   <MoreVertical className="w-5 h-5" />
                 </button>
 
                 {isMoreActionsMenuOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-64 rounded-xl bg-zinc-900 border border-zinc-700 shadow-2xl p-1.5 z-[110] space-y-1 text-xs font-semibold">
+                  <div className="absolute right-0 top-full mt-2 w-64 rounded-xl bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 shadow-2xl p-1.5 z-[110] space-y-1 text-xs font-semibold">
                     <button
                       onClick={() => {
                         setIsMoreActionsMenuOpen(false);
                         setIsImportModalOpen(true);
                       }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-zinc-200 hover:bg-zinc-800 transition-all text-left"
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-gray-700 dark:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-all text-left"
                     >
-                      <FileSpreadsheet className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <FileSpreadsheet className="w-4 h-4 text-emerald-500 dark:text-emerald-400 shrink-0" />
                       <span>DFB.net CSV Import</span>
                     </button>
 
-                    <div className="my-1 border-t border-zinc-800" />
+                    <div className="my-1 border-t border-gray-200 dark:border-zinc-800" />
 
                     <button
                       onClick={() => {
                         setIsMoreActionsMenuOpen(false);
                         handleSyncBirthdays();
                       }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-amber-300 hover:bg-zinc-800 transition-all text-left"
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-amber-600 dark:text-amber-300 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-all text-left"
                     >
-                      <Gift className="w-4 h-4 text-amber-400 shrink-0" />
+                      <Gift className="w-4 h-4 text-amber-500 dark:text-amber-400 shrink-0" />
                       <span>🎂 Geburtstage in Organizer</span>
                     </button>
 
@@ -511,9 +511,9 @@ export default function PlayersPage() {
                         setIsMoreActionsMenuOpen(false);
                         exportToExcel();
                       }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-emerald-400 hover:bg-zinc-800 transition-all text-left"
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-emerald-600 dark:text-emerald-400 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-all text-left"
                     >
-                      <Download className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <Download className="w-4 h-4 text-emerald-500 dark:text-emerald-400 shrink-0" />
                       <span>Excel Export</span>
                     </button>
 
@@ -522,9 +522,9 @@ export default function PlayersPage() {
                         setIsMoreActionsMenuOpen(false);
                         handlePrintRoster();
                       }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-blue-400 hover:bg-zinc-800 transition-all text-left"
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-blue-600 dark:text-blue-400 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-all text-left"
                     >
-                      <Printer className="w-4 h-4 text-blue-400 shrink-0" />
+                      <Printer className="w-4 h-4 text-blue-500 dark:text-blue-400 shrink-0" />
                       <span>PDF Drucken</span>
                     </button>
 
@@ -533,9 +533,9 @@ export default function PlayersPage() {
                         setIsMoreActionsMenuOpen(false);
                         setIsConsentModalOpen(true);
                       }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-emerald-400 hover:bg-zinc-800 transition-all text-left"
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-emerald-600 dark:text-emerald-400 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-all text-left"
                     >
-                      <Shield className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <Shield className="w-4 h-4 text-emerald-500 dark:text-emerald-400 shrink-0" />
                       <span>Muster-Einwilligung (PDF)</span>
                     </button>
                   </div>
@@ -546,7 +546,7 @@ export default function PlayersPage() {
         />
 
         {/* Filters & Search Toolbar */}
-        <div className="bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-xl rounded-2xl p-4 mb-8 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="bg-white/80 dark:bg-zinc-900/60 border border-gray-200 dark:border-zinc-800/80 backdrop-blur-xl rounded-2xl p-4 mb-8 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xs dark:shadow-md">
           {/* Team Filter Pills (Flex-Wrap on Mobile so no horizontal scroll needed) */}
           <div className="flex flex-wrap items-center gap-1.5 w-full md:w-auto">
             <button
@@ -554,7 +554,7 @@ export default function PlayersPage() {
               className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold transition-all ${
                 selectedTeamId === 'ALL'
                   ? 'bg-primary text-white shadow-md shadow-primary/20'
-                  : 'bg-zinc-800/50 text-zinc-400 hover:text-white hover:bg-zinc-800'
+                  : 'bg-gray-100 dark:bg-zinc-800/50 text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-zinc-800 border border-gray-200 dark:border-zinc-800'
               }`}
             >
               Alle Mannschaften ({players.length})
@@ -570,7 +570,7 @@ export default function PlayersPage() {
                   className={`px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1 border ${
                     selectedTeamId === t.id
                       ? 'bg-primary border-primary text-white shadow-md shadow-primary/20'
-                      : 'bg-zinc-800/50 border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800'
+                      : 'bg-gray-100 dark:bg-zinc-800/50 border-gray-200 dark:border-zinc-800 text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-zinc-800'
                   }`}
                 >
                   <span>{t.name}</span>
@@ -582,13 +582,13 @@ export default function PlayersPage() {
 
           {/* Search Input */}
           <div className="relative w-full md:w-80">
-            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-zinc-500" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Name oder DFB-Passnummer suchen..."
-              className="w-full pl-10 pr-4 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-primary transition-all"
+              className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-zinc-950 border border-gray-300 dark:border-zinc-800 rounded-xl text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-zinc-500 focus:outline-none focus:border-primary transition-all"
             />
           </div>
         </div>
@@ -597,25 +597,25 @@ export default function PlayersPage() {
         {loading ? (
           <div className="py-20 text-center">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent"></div>
-            <p className="text-zinc-500 text-sm mt-3">Lade Spielerliste...</p>
+            <p className="text-gray-500 dark:text-zinc-500 text-sm mt-3">Lade Spielerliste...</p>
           </div>
         ) : players.length === 0 ? (
-          <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-12 text-center">
-            <Users className="w-12 h-12 text-zinc-600 mx-auto mb-3" />
-            <h3 className="text-lg font-bold text-white mb-1">Keine Spieler gefunden</h3>
-            <p className="text-zinc-400 text-xs max-w-md mx-auto mb-6">
+          <div className="bg-white dark:bg-zinc-900/40 border border-gray-200 dark:border-zinc-800 rounded-2xl p-12 text-center shadow-xs dark:shadow-md">
+            <Users className="w-12 h-12 text-gray-400 dark:text-zinc-600 mx-auto mb-3" />
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Keine Spieler gefunden</h3>
+            <p className="text-gray-500 dark:text-zinc-400 text-xs max-w-md mx-auto mb-6">
               Es wurden noch keine Spieler für diesen Filter angelegt. Du kannst neue Spieler manuell erstellen oder direkt aus DFB.net per CSV importieren.
             </p>
             <div className="flex justify-center gap-3">
               <button
                 onClick={() => setIsImportModalOpen(true)}
-                className="bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all"
+                className="bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-gray-800 dark:text-white px-4 py-2 rounded-xl text-xs font-bold transition-all border border-gray-200 dark:border-transparent"
               >
                 DFB.net CSV Import
               </button>
               <button
                 onClick={() => setIsCreateModalOpen(true)}
-                className="bg-primary text-white px-4 py-2 rounded-xl text-xs font-bold transition-all"
+                className="bg-primary text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md shadow-primary/20"
               >
                 Neuer Spieler
               </button>
@@ -628,7 +628,7 @@ export default function PlayersPage() {
               {sortedPlayers.map((player) => (
                 <div
                   key={`card_${player.id}`}
-                  className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-4 shadow-xl space-y-3.5 backdrop-blur-md"
+                  className="bg-white dark:bg-zinc-900/90 border border-gray-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm dark:shadow-xl space-y-3.5 backdrop-blur-md"
                 >
                   {/* Card Header: Avatar/Jersey, Name, Team & Direct Actions */}
                   {(() => {
@@ -645,7 +645,7 @@ export default function PlayersPage() {
                       <>
                         <div className="flex items-start justify-between gap-3">
                           <Link href={`/players/${player.id}`} className="flex items-center gap-3 min-w-0 flex-1">
-                            <div className="w-11 h-11 rounded-2xl bg-zinc-800 border border-zinc-700 flex items-center justify-center font-bold text-primary shrink-0 relative overflow-hidden">
+                            <div className="w-11 h-11 rounded-2xl bg-gray-100 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 flex items-center justify-center font-bold text-primary shrink-0 relative overflow-hidden">
                               {player.profile_image_url ? (
                                 <img
                                   src={getMediaUrl(player.profile_image_url)}
@@ -660,11 +660,11 @@ export default function PlayersPage() {
                             </div>
 
                             <div className="min-w-0">
-                              <h3 className="font-bold text-sm text-white truncate hover:text-primary transition-colors">
+                              <h3 className="font-bold text-sm text-gray-900 dark:text-white truncate hover:text-primary transition-colors">
                                 {player.first_name} {player.last_name}
                               </h3>
-                              <div className="flex items-center gap-2 text-[10px] text-zinc-400 font-semibold mt-0.5">
-                                <span className="bg-zinc-800 px-2 py-0.5 rounded text-zinc-300 inline-flex items-center gap-1">
+                              <div className="flex items-center gap-2 text-[10px] text-gray-500 dark:text-zinc-400 font-semibold mt-0.5">
+                                <span className="bg-gray-100 dark:bg-zinc-800 px-2 py-0.5 rounded text-gray-700 dark:text-zinc-300 inline-flex items-center gap-1 border border-gray-200 dark:border-transparent">
                                   <span>{player.team_name || 'Kein Team'}</span>
                                   {canEditThisPlayer && <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400 shrink-0 inline-block ml-0.5" />}
                                 </span>
@@ -684,7 +684,7 @@ export default function PlayersPage() {
                             {canEditThisPlayer && (
                               <button
                                 onClick={() => openEditPlayerModal(player)}
-                                className="p-2 bg-zinc-800 text-zinc-400 hover:text-amber-400 rounded-xl"
+                                className="p-2 bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-zinc-400 hover:text-amber-500 dark:hover:text-amber-400 rounded-xl border border-gray-200 dark:border-transparent"
                                 title="Bearbeiten"
                               >
                                 <Edit3 className="w-4 h-4" />
@@ -697,14 +697,14 @@ export default function PlayersPage() {
                   })()}
 
                   {/* Mini Stats Footer: Attendance Rate, Latest Rating & Rating Date */}
-                  <div className="flex items-center justify-between text-xs pt-1 border-t border-zinc-800/60">
+                  <div className="flex items-center justify-between text-xs pt-1 border-t border-gray-100 dark:border-zinc-800/60">
                         <div className="flex items-center gap-2">
-                          <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-lg text-[11px] font-bold">
+                          <span className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-lg text-[11px] font-bold">
                             {player.attendance_rate !== undefined ? `${player.attendance_rate}%` : '100%'} Quote
                           </span>
 
                           {player.latest_rating ? (
-                            <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-lg text-[11px] font-bold flex items-center gap-1">
+                            <span className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-lg text-[11px] font-bold flex items-center gap-1">
                               <Star className="w-3 h-3 fill-amber-400" /> {player.latest_rating}/10
                             </span>
                           ) : null}
@@ -719,71 +719,71 @@ export default function PlayersPage() {
                 </div>
 
             {/* Desktop Table View (>= md / 768px) */}
-            <div className="hidden md:block bg-zinc-900/80 border border-zinc-800/80 rounded-2xl overflow-hidden backdrop-blur-xl shadow-xl">
+            <div className="hidden md:block bg-white dark:bg-zinc-900/80 border border-gray-200 dark:border-zinc-800/80 rounded-2xl overflow-hidden backdrop-blur-xl shadow-xs dark:shadow-xl">
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-zinc-950/80 border-b border-zinc-800 text-[11px] font-bold uppercase tracking-wider text-zinc-400 select-none">
-                      <th onClick={() => handleSort('number')} className="py-4 px-4 text-center w-12 cursor-pointer hover:text-white transition-colors">
+                    <tr className="bg-gray-50 dark:bg-zinc-950/80 border-b border-gray-200 dark:border-zinc-800 text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-400 select-none">
+                      <th onClick={() => handleSort('number')} className="py-4 px-4 text-center w-12 cursor-pointer hover:text-gray-900 dark:hover:text-white transition-colors">
                         <div className="flex items-center justify-center gap-1">
                           <span>#</span>
-                          <ArrowUpDown className="w-3 h-3 text-zinc-500" />
+                          <ArrowUpDown className="w-3 h-3 text-gray-400 dark:text-zinc-500" />
                         </div>
                       </th>
-                      <th onClick={() => handleSort('name')} className="py-4 px-4 cursor-pointer hover:text-white transition-colors">
+                      <th onClick={() => handleSort('name')} className="py-4 px-4 cursor-pointer hover:text-gray-900 dark:hover:text-white transition-colors">
                         <div className="flex items-center gap-1.5">
                           <span>Spieler / Name</span>
-                          <ArrowUpDown className="w-3 h-3 text-zinc-500" />
+                          <ArrowUpDown className="w-3 h-3 text-gray-400 dark:text-zinc-500" />
                         </div>
                       </th>
-                      <th onClick={() => handleSort('team')} className="py-4 px-4 cursor-pointer hover:text-white transition-colors">
+                      <th onClick={() => handleSort('team')} className="py-4 px-4 cursor-pointer hover:text-gray-900 dark:hover:text-white transition-colors">
                         <div className="flex items-center gap-1.5">
                           <span>Mannschaft</span>
-                          <ArrowUpDown className="w-3 h-3 text-zinc-500" />
+                          <ArrowUpDown className="w-3 h-3 text-gray-400 dark:text-zinc-500" />
                         </div>
                       </th>
-                      <th onClick={() => handleSort('position')} className="py-4 px-4 cursor-pointer hover:text-white transition-colors">
+                      <th onClick={() => handleSort('position')} className="py-4 px-4 cursor-pointer hover:text-gray-900 dark:hover:text-white transition-colors">
                         <div className="flex items-center gap-1.5">
                           <span>Position</span>
-                          <ArrowUpDown className="w-3 h-3 text-zinc-500" />
+                          <ArrowUpDown className="w-3 h-3 text-gray-400 dark:text-zinc-500" />
                         </div>
                       </th>
-                      <th onClick={() => handleSort('dfb_id')} className="py-4 px-4 cursor-pointer hover:text-white transition-colors">
+                      <th onClick={() => handleSort('dfb_id')} className="py-4 px-4 cursor-pointer hover:text-gray-900 dark:hover:text-white transition-colors">
                         <div className="flex items-center gap-1.5">
                           <span>DFB-Passnummer</span>
-                          <ArrowUpDown className="w-3 h-3 text-zinc-500" />
+                          <ArrowUpDown className="w-3 h-3 text-gray-400 dark:text-zinc-500" />
                         </div>
                       </th>
-                      <th onClick={() => handleSort('attendance')} className="py-4 px-4 text-center cursor-pointer hover:text-white transition-colors">
+                      <th onClick={() => handleSort('attendance')} className="py-4 px-4 text-center cursor-pointer hover:text-gray-900 dark:hover:text-white transition-colors">
                         <div className="flex items-center justify-center gap-1.5">
                           <span>Gesamt %</span>
-                          <ArrowUpDown className="w-3 h-3 text-zinc-500" />
+                          <ArrowUpDown className="w-3 h-3 text-gray-400 dark:text-zinc-500" />
                         </div>
                       </th>
-                      <th onClick={() => handleSort('rating')} className="py-4 px-4 text-center cursor-pointer hover:text-white transition-colors">
+                      <th onClick={() => handleSort('rating')} className="py-4 px-4 text-center cursor-pointer hover:text-gray-900 dark:hover:text-white transition-colors">
                         <div className="flex items-center justify-center gap-1.5">
                           <span>Letzte Note</span>
-                          <ArrowUpDown className="w-3 h-3 text-zinc-500" />
+                          <ArrowUpDown className="w-3 h-3 text-gray-400 dark:text-zinc-500" />
                         </div>
                       </th>
-                      <th onClick={() => handleSort('eval_date')} className="py-4 px-4 text-center cursor-pointer hover:text-white transition-colors">
+                      <th onClick={() => handleSort('eval_date')} className="py-4 px-4 text-center cursor-pointer hover:text-gray-900 dark:hover:text-white transition-colors">
                         <div className="flex items-center justify-center gap-1.5">
                           <span>Zuletzt eingeschätzt</span>
-                          <ArrowUpDown className="w-3 h-3 text-zinc-500" />
+                          <ArrowUpDown className="w-3 h-3 text-gray-400 dark:text-zinc-500" />
                         </div>
                       </th>
                       <th className="py-4 px-4 text-right pr-6">Aktionen</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-zinc-800/60 text-xs">
+                  <tbody className="divide-y divide-gray-200 dark:divide-zinc-800/60 text-xs">
                     {sortedPlayers.map((player) => (
                       <tr
                         key={player.id}
-                        className="group hover:bg-zinc-800/40 transition-colors"
+                        className="group hover:bg-gray-50 dark:hover:bg-zinc-800/40 transition-colors"
                       >
                         {/* Jersey / Number */}
                         <td className="py-3.5 px-4 text-center">
-                          <span className="w-8 h-8 rounded-lg bg-zinc-800 border border-zinc-700 inline-flex items-center justify-center font-bold text-xs text-primary">
+                          <span className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 inline-flex items-center justify-center font-bold text-xs text-primary">
                             {player.jersey_number ? `#${player.jersey_number}` : player.first_name[0]}
                           </span>
                         </td>
@@ -792,11 +792,11 @@ export default function PlayersPage() {
                         <td className="py-3.5 px-4">
                           <Link href={`/players/${player.id}`} className="flex items-center gap-3 group-hover:text-primary transition-colors">
                             <div>
-                              <div className="font-bold text-sm text-white group-hover:text-primary transition-colors">
+                              <div className="font-bold text-sm text-gray-900 dark:text-white group-hover:text-primary transition-colors">
                                 {player.first_name} {player.last_name}
                               </div>
                               {player.nationality && (
-                                <div className="text-[10px] text-zinc-500 font-semibold">Nat: {player.nationality}</div>
+                                <div className="text-[10px] text-gray-500 dark:text-zinc-500 font-semibold">Nat: {player.nationality}</div>
                               )}
                             </div>
                           </Link>
@@ -809,7 +809,7 @@ export default function PlayersPage() {
                             const tMatch = teams.find((item: any) => item.id === player.team_id);
                             const isEditableTeam = ut ? Boolean(ut.can_edit) : (tMatch ? Boolean(tMatch.can_edit) : false);
                             return (
-                              <span className="text-xs font-bold text-zinc-300 bg-zinc-800/80 px-2.5 py-1 rounded-lg border border-zinc-700/50 inline-flex items-center gap-1">
+                              <span className="text-xs font-bold text-gray-700 dark:text-zinc-300 bg-gray-100 dark:bg-zinc-800/80 px-2.5 py-1 rounded-lg border border-gray-200 dark:border-zinc-700/50 inline-flex items-center gap-1">
                                 <span>{player.team_name || 'Keine Mannschaft'}</span>
                                 {isEditableTeam && <Star className="w-3 h-3 fill-amber-400 text-amber-400 shrink-0 inline-block ml-0.5" />}
                               </span>
@@ -818,18 +818,18 @@ export default function PlayersPage() {
                         </td>
 
                         {/* Position */}
-                        <td className="py-3.5 px-4 font-semibold text-zinc-400">
+                        <td className="py-3.5 px-4 font-semibold text-gray-600 dark:text-zinc-400">
                           {player.position || 'Feldspieler'}
                         </td>
 
                         {/* DFB Passnummer */}
-                        <td className="py-3.5 px-4 font-mono font-semibold text-zinc-300">
+                        <td className="py-3.5 px-4 font-mono font-semibold text-gray-700 dark:text-zinc-300">
                           {player.dfb_id || '—'}
                         </td>
 
                       {/* Anwesenheit Rate */}
                       <td className="py-3.5 px-4 text-center">
-                        <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-lg text-xs font-bold">
+                        <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-lg text-xs font-bold">
                           <Check className="w-3 h-3" />
                           {player.attendance_rate !== undefined ? `${player.attendance_rate}%` : '100%'}
                         </span>
@@ -838,12 +838,12 @@ export default function PlayersPage() {
                       {/* Letzte Quartalsnote */}
                       <td className="py-3.5 px-4 text-center">
                         {player.latest_rating ? (
-                          <span className="inline-flex items-center gap-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2.5 py-1 rounded-lg text-xs font-bold">
+                          <span className="inline-flex items-center gap-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-2.5 py-1 rounded-lg text-xs font-bold">
                             <Star className="w-3 h-3 fill-amber-400" />
                             {player.latest_rating} / 10
                           </span>
                         ) : (
-                          <span className="text-zinc-600 font-medium">—</span>
+                          <span className="text-gray-400 dark:text-zinc-600 font-medium">—</span>
                         )}
                       </td>
 
@@ -873,26 +873,26 @@ export default function PlayersPage() {
                                     setTargetTeamId(player.team_id || (teams[0]?.id || ''));
                                     setIsTransferModalOpen(true);
                                   }}
-                                  className="p-1.5 bg-zinc-800/60 hover:bg-zinc-700 text-zinc-300 rounded-lg transition-all border border-zinc-700/50"
+                                  className="p-1.5 bg-gray-100 dark:bg-zinc-800/60 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-600 dark:text-zinc-300 rounded-lg transition-all border border-gray-200 dark:border-zinc-700/50"
                                   title="In andere Mannschaft verschieben (z.B. E3 -> E2)"
                                 >
-                                  <MoveRight className="w-4 h-4 text-emerald-400" />
+                                  <MoveRight className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
                                 </button>
                               )}
 
                               {canEditThisPlayer && (
                                 <button
                                   onClick={() => openEditPlayerModal(player)}
-                                  className="p-1.5 bg-zinc-800/60 hover:bg-amber-600/20 hover:text-amber-400 text-zinc-400 rounded-lg transition-all border border-zinc-700/50"
+                                  className="p-1.5 bg-gray-100 dark:bg-zinc-800/60 hover:bg-amber-100 dark:hover:bg-amber-600/20 hover:text-amber-600 dark:hover:text-amber-400 text-gray-500 dark:text-zinc-400 rounded-lg transition-all border border-gray-200 dark:border-zinc-700/50"
                                   title="Spielerdaten bearbeiten"
                                 >
-                                  <Edit3 className="w-4 h-4 text-amber-400" />
+                                  <Edit3 className="w-4 h-4 text-amber-500 dark:text-amber-400" />
                                 </button>
                               )}
 
                               <Link
                                 href={`/players/${player.id}`}
-                                className="p-1.5 bg-zinc-800/60 hover:bg-primary/20 hover:text-primary text-zinc-400 rounded-lg transition-all border border-zinc-700/50"
+                                className="p-1.5 bg-gray-100 dark:bg-zinc-800/60 hover:bg-primary/15 hover:text-primary text-gray-500 dark:text-zinc-400 rounded-lg transition-all border border-gray-200 dark:border-zinc-700/50"
                                 title="Profil & Bewertung öffnen"
                               >
                                 <Eye className="w-4 h-4 text-primary" />
@@ -901,7 +901,7 @@ export default function PlayersPage() {
                               {canEditThisPlayer && (
                                 <button
                                   onClick={() => setDeletePlayerId(player.id)}
-                                  className="p-1.5 bg-zinc-800/60 hover:bg-red-600/20 hover:text-red-400 text-zinc-400 rounded-lg transition-all border border-zinc-700/50"
+                                  className="p-1.5 bg-gray-100 dark:bg-zinc-800/60 hover:bg-red-100 dark:hover:bg-red-600/20 hover:text-red-600 dark:hover:text-red-400 text-gray-500 dark:text-zinc-400 rounded-lg transition-all border border-gray-200 dark:border-zinc-700/50"
                                   title="Spieler löschen"
                                 >
                                   <Trash2 className="w-4 h-4" />
@@ -924,15 +924,15 @@ export default function PlayersPage() {
       {/* --- Modal: Neuer Spieler anlegen --- */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5">
-            <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+          <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 text-gray-900 dark:text-white">
+            <div className="flex items-center justify-between border-b border-gray-200 dark:border-zinc-800 pb-3">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <UserPlus className="w-5 h-5 text-primary" />
                 Neuen Spieler anlegen
               </h2>
               <button
                 onClick={() => setIsCreateModalOpen(false)}
-                className="text-zinc-400 hover:text-white text-xl font-bold"
+                className="text-gray-400 hover:text-gray-600 dark:text-zinc-400 dark:hover:text-white text-xl font-bold"
               >
                 &times;
               </button>
@@ -941,59 +941,59 @@ export default function PlayersPage() {
             <form onSubmit={handleCreatePlayer} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">Vorname *</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-zinc-400 mb-1">Vorname *</label>
                   <input
                     type="text"
                     required
                     value={newFirstName}
                     onChange={(e) => setNewFirstName(e.target.value)}
                     placeholder="z.B. Theo"
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-primary"
+                    className="w-full bg-gray-50 dark:bg-zinc-950 border border-gray-300 dark:border-zinc-800 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-primary"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">Nachname *</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-zinc-400 mb-1">Nachname *</label>
                   <input
                     type="text"
                     required
                     value={newLastName}
                     onChange={(e) => setNewLastName(e.target.value)}
                     placeholder="z.B. Al Hamud"
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-primary"
+                    className="w-full bg-gray-50 dark:bg-zinc-950 border border-gray-300 dark:border-zinc-800 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-primary"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">Geburtsdatum</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-zinc-400 mb-1">Geburtsdatum</label>
                   <input
                     type="text"
                     value={newDob}
                     onChange={(e) => setNewDob(e.target.value)}
                     placeholder="z.B. 26.07.2017"
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-primary"
+                    className="w-full bg-gray-50 dark:bg-zinc-950 border border-gray-300 dark:border-zinc-800 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-primary"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">DFB Passnummer</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-zinc-400 mb-1">DFB Passnummer</label>
                   <input
                     type="text"
                     value={newDfbId}
                     onChange={(e) => setNewDfbId(e.target.value)}
                     placeholder="z.B. 0727-4836"
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-primary font-mono"
+                    className="w-full bg-gray-50 dark:bg-zinc-950 border border-gray-300 dark:border-zinc-800 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-primary font-mono"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">Mannschaft</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-zinc-400 mb-1">Mannschaft</label>
                   <select
                     value={newTeamId}
                     onChange={(e) => setNewTeamId(e.target.value)}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-primary"
+                    className="w-full bg-gray-50 dark:bg-zinc-950 border border-gray-300 dark:border-zinc-800 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-primary"
                   >
                     {teams
                       .filter((t) => Boolean(t.can_edit))
@@ -1003,11 +1003,11 @@ export default function PlayersPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">Position</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-zinc-400 mb-1">Position</label>
                   <select
                     value={newPosition}
                     onChange={(e) => setNewPosition(e.target.value)}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-primary"
+                    className="w-full bg-gray-50 dark:bg-zinc-950 border border-gray-300 dark:border-zinc-800 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-primary"
                   >
                     <option value="Torwart">Torwart</option>
                     <option value="Abwehr">Abwehr</option>
@@ -1018,18 +1018,18 @@ export default function PlayersPage() {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 pt-3 border-t border-zinc-800">
+              <div className="flex justify-end gap-3 pt-3 border-t border-gray-200 dark:border-zinc-800">
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs font-bold"
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-gray-700 dark:text-zinc-300 rounded-xl text-xs font-bold border border-gray-200 dark:border-transparent transition-all"
                 >
                   Abbrechen
                 </button>
                 <button
                   type="submit"
                   disabled={isSaving}
-                  className="px-5 py-2 bg-primary hover:bg-primary/90 text-white rounded-xl text-xs font-bold shadow-md shadow-primary/20"
+                  className="px-5 py-2 bg-primary hover:bg-primary/90 text-white rounded-xl text-xs font-bold shadow-md shadow-primary/20 transition-all"
                 >
                   {isSaving ? 'Speichere...' : 'Spieler Speichern'}
                 </button>
@@ -1042,15 +1042,15 @@ export default function PlayersPage() {
       {/* --- Modal: Spieler bearbeiten --- */}
       {isEditModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5">
-            <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                <Edit3 className="w-5 h-5 text-amber-400" />
+          <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 text-gray-900 dark:text-white">
+            <div className="flex items-center justify-between border-b border-gray-200 dark:border-zinc-800 pb-3">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <Edit3 className="w-5 h-5 text-amber-500 dark:text-amber-400" />
                 Spieler bearbeiten
               </h2>
               <button
                 onClick={() => { setIsEditModalOpen(false); setEditingPlayerId(null); }}
-                className="text-zinc-400 hover:text-white text-xl font-bold"
+                className="text-gray-400 hover:text-gray-600 dark:text-zinc-400 dark:hover:text-white text-xl font-bold"
               >
                 &times;
               </button>
@@ -1059,69 +1059,69 @@ export default function PlayersPage() {
             <form onSubmit={handleUpdatePlayer} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">Vorname *</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-zinc-400 mb-1">Vorname *</label>
                   <input
                     type="text"
                     required
                     value={newFirstName}
                     onChange={(e) => setNewFirstName(e.target.value)}
                     placeholder="z.B. Theo"
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-primary"
+                    className="w-full bg-gray-50 dark:bg-zinc-950 border border-gray-300 dark:border-zinc-800 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-primary"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">Nachname *</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-zinc-400 mb-1">Nachname *</label>
                   <input
                     type="text"
                     required
                     value={newLastName}
                     onChange={(e) => setNewLastName(e.target.value)}
                     placeholder="z.B. Al Hamud"
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-primary"
+                    className="w-full bg-gray-50 dark:bg-zinc-950 border border-gray-300 dark:border-zinc-800 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-primary"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">Geburtsdatum</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-zinc-400 mb-1">Geburtsdatum</label>
                   <input
                     type="text"
                     value={newDob}
                     onChange={(e) => setNewDob(e.target.value)}
                     placeholder="z.B. 26.07.2017"
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-primary"
+                    className="w-full bg-gray-50 dark:bg-zinc-950 border border-gray-300 dark:border-zinc-800 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-primary"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">DFB Passnummer</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-zinc-400 mb-1">DFB Passnummer</label>
                   <input
                     type="text"
                     value={newDfbId}
                     onChange={(e) => setNewDfbId(e.target.value)}
                     placeholder="z.B. 0727-4836"
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-primary font-mono"
+                    className="w-full bg-gray-50 dark:bg-zinc-950 border border-gray-300 dark:border-zinc-800 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-primary font-mono"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">Trikotnr.</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-zinc-400 mb-1">Trikotnr.</label>
                   <input
                     type="number"
                     value={newJerseyNumber}
                     onChange={(e) => setNewJerseyNumber(e.target.value)}
                     placeholder="z.B. 10"
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-primary font-mono"
+                    className="w-full bg-gray-50 dark:bg-zinc-950 border border-gray-300 dark:border-zinc-800 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-primary font-mono"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">Mannschaft</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-zinc-400 mb-1">Mannschaft</label>
                   <select
                     value={newTeamId}
                     onChange={(e) => setNewTeamId(e.target.value)}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-primary"
+                    className="w-full bg-gray-50 dark:bg-zinc-950 border border-gray-300 dark:border-zinc-800 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-primary"
                   >
                     {teams.map((t) => (
                       <option key={t.id} value={t.id}>{t.name}</option>
@@ -1129,11 +1129,11 @@ export default function PlayersPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">Position</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-zinc-400 mb-1">Position</label>
                   <select
                     value={newPosition}
                     onChange={(e) => setNewPosition(e.target.value)}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-primary"
+                    className="w-full bg-gray-50 dark:bg-zinc-950 border border-gray-300 dark:border-zinc-800 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-primary"
                   >
                     <option value="Torwart">Torwart</option>
                     <option value="Abwehr">Abwehr</option>
@@ -1144,18 +1144,18 @@ export default function PlayersPage() {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 pt-3 border-t border-zinc-800">
+              <div className="flex justify-end gap-3 pt-3 border-t border-gray-200 dark:border-zinc-800">
                 <button
                   type="button"
                   onClick={() => { setIsEditModalOpen(false); setEditingPlayerId(null); }}
-                  className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs font-bold"
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-gray-700 dark:text-zinc-300 rounded-xl text-xs font-bold border border-gray-200 dark:border-transparent transition-all"
                 >
                   Abbrechen
                 </button>
                 <button
                   type="submit"
                   disabled={isSaving}
-                  className="px-5 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-bold shadow-md shadow-amber-600/20"
+                  className="px-5 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-bold shadow-md shadow-amber-600/20 transition-all"
                 >
                   {isSaving ? 'Speichere...' : 'Änderungen Speichern'}
                 </button>
@@ -1168,48 +1168,48 @@ export default function PlayersPage() {
       {/* --- Modal: DFB.net CSV Import --- */}
       {isImportModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5">
-            <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                <FileSpreadsheet className="w-5 h-5 text-emerald-400" />
+          <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 text-gray-900 dark:text-white">
+            <div className="flex items-center justify-between border-b border-gray-200 dark:border-zinc-800 pb-3">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <FileSpreadsheet className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
                 DFB.net CSV Import
               </h2>
               <button
                 onClick={() => setIsImportModalOpen(false)}
-                className="text-zinc-400 hover:text-white text-xl font-bold"
+                className="text-gray-400 hover:text-gray-600 dark:text-zinc-400 dark:hover:text-white text-xl font-bold"
               >
                 &times;
               </button>
             </div>
 
-            <p className="text-xs text-zinc-400 leading-relaxed">
+            <p className="text-xs text-gray-600 dark:text-zinc-400 leading-relaxed">
               Importiere eine aus <strong>DFB.net</strong> exportierte CSV-Spielerliste. Die Felder <em>Name</em>, <em>Vorname</em>, <em>Geburtsdatum</em>, <em>Nationalität</em> und <em>Passnummer</em> werden automatisch zugewiesen.
             </p>
 
             {/* Help Hint: Wo exportiere ich die CSV in DFB.net? */}
-            <div className="p-3 rounded-xl bg-zinc-950/90 border border-zinc-800 space-y-2">
-              <div className="flex items-center gap-1.5 text-amber-400 font-bold text-[11px]">
+            <div className="p-3 rounded-xl bg-gray-50 dark:bg-zinc-950/90 border border-gray-200 dark:border-zinc-800 space-y-2">
+              <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-bold text-[11px]">
                 <span>💡 Wo finde ich den CSV-Export in DFB.net?</span>
               </div>
-              <p className="text-[11px] text-zinc-400 leading-normal">
-                Öffne in <strong className="text-zinc-200">DFB.net</strong> die <strong className="text-zinc-200">Spielberechtigungsliste</strong> deiner Mannschaft und klicke unten auf den Button <strong className="text-amber-300">EXPORT</strong>, um die CSV-Datei herunterzuladen.
+              <p className="text-[11px] text-gray-600 dark:text-zinc-400 leading-normal">
+                Öffne in <strong className="text-gray-800 dark:text-zinc-200">DFB.net</strong> die <strong className="text-gray-800 dark:text-zinc-200">Spielberechtigungsliste</strong> deiner Mannschaft und klicke unten auf den Button <strong className="text-amber-600 dark:text-amber-300">EXPORT</strong>, um die CSV-Datei herunterzuladen.
               </p>
-              <div className="rounded-lg border border-zinc-800 bg-black/60 p-1.5 overflow-hidden">
+              <div className="rounded-lg border border-gray-200 dark:border-zinc-800 bg-gray-100 dark:bg-black/60 p-1.5 overflow-hidden">
                 <img
                   src="/dfb_net_export_help.png"
                   alt="DFB.net Spielberechtigungsliste – EXPORT Button"
-                  className="w-full rounded border border-zinc-700/60 object-cover"
+                  className="w-full rounded border border-gray-300 dark:border-zinc-700/60 object-cover"
                 />
               </div>
             </div>
 
             <form onSubmit={handleDfbCsvImport} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">Ziel-Mannschaft auswählen *</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-zinc-400 mb-1">Ziel-Mannschaft auswählen *</label>
                 <select
                   value={importTeamId}
                   onChange={(e) => setImportTeamId(e.target.value)}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-primary"
+                  className="w-full bg-gray-50 dark:bg-zinc-950 border border-gray-300 dark:border-zinc-800 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-primary"
                 >
                   {teams
                     .filter((t) => Boolean(t.can_edit))
@@ -1220,35 +1220,35 @@ export default function PlayersPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">DFB.net CSV-Datei wählen *</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-zinc-400 mb-1">DFB.net CSV-Datei wählen *</label>
                 <input
                   type="file"
                   accept=".csv, .txt"
                   required
                   onChange={(e) => setCsvFile(e.target.files?.[0] || null)}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-xs text-zinc-300 file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-zinc-800 file:text-white hover:file:bg-zinc-700"
+                  className="w-full bg-gray-50 dark:bg-zinc-950 border border-gray-300 dark:border-zinc-800 rounded-xl p-2.5 text-xs text-gray-700 dark:text-zinc-300 file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-gray-200 dark:file:bg-zinc-800 file:text-gray-800 dark:file:text-white hover:file:bg-gray-300 dark:hover:file:bg-zinc-700"
                 />
               </div>
 
               {csvFile && (
-                <div className="p-3 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-zinc-300 space-y-1">
-                  <div className="font-bold text-emerald-400">Ausgewählte Datei: {csvFile.name}</div>
-                  <div className="text-[11px] text-zinc-500">Größe: {(csvFile.size / 1024).toFixed(1)} KB</div>
+                <div className="p-3 rounded-xl bg-gray-50 dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 text-xs text-gray-700 dark:text-zinc-300 space-y-1">
+                  <div className="font-bold text-emerald-600 dark:text-emerald-400">Ausgewählte Datei: {csvFile.name}</div>
+                  <div className="text-[11px] text-gray-500 dark:text-zinc-500">Größe: {(csvFile.size / 1024).toFixed(1)} KB</div>
                 </div>
               )}
 
-              <div className="flex justify-end gap-3 pt-3 border-t border-zinc-800">
+              <div className="flex justify-end gap-3 pt-3 border-t border-gray-200 dark:border-zinc-800">
                 <button
                   type="button"
                   onClick={() => setIsImportModalOpen(false)}
-                  className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs font-bold"
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-gray-700 dark:text-zinc-300 rounded-xl text-xs font-bold border border-gray-200 dark:border-transparent transition-all"
                 >
                   Abbrechen
                 </button>
                 <button
                   type="submit"
                   disabled={isImporting || !csvFile}
-                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20"
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 transition-all"
                 >
                   {isImporting ? 'Importiere...' : 'CSV Jetzt Importieren'}
                 </button>
@@ -1261,30 +1261,30 @@ export default function PlayersPage() {
       {/* --- Modal: Mannschaft verschieben --- */}
       {isTransferModalOpen && selectedPlayerForTransfer && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5">
-            <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                <MoveRight className="w-5 h-5 text-emerald-400" />
+          <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5 text-gray-900 dark:text-white">
+            <div className="flex items-center justify-between border-b border-gray-200 dark:border-zinc-800 pb-3">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <MoveRight className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
                 Spieler in andere Mannschaft verschieben
               </h2>
               <button
                 onClick={() => setIsTransferModalOpen(false)}
-                className="text-zinc-400 hover:text-white text-xl font-bold"
+                className="text-gray-400 hover:text-gray-600 dark:text-zinc-400 dark:hover:text-white text-xl font-bold"
               >
                 &times;
               </button>
             </div>
 
-            <p className="text-xs text-zinc-300">
-              Verschiebe <strong className="text-white">{selectedPlayerForTransfer.first_name} {selectedPlayerForTransfer.last_name}</strong> in eine andere Mannschaft (z.&nbsp;B. von E3 zu E2).
+            <p className="text-xs text-gray-600 dark:text-zinc-300">
+              Verschiebe <strong className="text-gray-900 dark:text-white">{selectedPlayerForTransfer.first_name} {selectedPlayerForTransfer.last_name}</strong> in eine andere Mannschaft (z.&nbsp;B. von E3 zu E2).
             </p>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">Neue Ziel-Mannschaft</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-zinc-400 mb-1">Neue Ziel-Mannschaft</label>
               <select
                 value={targetTeamId}
                 onChange={(e) => setTargetTeamId(e.target.value)}
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-primary"
+                className="w-full bg-gray-50 dark:bg-zinc-950 border border-gray-300 dark:border-zinc-800 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-primary"
               >
                 {teams.map((t) => (
                   <option key={t.id} value={t.id}>{t.name}</option>
@@ -1292,18 +1292,18 @@ export default function PlayersPage() {
               </select>
             </div>
 
-            <div className="flex justify-end gap-3 pt-3 border-t border-zinc-800">
+            <div className="flex justify-end gap-3 pt-3 border-t border-gray-200 dark:border-zinc-800">
               <button
                 type="button"
                 onClick={() => setIsTransferModalOpen(false)}
-                className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs font-bold"
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-gray-700 dark:text-zinc-300 rounded-xl text-xs font-bold border border-gray-200 dark:border-transparent transition-all"
               >
                 Abbrechen
               </button>
               <button
                 type="button"
                 onClick={handleTransfer}
-                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20"
+                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 transition-all"
               >
                 Verschieben Bestätigen
               </button>

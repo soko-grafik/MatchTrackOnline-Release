@@ -134,3 +134,44 @@ def get_legal_templates(db: Session = Depends(get_db)):
         "default_privacy": get_default_privacy(club_name, contact_email, address),
         "default_terms": get_default_terms(club_name)
     }
+
+class PublicLivestreamOut(BaseModel):
+    is_protected: bool
+    title: str
+
+class LivestreamVerifyIn(BaseModel):
+    password: str
+
+@router.get("/livestream", response_model=PublicLivestreamOut)
+def get_public_livestream_status(db: Session = Depends(get_db)):
+    """
+    Öffentliche Status-Abfrage für den Livestream:
+    Liefert den Schutz-Status und Titel.
+    """
+    settings = db.query(SystemSettings).first()
+    is_protected = bool(getattr(settings, "livestream_is_protected", False)) if settings else False
+    has_pass = bool(getattr(settings, "livestream_password", None)) if settings else False
+    title = (getattr(settings, "livestream_title", None) or "MatchTrack Livestream") if settings else "MatchTrack Livestream"
+    
+    return {
+        "is_protected": is_protected and has_pass,
+        "title": title
+    }
+
+@router.post("/livestream/verify")
+def verify_livestream_password(data: LivestreamVerifyIn, db: Session = Depends(get_db)):
+    """
+    Überprüft das Passwort für den geschützten Livestream.
+    """
+    settings = db.query(SystemSettings).first()
+    if not settings or not getattr(settings, "livestream_is_protected", False):
+        return {"success": True}
+    
+    stored_password = getattr(settings, "livestream_password", "") or ""
+    if not stored_password:
+        return {"success": True}
+        
+    if data.password.strip() == stored_password.strip():
+        return {"success": True}
+    else:
+        raise HTTPException(status_code=401, detail="Ungültiges Livestream-Passwort")

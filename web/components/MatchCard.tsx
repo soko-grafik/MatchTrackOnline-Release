@@ -60,10 +60,10 @@ export default function MatchCard({ match, user, onToggleSubscription, onEditReq
 
   return (
     <Link href={`/matches?id=${match.id}`} className="group relative block h-full">
-      <div className="flex h-full flex-col overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 transition-all hover:border-primary hover:shadow-lg">
+      <div className="flex h-full flex-col overflow-hidden rounded-lg border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 transition-all hover:border-primary hover:shadow-lg shadow-sm">
         
         {/* Thumbnail Hero Section */}
-        <div className="relative aspect-video w-full shrink-0 overflow-hidden bg-zinc-950">
+        <div className="relative aspect-video w-full shrink-0 overflow-hidden bg-gray-100 dark:bg-zinc-950">
           {match.thumbnail_path ? (
             <Image
               src={getMediaUrl(match.thumbnail_path)}
@@ -72,7 +72,7 @@ export default function MatchCard({ match, user, onToggleSubscription, onEditReq
               className="object-cover opacity-80 transition-all duration-500 group-hover:scale-105 group-hover:opacity-100"
             />
           ) : (
-            <div className="absolute inset-0 bg-gradient-to-tr from-zinc-900 to-zinc-800" />
+            <div className="absolute inset-0 bg-gradient-to-tr from-gray-200 to-gray-300 dark:from-zinc-900 dark:to-zinc-800" />
           )}
 
           {/* Live Status Overlay Bar (Stitching / Heatmap / Highlights / Error) */}
@@ -148,7 +148,7 @@ export default function MatchCard({ match, user, onToggleSubscription, onEditReq
                   e.stopPropagation();
                   onEditRequest(e, match);
                 }}
-                className="rounded-md bg-zinc-900/60 p-1.5 text-zinc-300 hover:bg-primary hover:text-white transition-colors"
+                className="rounded-md bg-white/80 dark:bg-zinc-900/60 p-1.5 text-gray-700 dark:text-zinc-300 hover:bg-primary hover:text-white transition-colors shadow-xs"
                 title="Match bearbeiten"
               >
                 <Edit2 className="h-4 w-4" />
@@ -161,7 +161,7 @@ export default function MatchCard({ match, user, onToggleSubscription, onEditReq
                   e.stopPropagation();
                   onDeleteRequest(e, match);
                 }}
-                className="rounded-md bg-zinc-900/60 p-1.5 text-zinc-300 hover:bg-red-600 hover:text-white transition-colors"
+                className="rounded-md bg-white/80 dark:bg-zinc-900/60 p-1.5 text-gray-700 dark:text-zinc-300 hover:bg-red-600 hover:text-white transition-colors shadow-xs"
                 title="Spiel löschen"
               >
                 <Trash2 className="h-4 w-4" />
@@ -183,26 +183,26 @@ export default function MatchCard({ match, user, onToggleSubscription, onEditReq
             {/* Category / Card Type Badge & Video Type Badge directly above Title */}
             <div className="mb-1.5 flex items-center justify-between gap-1.5 min-h-[20px]">
               {match.category ? (
-                <span className="inline-block rounded border border-zinc-800 bg-zinc-950/80 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-zinc-300 truncate">
+                <span className="inline-block rounded border border-gray-200 dark:border-zinc-800 bg-gray-100 dark:bg-zinc-950/80 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-gray-700 dark:text-zinc-300 truncate">
                   {match.category}
                 </span>
               ) : <div />}
 
               {videoType && (
-                <span className="inline-flex items-center gap-1 rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-400 tracking-wide shrink-0">
+                <span className="inline-flex items-center gap-1 rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 tracking-wide shrink-0">
                   <Video className="w-3 h-3 text-emerald-400 shrink-0" />
                   <span>{videoType}</span>
                 </span>
               )}
             </div>
 
-            <h3 className="font-bold text-emerald-400 transition-colors group-hover:text-emerald-300 line-clamp-2 text-base">
+            <h3 className="font-bold text-emerald-600 dark:text-emerald-400 transition-colors group-hover:text-emerald-500 dark:group-hover:text-emerald-300 line-clamp-2 text-base">
               {match.name || `Match ${match.id}`}
             </h3>
             
-            <div className="mt-2.5 flex items-center justify-between gap-2 text-xs text-zinc-400">
-              <div className="flex items-center gap-1.5 text-zinc-300 font-medium">
-                <Calendar className="h-4 w-4 shrink-0 text-zinc-400" />
+            <div className="mt-2.5 flex items-center justify-between gap-2 text-xs text-gray-500 dark:text-zinc-400">
+              <div className="flex items-center gap-1.5 text-gray-700 dark:text-zinc-300 font-medium">
+                <Calendar className="h-4 w-4 shrink-0 text-gray-400 dark:text-zinc-400" />
                 <time>
                   {match.recording_date
                     ? `${new Date(match.recording_date).toLocaleDateString('de-DE')} • ${new Date(match.recording_date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`
@@ -212,7 +212,7 @@ export default function MatchCard({ match, user, onToggleSubscription, onEditReq
               </div>
 
               {(match.video_quality || match.file_size_mb) && (
-                <span className="rounded bg-zinc-800/80 px-2 py-0.5 font-mono text-[11px] text-zinc-400 border border-zinc-700/50">
+                <span className="rounded bg-gray-100 dark:bg-zinc-800/80 px-2 py-0.5 font-mono text-[11px] text-gray-600 dark:text-zinc-400 border border-gray-200 dark:border-zinc-700/50">
                   {match.file_size_mb ? `${match.file_size_mb}MB` : match.video_quality}
                 </span>
               )}
@@ -235,7 +235,7 @@ export default function MatchCard({ match, user, onToggleSubscription, onEditReq
                       <span>Kein Team</span>
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 rounded-md bg-zinc-800/90 border border-zinc-700/50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-zinc-200">
+                    <span className="inline-flex items-center gap-1 rounded-md bg-gray-100 dark:bg-zinc-800/90 border border-gray-200 dark:border-zinc-700/50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-gray-800 dark:text-zinc-200">
                       <span>{match.team_name || 'Kein Team'}</span>
                       {isEditableTeam && <Star className="w-3 h-3 fill-amber-400 text-amber-400 shrink-0 ml-0.5" />}
                     </span>
@@ -246,7 +246,7 @@ export default function MatchCard({ match, user, onToggleSubscription, onEditReq
 
             {/* Event Count Pill */}
             <div className="flex items-center">
-              <span className="flex items-center gap-1.5 rounded-md bg-zinc-800/80 border border-zinc-700/40 px-2 py-1 text-[11px] font-bold text-zinc-300">
+              <span className="flex items-center gap-1.5 rounded-md bg-gray-100 dark:bg-zinc-800/80 border border-gray-200 dark:border-zinc-700/40 px-2 py-1 text-[11px] font-bold text-gray-700 dark:text-zinc-300">
                 <Tag className="h-3.5 w-3.5 text-emerald-400" />
                 <span>{match.events_count || 0}</span>
               </span>

@@ -15,3 +15,5 @@ __pycache__/
 *.tsbuildinfo
 .idea/
 .vscode/
+.antigravity/
+.agents/

@@ -10,7 +10,7 @@ function TacticsPageContent() {
   const boardId = searchParams.get('id') || undefined;
 
   return (
-    <div className="flex min-h-screen flex-col bg-zinc-950 text-white font-sans overflow-hidden">
+    <div className="flex min-h-screen flex-col bg-gray-50 dark:bg-zinc-950 text-gray-900 dark:text-white font-sans overflow-hidden">
       <Navbar />
       <main className="flex-1 w-full flex flex-col overflow-hidden">
         <TacticsBoard initialBoardId={boardId} />
@@ -23,7 +23,7 @@ export default function TacticsPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-zinc-950 text-white">
+        <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-zinc-950 text-gray-900 dark:text-white">
           <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
         </div>
       }

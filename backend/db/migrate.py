@@ -115,6 +115,9 @@ MIGRATION_COLUMNS = [
     ("system_settings", "legal_representative", "VARCHAR(255) DEFAULT ''"),
     ("system_settings", "legal_register_info", "VARCHAR(255) DEFAULT ''"),
     ("system_settings", "log_irrelevant_patterns", "JSON DEFAULT '[]'"),
+    ("system_settings", "livestream_is_protected", "BOOLEAN DEFAULT 0"),
+    ("system_settings", "livestream_password", "VARCHAR(255)"),
+    ("system_settings", "livestream_title", "VARCHAR(255) DEFAULT 'MatchTrack Livestream'"),
     ("system_settings", "updated_at", "DATETIME"),
 
     # Table: training_exercises

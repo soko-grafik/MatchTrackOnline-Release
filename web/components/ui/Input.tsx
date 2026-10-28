@@ -1,0 +1,59 @@
+import React from 'react';
+import { cn } from '@/lib/utils';
+
+export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  label?: string;
+  error?: string;
+  helperText?: string;
+  leftIcon?: React.ReactNode;
+  rightIcon?: React.ReactNode;
+}
+
+export const Input = React.forwardRef<HTMLInputElement, InputProps>(
+  ({ className, label, error, helperText, leftIcon, rightIcon, id, disabled, ...props }, ref) => {
+    const generatedId = React.useId();
+    const inputId = id || generatedId;
+
+    return (
+      <div className="w-full">
+        {label && (
+          <label htmlFor={inputId} className="block text-sm font-medium mb-1.5 text-gray-800 dark:text-zinc-200">
+            {label}
+          </label>
+        )}
+        <div className="relative">
+          {leftIcon && (
+            <div className="absolute inset-y-0 start-0 flex items-center pointer-events-none ps-3.5 text-gray-400 dark:text-zinc-500">
+              {leftIcon}
+            </div>
+          )}
+          <input
+            id={inputId}
+            ref={ref}
+            disabled={disabled}
+            className={cn(
+              'py-2 px-3 block w-full border border-gray-300 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-zinc-900 dark:border-zinc-700 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-emerald-500 dark:focus:ring-emerald-500 transition-colors shadow-2xs',
+              leftIcon && 'ps-10',
+              rightIcon && 'pe-10',
+              error && 'border-red-500 focus:border-red-500 focus:ring-red-500 dark:border-red-500',
+              className
+            )}
+            {...props}
+          />
+          {rightIcon && (
+            <div className="absolute inset-y-0 end-0 flex items-center pe-3.5 text-gray-400 dark:text-zinc-500">
+              {rightIcon}
+            </div>
+          )}
+        </div>
+        {error ? (
+          <p className="text-xs text-red-600 dark:text-red-400 mt-1.5">{error}</p>
+        ) : helperText ? (
+          <p className="text-xs text-gray-500 dark:text-zinc-400 mt-1.5">{helperText}</p>
+        ) : null}
+      </div>
+    );
+  }
+);
+
+Input.displayName = 'Input';

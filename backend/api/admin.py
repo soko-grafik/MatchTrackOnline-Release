@@ -1844,3 +1844,55 @@ def create_test_system_logs(
     """Erzeugt eine Test-Mustergruppe an Logs für Backend und Frontend zur Überprüfung."""
     created = generate_test_logs(db)
     return {"success": True, "count": len(created)}
+
+# ==========================================
+# LIVESTREAM SHARING & PASSWORT-SCHUTZ
+# ==========================================
+class AdminLivestreamSettings(BaseModel):
+    is_protected: bool
+    password: Optional[str] = None
+    title: Optional[str] = "MatchTrack Livestream"
+
+@router.get("/livestream", response_model=AdminLivestreamSettings)
+def get_admin_livestream_settings(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_trainer)
+):
+    settings = db.query(SystemSettings).first()
+    if not settings:
+        settings = SystemSettings(id=1)
+        db.add(settings)
+        db.commit()
+        db.refresh(settings)
+        
+    return {
+        "is_protected": bool(getattr(settings, "livestream_is_protected", False)),
+        "password": getattr(settings, "livestream_password", "") or "",
+        "title": getattr(settings, "livestream_title", None) or "MatchTrack Livestream"
+    }
+
+@router.put("/livestream", response_model=AdminLivestreamSettings)
+def update_admin_livestream_settings(
+    data: AdminLivestreamSettings,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_trainer)
+):
+    settings = db.query(SystemSettings).first()
+    if not settings:
+        settings = SystemSettings(id=1)
+        db.add(settings)
+        
+    settings.livestream_is_protected = data.is_protected
+    if data.password is not None:
+        settings.livestream_password = data.password.strip()
+    if data.title:
+        settings.livestream_title = data.title.strip()
+        
+    db.commit()
+    db.refresh(settings)
+    
+    return {
+        "is_protected": bool(getattr(settings, "livestream_is_protected", False)),
+        "password": getattr(settings, "livestream_password", "") or "",
+        "title": getattr(settings, "livestream_title", None) or "MatchTrack Livestream"
+    }

@@ -79,9 +79,9 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col justify-between bg-zinc-950 font-sans text-white">
+    <div className="flex min-h-screen flex-col justify-between bg-gray-50 dark:bg-zinc-950 font-sans text-gray-900 dark:text-white">
       <div className="flex flex-1 items-center justify-center p-4">
-        <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900/50 p-8 shadow-2xl backdrop-blur-md">
+        <div className="w-full max-w-md rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-8 shadow-xl dark:shadow-2xl backdrop-blur-md text-gray-900 dark:text-white">
         <div className="mb-8 flex justify-center">
           <Image
             src="/logo_light_wide.png"
@@ -109,7 +109,7 @@ export default function RegisterPage() {
                 onChange={(e) => setFirstName(e.target.value)}
                 placeholder="Vorname"
                 required
-                className="w-full rounded-lg border-zinc-800 bg-zinc-900 p-3 text-sm text-white shadow-sm focus:border-primary focus:ring-primary"
+                className="w-full rounded-lg border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900 p-3 text-sm text-gray-900 dark:text-white shadow-sm focus:border-primary focus:ring-primary"
               />
             </div>
             <div>
@@ -121,7 +121,7 @@ export default function RegisterPage() {
                 onChange={(e) => setLastName(e.target.value)}
                 placeholder="Nachname"
                 required
-                className="w-full rounded-lg border-zinc-800 bg-zinc-900 p-3 text-sm text-white shadow-sm focus:border-primary focus:ring-primary"
+                className="w-full rounded-lg border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900 p-3 text-sm text-gray-900 dark:text-white shadow-sm focus:border-primary focus:ring-primary"
               />
             </div>
           </div>
@@ -134,7 +134,7 @@ export default function RegisterPage() {
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Benutzername"
               required
-              className="w-full rounded-lg border-zinc-800 bg-zinc-900 p-3 text-sm text-white shadow-sm focus:border-primary focus:ring-primary"
+              className="w-full rounded-lg border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900 p-3 text-sm text-gray-900 dark:text-white shadow-sm focus:border-primary focus:ring-primary"
             />
           </div>
           <div>
@@ -146,7 +146,7 @@ export default function RegisterPage() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="E-Mail Adresse"
               required
-              className="w-full rounded-lg border-zinc-800 bg-zinc-900 p-3 text-sm text-white shadow-sm focus:border-primary focus:ring-primary"
+              className="w-full rounded-lg border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900 p-3 text-sm text-gray-900 dark:text-white shadow-sm focus:border-primary focus:ring-primary"
             />
           </div>
           <div>
@@ -159,7 +159,7 @@ export default function RegisterPage() {
               placeholder="Passwort"
               required
               minLength={6}
-              className="w-full rounded-lg border-zinc-800 bg-zinc-900 p-3 text-sm text-white shadow-sm focus:border-primary focus:ring-primary"
+              className="w-full rounded-lg border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900 p-3 text-sm text-gray-900 dark:text-white shadow-sm focus:border-primary focus:ring-primary"
             />
           </div>
           <div>
@@ -168,7 +168,7 @@ export default function RegisterPage() {
               id="team"
               value={selectedTeamId}
               onChange={(e) => setSelectedTeamId(e.target.value)}
-              className="w-full rounded-lg border-zinc-800 bg-zinc-900 p-3 text-sm text-zinc-400 shadow-sm focus:border-primary focus:ring-primary"
+              className="w-full rounded-lg border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900 p-3 text-sm text-gray-900 dark:text-zinc-400 shadow-sm focus:border-primary focus:ring-primary"
             >
               <option value="">Mannschaft auswählen (optional)</option>
               {teams.map((t) => (
@@ -186,7 +186,7 @@ export default function RegisterPage() {
                 type="checkbox"
                 checked={termsAccepted}
                 onChange={(e) => setTermsAccepted(e.target.checked)}
-                className="mt-0.5 rounded border-zinc-700 bg-zinc-900 text-primary focus:ring-primary w-4 h-4 shrink-0"
+                className="mt-0.5 rounded border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-primary focus:ring-primary w-4 h-4 shrink-0"
               />
               <span className="leading-snug">
                 Ich akzeptiere die{' '}

@@ -195,7 +195,7 @@ export default function ProfilePage() {
 
   if (loading && !profile) {
     return (
-      <div className="min-h-screen bg-black text-white">
+      <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 text-gray-900 dark:text-white">
         <Navbar />
         <div className="flex items-center justify-center h-[calc(100vh-80px)]">
           <Loader2 className="w-8 h-8 text-primary animate-spin" />
@@ -205,7 +205,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white font-sans selection:bg-primary/30">
+    <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 text-gray-900 dark:text-white font-sans selection:bg-primary/30">
       <Navbar />
 
       <main className="w-full px-4 sm:px-6 lg:px-8 py-8 flex-1">
@@ -224,7 +224,7 @@ export default function ProfilePage() {
         )}
 
         {/* Navigation Tabs */}
-        <div className="flex overflow-x-auto gap-2 border-b border-zinc-800 pb-3 mb-8 scrollbar-none">
+        <div className="flex overflow-x-auto gap-2 border-b border-gray-200 dark:border-zinc-800 pb-3 mb-8 scrollbar-none">
           {[
             { id: 'profile', label: 'Profildaten', icon: <User className="w-4 h-4" /> },
             { id: 'appearance', label: 'Erscheinungsbild', icon: <Palette className="w-4 h-4" /> },
@@ -238,8 +238,8 @@ export default function ProfilePage() {
               onClick={() => setActiveTab(tab.id as any)}
               className={`flex items-center gap-2 px-4 h-11 rounded-lg text-sm font-medium transition-colors shrink-0 ${
                 activeTab === tab.id
-                  ? 'bg-zinc-800 text-white'
-                  : 'bg-transparent text-zinc-400 hover:bg-zinc-800/50 hover:text-white'
+                  ? 'bg-white dark:bg-zinc-800 text-gray-900 dark:text-white shadow-xs border border-gray-200 dark:border-transparent'
+                  : 'bg-transparent text-gray-500 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800/50 hover:text-gray-900 dark:hover:text-white'
               }`}
             >
               {tab.icon}
@@ -250,7 +250,7 @@ export default function ProfilePage() {
 
         {/* Tab 1: Profile Settings */}
         {activeTab === 'profile' && (
-          <form onSubmit={handleProfileSave} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 sm:p-8 space-y-6">
+          <form onSubmit={handleProfileSave} className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl p-6 sm:p-8 space-y-6 shadow-xs">
             <h2 className="text-lg font-bold text-white border-b border-zinc-800 pb-3">Persönliche Angaben</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="space-y-2">
@@ -314,10 +314,10 @@ export default function ProfilePage() {
         )}
         {/* Tab: Appearance / Theme */}
         {activeTab === 'appearance' && (
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 sm:p-8 space-y-6">
+          <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl p-6 sm:p-8 space-y-6 shadow-xs">
             <div>
-              <h2 className="text-lg font-bold text-white border-b border-zinc-800 pb-3">Erscheinungsbild (Theme)</h2>
-              <p className="text-xs text-zinc-400 mt-2">Wähle dein bevorzugtes Farbschema für die MatchTrack Oberfläche.</p>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white border-b border-gray-200 dark:border-zinc-800 pb-3">Erscheinungsbild (Theme)</h2>
+              <p className="text-xs text-gray-500 dark:text-zinc-400 mt-2">Wähle dein bevorzugtes Farbschema für die MatchTrack Oberfläche.</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
@@ -333,7 +333,7 @@ export default function ProfilePage() {
                   className={`p-5 rounded-2xl border flex flex-col items-start gap-3 transition-all text-left ${
                     theme === item.id
                       ? 'bg-primary/10 border-primary text-white ring-2 ring-primary/50 shadow-lg shadow-primary/10'
-                      : 'bg-zinc-950/60 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white'
+                      : 'bg-gray-50 dark:bg-zinc-950/60 border-gray-200 dark:border-zinc-800 text-gray-600 dark:text-zinc-400 hover:border-gray-300 dark:hover:border-zinc-700 hover:text-gray-900 dark:hover:text-white'
                   }`}
                 >
                   <div className="flex items-center justify-between w-full">
@@ -345,8 +345,8 @@ export default function ProfilePage() {
                     )}
                   </div>
                   <div>
-                    <div className="text-sm font-bold text-white mb-1">{item.label}</div>
-                    <div className="text-xs text-zinc-400 leading-relaxed">{item.desc}</div>
+                    <div className="text-sm font-bold text-gray-900 dark:text-white mb-1">{item.label}</div>
+                    <div className="text-xs text-gray-500 dark:text-zinc-400 leading-relaxed">{item.desc}</div>
                   </div>
                 </button>
               ))}
@@ -356,7 +356,7 @@ export default function ProfilePage() {
 
         {/* Tab 2: Security & Password */}
         {activeTab === 'security' && (
-          <form onSubmit={handlePasswordSave} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 sm:p-8 space-y-6">
+          <form onSubmit={handlePasswordSave} className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl p-6 sm:p-8 space-y-6 shadow-xs">
             <h2 className="text-lg font-bold text-white border-b border-zinc-800 pb-3">Passwort ändern</h2>
             <div className="space-y-4 max-w-md">
               <div className="space-y-2">
@@ -408,7 +408,7 @@ export default function ProfilePage() {
 
         {/* Tab 3: Notifications */}
         {activeTab === 'notifications' && (
-          <form onSubmit={handlePreferencesSave} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 sm:p-8 space-y-6">
+          <form onSubmit={handlePreferencesSave} className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl p-6 sm:p-8 space-y-6 shadow-xs">
             <h2 className="text-lg font-bold text-white border-b border-zinc-800 pb-3">E-Mail Benachrichtigungen</h2>
             <div className="space-y-4">
               <label className="flex items-center justify-between p-4 rounded-xl bg-zinc-950 border border-zinc-800 cursor-pointer hover:bg-zinc-800 transition-colors">
@@ -500,7 +500,7 @@ export default function ProfilePage() {
 
         {/* Tab 4: Teams */}
         {activeTab === 'teams' && (
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 sm:p-8 space-y-6">
+          <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl p-6 sm:p-8 space-y-6 shadow-xs">
             <h2 className="text-lg font-bold text-white border-b border-zinc-800 pb-3">Zugewiesene Mannschaften</h2>
             {profile?.teams && profile.teams.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

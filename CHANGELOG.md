@@ -1,18 +1,18 @@
 # 📋 MatchTrack Online - Versions-Changelog
 
-## Release: 2026-10-27 11:14:56 (Dev Commit: `fc70e7ad`)
+## Release: 2026-10-28 13:33:33 (Dev Commit: `dee6a7a9`)
 
 ### 🚀 Letzte Änderungen aus dem Entwicklungs-Repository:
-* fix(backend): eliminate 750MB PyTorch RAM leak in backend webserver process (fc70e7ad - 2026-10-27)
-* fix(worker): eliminate 700MB idle RAM usage and remove obsolete stitching service files (0a692340 - 2026-10-27)
-* feat(training): add touch-friendly tap-to-assign and block dropdown for iPad/tablets (9e6e1e0c - 2026-10-27)
-* feat(training): responsive single-column list view below 1260px with left thumbnail (02b33521 - 2026-10-27)
-* refactor(admin): remove legacy stitching options from system settings (dbb14597 - 2026-10-27)
-* fix(player): resolve video playback stuttering and optimize streaming performance (1df21433 - 2026-10-26)
-* fix(services): restore generate_thumbnail in thumbnail_service for video uploads (b50be305 - 2026-10-26)
-* feat(perf): implement comprehensive caching masterplan (client SWR, backend TTL RAM cache, and thumbnail offload) (41cb9609 - 2026-10-26)
-* perf(core): eliminate N+1 queries, add GZip compression, pool tuning, and DB indexes (73e5831f - 2026-10-26)
-* fix(db): widen thumbnail_path to LONGTEXT for base64 canvas images (c5ed68cb - 2026-10-26)
+* fix(streaming): use regex flag -E for mediamtx sed replacements and activate api (dee6a7a9 - 2026-10-28)
+* fix(live): resolve /login redirect for external viewers and optimize HLS playback with MPEG-TS (ed7f4ec8 - 2026-10-28)
+* fix(backend): replace undefined require_role with require_trainer in admin livestream routes (6c275b37 - 2026-10-28)
+* feat(streaming): add role-based access for stream credentials, password protection, and dedicated public /live player page (196619e5 - 2026-10-28)
+* fix(streaming): extract official mediamtx.yml to guarantee 100% valid configuration (c20a8cd3 - 2026-10-28)
+* feat(streaming): switch setup_rtmp.sh to MediaMTX standalone engine to prevent apt conflicts on HestiaCP (23a54c1b - 2026-10-28)
+* feat(streaming): place setup_rtmp.sh in backend directory for direct server execution (f30ceaa6 - 2026-10-28)
+* feat(streaming): add RTMP & HLS setup script, docs, and enhance LiveStreamModal with OBS/DJI support (0f41661a - 2026-10-28)
+* feat(theme): implement full light mode support across all pages and add release safety guards (af560d79 - 2026-10-28)
+* feat(ui): implement Preline UI foundation primitives and modernize global modals (8ce26039 - 2026-10-28)
 
 ---
 *Automatisch generiert durch die MatchTrack Release Pipeline.*

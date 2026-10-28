@@ -430,7 +430,7 @@ export default function AdminUsersPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen flex-col bg-zinc-950 font-sans text-white">
+    <div className="relative flex min-h-screen flex-col bg-gray-50 dark:bg-zinc-950 font-sans text-gray-900 dark:text-white">
       <Navbar />
 
       <main className="flex-1 w-full px-4 py-8 sm:px-6 lg:px-8">
@@ -468,13 +468,13 @@ export default function AdminUsersPage() {
         />
 
         {/* Main Navigation Tabs */}
-        <div className="flex flex-wrap items-center gap-3 mb-6 border-b border-zinc-800 pb-3">
+        <div className="flex flex-wrap items-center gap-3 mb-6 border-b border-gray-200 dark:border-zinc-800 pb-3">
           <button
             onClick={() => setActiveMainTab('users')}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${
               activeMainTab === 'users'
                 ? 'bg-primary text-white shadow-lg shadow-primary/20'
-                : 'text-zinc-400 hover:text-white hover:bg-zinc-900 border border-zinc-800'
+                : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-zinc-900 border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900'
             }`}
           >
             <UsersIcon className="w-4 h-4" />
@@ -489,7 +489,7 @@ export default function AdminUsersPage() {
             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${
               activeMainTab === 'unassigned'
                 ? 'bg-amber-600 text-white shadow-lg shadow-amber-500/20'
-                : 'text-zinc-400 hover:text-white hover:bg-zinc-900 border border-zinc-800'
+                : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-zinc-900 border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900'
             }`}
           >
             <Film className="w-4 h-4" />
@@ -511,7 +511,7 @@ export default function AdminUsersPage() {
             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${
               activeMainTab === 'statistics'
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-                : 'text-zinc-400 hover:text-white hover:bg-zinc-900 border border-zinc-800'
+                : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-zinc-900 border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900'
             }`}
           >
             <BarChart3 className="w-4 h-4" />
@@ -522,20 +522,20 @@ export default function AdminUsersPage() {
         {activeMainTab === 'unassigned' ? (
           <div className="space-y-6 animate-in fade-in duration-200">
             {/* Batch Action Bar / Schnell-Zuweisungsleiste */}
-            <div className="sticky top-20 z-30 rounded-2xl border border-amber-500/30 bg-gradient-to-r from-amber-950/90 via-zinc-900 to-zinc-900 p-5 shadow-2xl backdrop-blur-md">
+            <div className="sticky top-20 z-30 rounded-2xl border border-amber-500/30 bg-gradient-to-r from-amber-50 via-white to-amber-50/40 dark:from-amber-950/90 dark:via-zinc-900 dark:to-zinc-900 p-5 shadow-lg dark:shadow-2xl backdrop-blur-md">
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-400">
                     <Film className="h-5 w-5" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
                       <span>Batch-Zuweisungsleiste für Alt-Videos</span>
                       <span className="rounded-full bg-amber-500/20 px-2.5 py-0.5 text-[10px] font-black text-amber-400 border border-amber-500/30">
                         {unassignedMatches.length} unzugeordnet
                       </span>
                     </h3>
-                    <p className="text-xs text-zinc-400">
+                    <p className="text-xs text-gray-600 dark:text-zinc-400">
                       Weise mehrere Alt-Videos ohne Mannschaft mit einem Klick einer Mannschaft & Kategorie zu.
                     </p>
                   </div>
@@ -548,7 +548,7 @@ export default function AdminUsersPage() {
                     <select
                       value={batchTargetTeamId}
                       onChange={(e) => setBatchTargetTeamId(e.target.value)}
-                      className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3.5 py-2.5 text-xs font-semibold text-white focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                      className="w-full rounded-xl border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3.5 py-2.5 text-xs font-semibold text-gray-900 dark:text-white focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
                     >
                       <option value="">-- Ziel-Mannschaft wählen * --</option>
                       {teams.map((t) => (
@@ -564,7 +564,7 @@ export default function AdminUsersPage() {
                     <select
                       value={batchTargetCategory}
                       onChange={(e) => setBatchTargetCategory(e.target.value)}
-                      className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3.5 py-2.5 text-xs font-semibold text-white focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                      className="w-full rounded-xl border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3.5 py-2.5 text-xs font-semibold text-gray-900 dark:text-white focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
                     >
                       <option value="">Kategorie unverändert</option>
                       <option value="Punktspiel">Punktspiel</option>
@@ -596,7 +596,7 @@ export default function AdminUsersPage() {
                 <div className="flex items-center gap-3">
                   <button
                     onClick={handleSelectAllMatches}
-                    className="inline-flex items-center gap-1.5 text-zinc-300 hover:text-white font-medium"
+                    className="inline-flex items-center gap-1.5 text-gray-700 dark:text-zinc-300 hover:text-gray-900 dark:hover:text-white font-medium"
                   >
                     {selectedMatchIds.length === filteredUnassignedMatches.length && filteredUnassignedMatches.length > 0 ? (
                       <CheckSquare className="w-4 h-4 text-amber-400" />
@@ -622,7 +622,7 @@ export default function AdminUsersPage() {
                     placeholder="Videos filtern..."
                     value={unassignedSearchQuery}
                     onChange={(e) => setUnassignedSearchQuery(e.target.value)}
-                    className="w-full rounded-lg border border-zinc-800 bg-zinc-950/80 px-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:border-amber-500 focus:outline-none"
+                    className="w-full rounded-lg border border-gray-300 dark:border-zinc-800 bg-white dark:bg-zinc-950/80 px-3 py-1.5 text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-zinc-500 focus:border-amber-500 focus:outline-none"
                   />
                 </div>
               </div>
@@ -635,25 +635,25 @@ export default function AdminUsersPage() {
                 <p className="animate-pulse text-zinc-500">Lade nicht zugewiesene Videos...</p>
               </div>
             ) : filteredUnassignedMatches.length === 0 ? (
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-12 text-center">
+              <div className="rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 p-12 text-center">
                 <CheckCircle className="mx-auto h-12 w-12 text-emerald-400 mb-3 opacity-80" />
-                <h4 className="text-base font-bold text-white">Perfekt! Keine unzugeordneten Videos vorhanden</h4>
+                <h4 className="text-base font-bold text-gray-900 dark:text-white">Perfekt! Keine unzugeordneten Videos vorhanden</h4>
                 <p className="mt-1 text-xs text-zinc-400 max-w-md mx-auto">
                   Alle vorhandenen Spiele und Videos sind bereits einer Mannschaft zugewiesen. Neu hochgeladene Videos erhalten ihr Team direkt beim Upload.
                 </p>
               </div>
             ) : (
-              <div className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900 shadow-xl">
+              <div className="overflow-hidden rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm dark:shadow-xl">
                 <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-zinc-800">
-                    <thead className="bg-zinc-950/60">
+                  <table className="min-w-full divide-y divide-gray-200 dark:divide-zinc-800">
+                    <thead className="bg-gray-50 dark:bg-zinc-950/60">
                       <tr>
                         <th scope="col" className="w-12 px-6 py-4 text-left">
                           <input
                             type="checkbox"
                             checked={selectedMatchIds.length === filteredUnassignedMatches.length && filteredUnassignedMatches.length > 0}
                             onChange={handleSelectAllMatches}
-                            className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-amber-500 focus:ring-amber-500 focus:ring-offset-zinc-950"
+                            className="h-4 w-4 rounded border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-amber-500 focus:ring-amber-500 focus:ring-offset-white dark:focus:ring-offset-zinc-950"
                           />
                         </th>
                         <th scope="col" className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">
@@ -673,7 +673,7 @@ export default function AdminUsersPage() {
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-zinc-800 text-sm">
+                    <tbody className="divide-y divide-gray-200 dark:divide-zinc-800 text-sm">
                       {filteredUnassignedMatches.map((m) => {
                         const isSelected = selectedMatchIds.includes(m.id);
                         return (
@@ -691,13 +691,13 @@ export default function AdminUsersPage() {
                                 type="checkbox"
                                 checked={isSelected}
                                 onChange={() => handleToggleSelectMatch(m.id)}
-                                className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-amber-500 focus:ring-amber-500 focus:ring-offset-zinc-950"
+                                className="h-4 w-4 rounded border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-amber-500 focus:ring-amber-500 focus:ring-offset-white dark:focus:ring-offset-zinc-950"
                               />
                             </td>
                             <td className="px-6 py-4">
                               <div className="flex items-center gap-3">
                                 {m.thumbnail_path ? (
-                                  <div className="relative h-10 w-16 shrink-0 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950">
+                                  <div className="relative h-10 w-16 shrink-0 overflow-hidden rounded-lg border border-gray-200 dark:border-zinc-800 bg-gray-100 dark:bg-zinc-950">
                                     <Image
                                       src={getMediaUrl(m.thumbnail_path)}
                                       alt={m.name}
@@ -706,7 +706,7 @@ export default function AdminUsersPage() {
                                     />
                                   </div>
                                 ) : (
-                                  <div className="flex h-10 w-16 shrink-0 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-950 text-zinc-600">
+                                  <div className="flex h-10 w-16 shrink-0 items-center justify-center rounded-lg border border-gray-200 dark:border-zinc-800 bg-gray-100 dark:bg-zinc-950 text-gray-400 dark:text-zinc-600">
                                     <Video className="h-4 w-4" />
                                   </div>
                                 )}
@@ -752,7 +752,7 @@ export default function AdminUsersPage() {
                                       toast.error("Fehler beim Zuweisen.");
                                     }
                                   }}
-                                  className="rounded-lg border border-zinc-700 bg-zinc-950 px-2.5 py-1.5 text-xs text-zinc-200 focus:border-amber-500 focus:outline-none"
+                                  className="rounded-lg border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-2.5 py-1.5 text-xs text-gray-900 dark:text-zinc-200 focus:border-amber-500 focus:outline-none"
                                 >
                                   <option value="">Sofort zuweisen...</option>
                                   {teams.map((t) => (
@@ -783,7 +783,7 @@ export default function AdminUsersPage() {
               <>
                 {/* Platform Summary KPI Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-5 shadow-lg">
+                  <div className="bg-white dark:bg-zinc-900/60 border border-gray-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm dark:shadow-lg">
                     <div className="flex items-center justify-between text-zinc-400 mb-2">
                       <span className="text-xs font-bold uppercase tracking-wider">Aktive Nutzer</span>
                       <UsersIcon className="w-4 h-4 text-blue-400" />
@@ -798,7 +798,7 @@ export default function AdminUsersPage() {
                     </div>
                   </div>
 
-                  <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-5 shadow-lg">
+                  <div className="bg-white dark:bg-zinc-900/60 border border-gray-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm dark:shadow-lg">
                     <div className="flex items-center justify-between text-zinc-400 mb-2">
                       <span className="text-xs font-bold uppercase tracking-wider">Gesamt Watch-Time</span>
                       <Clock className="w-4 h-4 text-emerald-400" />
@@ -811,7 +811,7 @@ export default function AdminUsersPage() {
                     </p>
                   </div>
 
-                  <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-5 shadow-lg">
+                  <div className="bg-white dark:bg-zinc-900/60 border border-gray-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm dark:shadow-lg">
                     <div className="flex items-center justify-between text-zinc-400 mb-2">
                       <span className="text-xs font-bold uppercase tracking-wider">Video-Analysen</span>
                       <Activity className="w-4 h-4 text-purple-400" />
@@ -824,7 +824,7 @@ export default function AdminUsersPage() {
                     </p>
                   </div>
 
-                  <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-5 shadow-lg">
+                  <div className="bg-white dark:bg-zinc-900/60 border border-gray-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm dark:shadow-lg">
                     <div className="flex items-center justify-between text-zinc-400 mb-2">
                       <span className="text-xs font-bold uppercase tracking-wider">Taktik & Training</span>
                       <Layers className="w-4 h-4 text-indigo-400" />
@@ -839,17 +839,17 @@ export default function AdminUsersPage() {
                 </div>
 
                 {/* User Behavior Ranking Table */}
-                <div className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/80 shadow-xl">
+                <div className="overflow-hidden rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/80 shadow-sm dark:shadow-xl">
                   <div className="p-5 border-b border-zinc-800 flex items-center justify-between">
                     <div>
                       <h3 className="text-base font-bold text-white tracking-tight">Trainer- & Nutzer-Aktivitätsranking</h3>
-                      <p className="text-xs text-zinc-400">Übersicht aller Benutzer nach Interaktionen, Logins und Analysezeit</p>
+                      <p className="text-xs text-gray-600 dark:text-zinc-400">Übersicht aller Benutzer nach Interaktionen, Logins und Analysezeit</p>
                     </div>
                   </div>
 
                   <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-zinc-800">
-                      <thead className="bg-zinc-950/60">
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-zinc-800">
+                      <thead className="bg-gray-50 dark:bg-zinc-950/60">
                         <tr>
                           <th className="px-6 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-zinc-400">Benutzer</th>
                           <th className="px-6 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-zinc-400">Rolle</th>
@@ -860,7 +860,7 @@ export default function AdminUsersPage() {
                           <th className="px-6 py-3.5 text-right text-xs font-bold uppercase tracking-wider text-zinc-400">Detail-Analyse</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-zinc-800/80 bg-zinc-900/40">
+                      <tbody className="divide-y divide-gray-200 dark:divide-zinc-800/80 bg-white dark:bg-zinc-900/40">
                         {(statsOverview.user_ranking || []).map((u: any) => (
                           <tr key={u.id} className="hover:bg-zinc-800/40 transition-colors">
                             <td className="px-6 py-4 whitespace-nowrap">
@@ -939,10 +939,10 @@ export default function AdminUsersPage() {
             <p className="text-sm opacity-80">{error}</p>
           </div>
         ) : (
-          <div className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900">
+          <div className="overflow-hidden rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-zinc-800">
-                <thead className="bg-zinc-800/50">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-zinc-800">
+                <thead className="bg-gray-100 dark:bg-zinc-800/50">
                   <tr>
                     <th scope="col" className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">
                       Benutzername
@@ -970,7 +970,7 @@ export default function AdminUsersPage() {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-800">
+                <tbody className="divide-y divide-gray-200 dark:divide-zinc-800">
                   {users.map((u) => (
                     <tr key={u.id} className={`transition-colors hover:bg-zinc-800/50 ${!u.is_approved ? 'bg-primary/5' : ''}`}>
                       <td className="whitespace-nowrap px-6 py-4">
@@ -1013,7 +1013,7 @@ export default function AdminUsersPage() {
                         <select
                           value={u.role.toUpperCase()}
                           onChange={(e) => handleRoleChange(u.id, e.target.value as UserRole)}
-                          className="block w-full rounded-lg border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white focus:border-primary focus:ring-primary"
+                          className="block w-full rounded-lg border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-primary focus:ring-primary"
                           disabled={u.id === user?.id}
                         >
                           <option value="VIEWER">Viewer</option>
@@ -1122,7 +1122,7 @@ export default function AdminUsersPage() {
         )}
 
         {/* Section: Mannschaftsverwaltung */}
-        <section className="mt-16 rounded-2xl border border-zinc-800 bg-zinc-900 p-6 sm:p-8">
+        <section className="mt-16 rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 sm:p-8">
           <div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-center">
             <div>
               <h3 className="flex items-center gap-2 text-xl font-bold text-white">
@@ -1135,13 +1135,13 @@ export default function AdminUsersPage() {
             </div>
           </div>
 
-          <form onSubmit={handleCreateTeam} className="mb-8 flex flex-col gap-3 rounded-xl border border-zinc-800 bg-zinc-950 p-4 sm:flex-row">
+          <form onSubmit={handleCreateTeam} className="mb-8 flex flex-col gap-3 rounded-xl border border-gray-200 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-950/40 p-4 sm:flex-row">
             <input
               type="text"
               placeholder="Mannschaftsname (z. B. 1. Herren, E-Junioren)..."
               value={newTeamName}
               onChange={(e) => setNewTeamName(e.target.value)}
-              className="flex-1 rounded-lg border-zinc-800 bg-zinc-900 p-3 text-sm text-white focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              className="flex-1 rounded-lg border border-gray-300 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3 text-sm text-gray-900 dark:text-white focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               required
             />
             <input
@@ -1149,7 +1149,7 @@ export default function AdminUsersPage() {
               placeholder="Altersklasse (z. B. U11, optional)..."
               value={newTeamAgeGroup}
               onChange={(e) => setNewTeamAgeGroup(e.target.value)}
-              className="w-full rounded-lg border-zinc-800 bg-zinc-900 p-3 text-sm text-white focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:w-48"
+              className="w-full rounded-lg border border-gray-300 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3 text-sm text-gray-900 dark:text-white focus:border-primary focus:ring-primary sm:w-48"
             />
             <button
               type="submit"
@@ -1163,9 +1163,9 @@ export default function AdminUsersPage() {
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {teams.map((t) => (
-              <div key={t.id} className="group flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-950 p-4 transition-all hover:border-zinc-700">
+              <div key={t.id} className="group flex items-center justify-between rounded-xl border border-gray-200 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-950 p-4 transition-all hover:border-gray-300 dark:hover:border-zinc-700">
                 <div>
-                  <h4 className="text-sm font-bold text-white">{t.name}</h4>
+                  <h4 className="text-sm font-bold text-gray-900 dark:text-white">{t.name}</h4>
                   {t.age_group && <span className="text-[10px] font-semibold uppercase text-zinc-500">{t.age_group}</span>}
                 </div>
                 <div className="flex items-center gap-1">
@@ -1194,8 +1194,8 @@ export default function AdminUsersPage() {
       {/* --- Modal: Mannschaft bearbeiten --- */}
       {editingTeam && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5">
-            <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+          <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5 text-gray-900 dark:text-white">
+            <div className="flex items-center justify-between border-b border-gray-200 dark:border-zinc-800 pb-3">
               <h2 className="text-lg font-bold text-white flex items-center gap-2">
                 <Edit2 className="w-5 h-5 text-amber-400" />
                 Mannschaft bearbeiten
@@ -1217,7 +1217,7 @@ export default function AdminUsersPage() {
                   value={editTeamName}
                   onChange={(e) => setEditTeamName(e.target.value)}
                   placeholder="z. B. E3-Junioren"
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-primary"
+                  className="w-full bg-gray-50 dark:bg-zinc-950 border border-gray-300 dark:border-zinc-800 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-primary"
                 />
               </div>
 
@@ -1228,7 +1228,7 @@ export default function AdminUsersPage() {
                   value={editTeamAgeGroup}
                   onChange={(e) => setEditTeamAgeGroup(e.target.value)}
                   placeholder="z. B. U11"
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-primary"
+                  className="w-full bg-gray-50 dark:bg-zinc-950 border border-gray-300 dark:border-zinc-800 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-primary"
                 />
               </div>
 
@@ -1256,7 +1256,7 @@ export default function AdminUsersPage() {
       {/* Modal: Trainer Mannschaften zuweisen */}
       {editingUserTeams && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-950 p-6 shadow-2xl space-y-4">
+          <div className="w-full max-w-lg rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-6 shadow-2xl space-y-4 text-gray-900 dark:text-white">
             <div>
               <h3 className="text-lg font-bold text-white">
                 Teams & Rechte zuweisen für {editingUserTeams.username}
@@ -1266,7 +1266,7 @@ export default function AdminUsersPage() {
               </p>
             </div>
 
-            <div className="max-h-72 space-y-2.5 overflow-y-auto rounded-xl border border-zinc-800 bg-zinc-900 p-3">
+            <div className="max-h-72 space-y-2.5 overflow-y-auto rounded-xl border border-gray-200 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900 p-3">
               {teams.map((t) => {
                 const item = userTeamPerms[t.id] || { assigned: false, can_edit: true };
                 return (
@@ -1274,8 +1274,8 @@ export default function AdminUsersPage() {
                     key={t.id}
                     className={`flex items-center justify-between gap-3 rounded-xl border p-3 transition-all ${
                       item.assigned
-                        ? 'border-zinc-700 bg-zinc-950'
-                        : 'border-zinc-800/60 bg-zinc-950/40 opacity-60'
+                        ? 'border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-950'
+                        : 'border-gray-200 dark:border-zinc-800/60 bg-gray-100/50 dark:bg-zinc-950/40 opacity-60'
                     }`}
                   >
                     <label className="flex cursor-pointer items-center gap-3 flex-1 min-w-0">
@@ -1297,7 +1297,7 @@ export default function AdminUsersPage() {
                     </label>
 
                     {item.assigned && (
-                      <div className="flex items-center gap-1 bg-zinc-900 border border-zinc-800 p-1 rounded-lg shrink-0">
+                      <div className="flex items-center gap-1 bg-gray-100 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 p-1 rounded-lg shrink-0">
                         <button
                           type="button"
                           onClick={() => {
@@ -1361,7 +1361,7 @@ export default function AdminUsersPage() {
       {/* Modal: Benutzer hinzufügen */}
       {isAddUserModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950 p-6 shadow-2xl">
+          <div className="w-full max-w-md rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-6 shadow-2xl text-gray-900 dark:text-white">
             <h3 className="mb-2 text-lg font-bold text-white">
               Neuen Benutzer anlegen
             </h3>
@@ -1378,7 +1378,7 @@ export default function AdminUsersPage() {
                     value={newFirstName}
                     onChange={(e) => setNewFirstName(e.target.value)}
                     required
-                    className="mt-1 w-full rounded-lg border border-zinc-800 bg-zinc-900 p-2.5 text-sm text-white focus:border-primary focus:ring-primary"
+                    className="mt-1 w-full rounded-lg border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900 p-2.5 text-sm text-gray-900 dark:text-white focus:border-primary focus:ring-primary"
                   />
                 </div>
                 <div>
@@ -1388,7 +1388,7 @@ export default function AdminUsersPage() {
                     value={newLastName}
                     onChange={(e) => setNewLastName(e.target.value)}
                     required
-                    className="mt-1 w-full rounded-lg border border-zinc-800 bg-zinc-900 p-2.5 text-sm text-white focus:border-primary focus:ring-primary"
+                    className="mt-1 w-full rounded-lg border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900 p-2.5 text-sm text-gray-900 dark:text-white focus:border-primary focus:ring-primary"
                   />
                 </div>
               </div>
@@ -1400,7 +1400,7 @@ export default function AdminUsersPage() {
                   value={newUsername}
                   onChange={(e) => setNewUsername(e.target.value)}
                   required
-                  className="mt-1 w-full rounded-lg border border-zinc-800 bg-zinc-900 p-2.5 text-sm text-white focus:border-primary focus:ring-primary"
+                  className="mt-1 w-full rounded-lg border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900 p-2.5 text-sm text-gray-900 dark:text-white focus:border-primary focus:ring-primary"
                 />
               </div>
 
@@ -1411,7 +1411,7 @@ export default function AdminUsersPage() {
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
                   required
-                  className="mt-1 w-full rounded-lg border border-zinc-800 bg-zinc-900 p-2.5 text-sm text-white focus:border-primary focus:ring-primary"
+                  className="mt-1 w-full rounded-lg border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900 p-2.5 text-sm text-gray-900 dark:text-white focus:border-primary focus:ring-primary"
                 />
               </div>
 
@@ -1422,7 +1422,7 @@ export default function AdminUsersPage() {
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   required
-                  className="mt-1 w-full rounded-lg border border-zinc-800 bg-zinc-900 p-2.5 text-sm text-white focus:border-primary focus:ring-primary"
+                  className="mt-1 w-full rounded-lg border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900 p-2.5 text-sm text-gray-900 dark:text-white focus:border-primary focus:ring-primary"
                 />
               </div>
 
@@ -1431,7 +1431,7 @@ export default function AdminUsersPage() {
                 <select
                   value={newUserRole}
                   onChange={(e) => setNewUserRole(e.target.value as any)}
-                  className="mt-1 w-full rounded-lg border border-zinc-800 bg-zinc-900 p-2.5 text-sm text-white focus:border-primary focus:ring-primary"
+                  className="mt-1 w-full rounded-lg border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900 p-2.5 text-sm text-gray-900 dark:text-white focus:border-primary focus:ring-primary"
                 >
                   <option value="VIEWER">Viewer (Zuschauer)</option>
                   <option value="CO_TRAINER">Co-Trainer</option>
@@ -1443,7 +1443,7 @@ export default function AdminUsersPage() {
 
               <div>
                 <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1 block">Mannschaften zuweisen (optional)</label>
-                <div className="max-h-32 space-y-1 overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-900 p-2">
+                <div className="max-h-32 space-y-1 overflow-y-auto rounded-lg border border-gray-200 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900 p-2">
                   {teams.map((t) => {
                     const isChecked = newUserTeamIds.includes(t.id);
                     return (
@@ -1497,8 +1497,8 @@ export default function AdminUsersPage() {
       {/* --- Modal: Modul-Rechte verwalten --- */}
       {editingUserPerms && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5">
-            <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+          <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5 text-gray-900 dark:text-white">
+            <div className="flex items-center justify-between border-b border-gray-200 dark:border-zinc-800 pb-3">
               <h2 className="text-lg font-bold text-white flex items-center gap-2">
                 <ShieldAlert className="w-5 h-5 text-amber-400" />
                 Modul-Rechte anpassen
@@ -1525,9 +1525,9 @@ export default function AdminUsersPage() {
                 { id: 'AI', label: '🤖 KI-Sprachassistent & Foto-Scanner', desc: 'Spracheingabe, Noten-Erfassung & KI-Karten-Scanner' },
               ].map((mod) => (
 
-                <label key={mod.id} className="flex items-start justify-between p-3 bg-zinc-950 border border-zinc-800 rounded-xl cursor-pointer hover:border-zinc-700 transition-all">
+                <label key={mod.id} className="flex items-start justify-between p-3 bg-gray-50 dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 rounded-xl cursor-pointer hover:border-gray-300 dark:hover:border-zinc-700 transition-all">
                   <div>
-                    <div className="text-xs font-bold text-white">{mod.label}</div>
+                    <div className="text-xs font-bold text-gray-900 dark:text-white">{mod.label}</div>
                     <div className="text-[11px] text-zinc-500">{mod.desc}</div>
                   </div>
                   <input

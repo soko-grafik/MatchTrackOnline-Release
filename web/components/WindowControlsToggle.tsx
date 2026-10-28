@@ -39,17 +39,17 @@ export default function WindowControlsToggle() {
 
   return (
     <div className="hidden lg:block">
-      <div className="flex items-center gap-1.5 bg-zinc-900/90 border border-zinc-700/80 p-1 rounded-xl shadow-lg backdrop-blur-md shrink-0">
+      <div className="flex items-center gap-1.5 bg-gray-100/90 dark:bg-zinc-900/90 border border-gray-200 dark:border-zinc-700/80 p-1 rounded-xl shadow-xs dark:shadow-lg backdrop-blur-md shrink-0">
         <button
           onClick={toggleFullscreenMode}
           title={isFullscreen ? "Fenstermodus wiederherstellen" : "Vollbild / Software-Modus (ohne Browserrahmen)"}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-bold text-zinc-200 transition-all active:scale-95"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white hover:bg-gray-50 border border-gray-200/80 dark:border-transparent dark:bg-zinc-800 dark:hover:bg-zinc-700 text-xs font-bold text-gray-700 dark:text-zinc-200 transition-all active:scale-95 shadow-xs"
         >
           <Monitor className="w-3.5 h-3.5 text-primary shrink-0" />
           <span>
             {isFullscreen ? "Fenstermodus" : "Fullscreen"}
           </span>
-          {isFullscreen ? <Minimize className="w-3 h-3 text-zinc-400 shrink-0" /> : <Maximize className="w-3 h-3 text-zinc-400 shrink-0" />}
+          {isFullscreen ? <Minimize className="w-3 h-3 text-gray-500 dark:text-zinc-400 shrink-0" /> : <Maximize className="w-3 h-3 text-gray-500 dark:text-zinc-400 shrink-0" />}
         </button>
       </div>
     </div>

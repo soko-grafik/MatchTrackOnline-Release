@@ -299,10 +299,10 @@ export default function PlayerDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-950 text-white flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 text-gray-900 dark:text-white flex items-center justify-center">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent"></div>
-          <p className="text-zinc-500 text-sm mt-3">Lade Spielerprofil...</p>
+          <p className="text-gray-500 dark:text-zinc-500 text-sm mt-3">Lade Spielerprofil...</p>
         </div>
       </div>
     );
@@ -310,9 +310,9 @@ export default function PlayerDetailPage() {
 
   if (!player) {
     return (
-      <div className="min-h-screen bg-zinc-950 text-white p-8 text-center">
-        <h2 className="text-xl font-bold text-red-400">Spieler nicht gefunden</h2>
-        <Link href="/players" className="text-primary hover:underline text-xs mt-4 inline-block">
+      <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 text-gray-900 dark:text-white p-8 text-center">
+        <h2 className="text-xl font-bold text-red-500 dark:text-red-400">Spieler nicht gefunden</h2>
+        <Link href="/players" className="text-primary hover:underline text-xs mt-4 inline-block font-semibold">
           Zurück zur Spielerliste
         </Link>
       </div>
@@ -360,21 +360,21 @@ export default function PlayerDetailPage() {
   })();
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white selection:bg-primary selection:text-white pb-16">
+    <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 text-gray-900 dark:text-white selection:bg-primary selection:text-white pb-16">
       <Navbar />
 
       <main className="w-full px-4 sm:px-6 lg:px-8 py-8">
         {/* Back Link */}
         <Link
           href="/players"
-          className="inline-flex items-center gap-2 text-zinc-400 hover:text-white text-xs font-bold mb-6 transition-colors"
+          className="inline-flex items-center gap-2 text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white text-xs font-bold mb-6 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Zurück zum Kader</span>
         </Link>
 
         {/* Player Header Banner */}
-        <div className="bg-gradient-to-r from-zinc-900 via-zinc-900 to-zinc-950 border border-zinc-800 rounded-3xl p-6 lg:p-8 mb-8 relative overflow-hidden shadow-2xl">
+        <div className="bg-gradient-to-r from-white via-slate-50 to-gray-100 dark:from-zinc-900 dark:via-zinc-900 dark:to-zinc-950 border border-gray-200 dark:border-zinc-800 rounded-3xl p-6 lg:p-8 mb-8 relative overflow-hidden shadow-xs dark:shadow-2xl">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
             <div className="flex items-center gap-5">
               <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-primary/60 border border-primary/30 flex items-center justify-center text-white font-black text-3xl shadow-xl shadow-primary/20">
@@ -387,14 +387,14 @@ export default function PlayerDetailPage() {
                   {canEditPlayer && <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400 shrink-0" />}
                   <span>{player.team_name || 'Keine Mannschaft'}</span>
                 </div>
-                <h1 className="text-3xl lg:text-4xl font-black text-white tracking-tight">
+                <h1 className="text-3xl lg:text-4xl font-black text-gray-900 dark:text-white tracking-tight">
                   {player.first_name} {player.last_name}
                 </h1>
-                <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-400 mt-2 font-medium">
-                  {player.position && <span className="bg-zinc-800 px-2.5 py-1 rounded-lg text-zinc-300 font-bold">{player.position}</span>}
-                  {player.date_of_birth && <span>Geb.: <strong className="text-zinc-200">{player.date_of_birth}</strong></span>}
-                  {player.dfb_id && <span>Pass-Nr: <strong className="font-mono text-zinc-200">{player.dfb_id}</strong></span>}
-                  {player.nationality && <span>Nat: <strong className="text-zinc-200">{player.nationality}</strong></span>}
+                <div className="flex flex-wrap items-center gap-3 text-xs text-gray-600 dark:text-zinc-400 mt-2 font-medium">
+                  {player.position && <span className="bg-gray-100 dark:bg-zinc-800 px-2.5 py-1 rounded-lg text-gray-700 dark:text-zinc-300 font-bold border border-gray-200 dark:border-transparent">{player.position}</span>}
+                  {player.date_of_birth && <span>Geb.: <strong className="text-gray-800 dark:text-zinc-200">{player.date_of_birth}</strong></span>}
+                  {player.dfb_id && <span>Pass-Nr: <strong className="font-mono text-gray-800 dark:text-zinc-200">{player.dfb_id}</strong></span>}
+                  {player.nationality && <span>Nat: <strong className="text-gray-800 dark:text-zinc-200">{player.nationality}</strong></span>}
                 </div>
               </div>
             </div>
@@ -402,9 +402,9 @@ export default function PlayerDetailPage() {
             <div className="flex flex-wrap items-center gap-3">
               <button
                 onClick={() => setIsPrintModalOpen(true)}
-                className="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2.5 rounded-xl font-bold text-xs transition-all shadow-md"
+                className="flex items-center gap-2 bg-white dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 text-gray-700 dark:text-white px-4 py-2.5 rounded-xl font-bold text-xs transition-all shadow-xs border border-gray-200 dark:border-transparent"
               >
-                <Printer className="w-4 h-4 text-emerald-400" />
+                <Printer className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
                 <span>PDF Bericht Drucken</span>
               </button>
 
@@ -430,66 +430,66 @@ export default function PlayerDetailPage() {
             {/* Row 1: Anwesenheitsquote & Gesamtschnitt (Side-by-Side) */}
             <div className="grid grid-cols-2 gap-3">
               {/* Anwesenheitsquote */}
-              <div className="bg-zinc-900/80 border border-zinc-800/80 rounded-3xl p-4 backdrop-blur-xl shadow-xl flex flex-col justify-between">
-                <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider block">Anwesenheit</span>
-                <div className="text-2xl sm:text-3xl font-black text-emerald-400 flex items-center gap-2 my-1">
+              <div className="bg-white dark:bg-zinc-900/80 border border-gray-200 dark:border-zinc-800/80 rounded-3xl p-4 backdrop-blur-xl shadow-xs dark:shadow-xl flex flex-col justify-between">
+                <span className="text-[11px] font-bold text-gray-500 dark:text-zinc-500 uppercase tracking-wider block">Anwesenheit</span>
+                <div className="text-2xl sm:text-3xl font-black text-emerald-500 dark:text-emerald-400 flex items-center gap-2 my-1">
                   <UserCheck className="w-6 h-6 shrink-0" />
                   <span>{attRate}%</span>
                 </div>
-                <span className="text-[10px] text-zinc-400 font-medium">{presentCount} von {totalAtt} Einheiten</span>
+                <span className="text-[10px] text-gray-500 dark:text-zinc-400 font-medium">{presentCount} von {totalAtt} Einheiten</span>
               </div>
 
               {/* Gesamtschnitt (Note) */}
-              <div className="bg-zinc-900/80 border border-zinc-800/80 rounded-3xl p-4 backdrop-blur-xl shadow-xl flex flex-col justify-between">
-                <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider block">Gesamtschnitt</span>
-                <div className="text-2xl sm:text-3xl font-black text-amber-400 flex items-center gap-2 my-1">
+              <div className="bg-white dark:bg-zinc-900/80 border border-gray-200 dark:border-zinc-800/80 rounded-3xl p-4 backdrop-blur-xl shadow-xs dark:shadow-xl flex flex-col justify-between">
+                <span className="text-[11px] font-bold text-gray-500 dark:text-zinc-500 uppercase tracking-wider block">Gesamtschnitt</span>
+                <div className="text-2xl sm:text-3xl font-black text-amber-500 dark:text-amber-400 flex items-center gap-2 my-1">
                   <Star className="w-6 h-6 fill-amber-400 shrink-0" />
                   <span>{latestEval ? latestEval.overall_rating.toFixed(1) : '—'}</span>
                 </div>
-                <span className="text-[10px] text-zinc-400 font-medium">Skala 1 - 10</span>
+                <span className="text-[10px] text-gray-500 dark:text-zinc-400 font-medium">Skala 1 - 10</span>
               </div>
             </div>
 
             {/* Row 2: Trainings- & Spiel-Teilnahme Counter */}
-            <div className="bg-zinc-900/80 border border-zinc-800/80 rounded-3xl p-5 backdrop-blur-xl shadow-xl">
-              <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-3">Teilnahme-Counter</span>
+            <div className="bg-white dark:bg-zinc-900/80 border border-gray-200 dark:border-zinc-800/80 rounded-3xl p-5 backdrop-blur-xl shadow-xs dark:shadow-xl">
+              <span className="text-xs font-bold text-gray-500 dark:text-zinc-500 uppercase tracking-wider block mb-3">Teilnahme-Counter</span>
               <div className="space-y-3">
                 {/* Training counter */}
-                <div className="bg-zinc-950/60 border border-zinc-800/80 p-3 rounded-2xl">
+                <div className="bg-gray-50 dark:bg-zinc-950/60 border border-gray-200 dark:border-zinc-800/80 p-3 rounded-2xl">
                   <div className="flex justify-between items-center text-xs font-bold mb-1">
-                    <span className="text-zinc-300">🏋️ Trainingseinheiten</span>
-                    <span className="text-emerald-400 font-mono">{presentTraining} / {totalTraining}</span>
+                    <span className="text-gray-700 dark:text-zinc-300">🏋️ Trainingseinheiten</span>
+                    <span className="text-emerald-500 dark:text-emerald-400 font-mono">{presentTraining} / {totalTraining}</span>
                   </div>
-                  <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
+                  <div className="w-full h-2 bg-gray-200 dark:bg-zinc-800 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-emerald-500 rounded-full transition-all duration-500"
                       style={{ width: `${totalTraining > 0 ? (presentTraining / totalTraining) * 100 : 0}%` }}
                     />
                   </div>
-                  <span className="text-[10px] text-zinc-500 mt-1 block">An {presentTraining} von {totalTraining} Trainingseinheiten teilgenommen</span>
+                  <span className="text-[10px] text-gray-500 dark:text-zinc-500 mt-1 block">An {presentTraining} von {totalTraining} Trainingseinheiten teilgenommen</span>
                 </div>
 
                 {/* Match counter */}
-                <div className="bg-zinc-950/60 border border-zinc-800/80 p-3 rounded-2xl">
+                <div className="bg-gray-50 dark:bg-zinc-950/60 border border-gray-200 dark:border-zinc-800/80 p-3 rounded-2xl">
                   <div className="flex justify-between items-center text-xs font-bold mb-1">
-                    <span className="text-zinc-300">⚽ Meisterschafts-Spiele</span>
-                    <span className="text-blue-400 font-mono">{presentMatch} / {totalMatch}</span>
+                    <span className="text-gray-700 dark:text-zinc-300">⚽ Meisterschafts-Spiele</span>
+                    <span className="text-blue-500 dark:text-blue-400 font-mono">{presentMatch} / {totalMatch}</span>
                   </div>
-                  <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
+                  <div className="w-full h-2 bg-gray-200 dark:bg-zinc-800 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-blue-500 rounded-full transition-all duration-500"
                       style={{ width: `${totalMatch > 0 ? (presentMatch / totalMatch) * 100 : 0}%` }}
                     />
                   </div>
-                  <span className="text-[10px] text-zinc-500 mt-1 block">An {presentMatch} von {totalMatch} Spielen teilgenommen</span>
+                  <span className="text-[10px] text-gray-500 dark:text-zinc-500 mt-1 block">An {presentMatch} von {totalMatch} Spielen teilgenommen</span>
                 </div>
               </div>
             </div>
 
             {/* Card 3: Anwesenheit erfassen */}
             {canEditPlayer && (
-              <div className="bg-zinc-900/80 border border-zinc-800/80 rounded-3xl p-5 backdrop-blur-xl shadow-xl">
-                <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-2">Anwesenheit erfassen</span>
+              <div className="bg-white dark:bg-zinc-900/80 border border-gray-200 dark:border-zinc-800/80 rounded-3xl p-5 backdrop-blur-xl shadow-xs dark:shadow-xl">
+                <span className="text-xs font-bold text-gray-500 dark:text-zinc-500 uppercase tracking-wider block mb-2">Anwesenheit erfassen</span>
                 <button
                   onClick={() => setIsAttModalOpen(true)}
                   className="w-full bg-primary hover:bg-primary/90 text-white py-3 rounded-2xl text-xs font-bold transition-all shadow-md shadow-primary/20 flex items-center justify-center gap-2"
@@ -501,28 +501,28 @@ export default function PlayerDetailPage() {
             )}
 
             {/* Card 4: Absagegründe */}
-            <div className="bg-zinc-900/80 border border-zinc-800/80 rounded-3xl p-5 backdrop-blur-xl shadow-xl">
-              <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-2">Absagegründe</span>
+            <div className="bg-white dark:bg-zinc-900/80 border border-gray-200 dark:border-zinc-800/80 rounded-3xl p-5 backdrop-blur-xl shadow-xs dark:shadow-xl">
+              <span className="text-xs font-bold text-gray-500 dark:text-zinc-500 uppercase tracking-wider block mb-2">Absagegründe</span>
               <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
-                <span className="bg-red-500/10 text-red-400 border border-red-500/20 px-3 py-1.5 rounded-xl flex-1 text-center">Krank: {krankheitCount}</span>
-                <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 px-3 py-1.5 rounded-xl flex-1 text-center">Privat: {privatesCount}</span>
-                <span className="bg-purple-500/10 text-purple-400 border border-purple-500/20 px-3 py-1.5 rounded-xl flex-1 text-center">Verletzt: {verletzungCount}</span>
+                <span className="bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 px-3 py-1.5 rounded-xl flex-1 text-center">Krank: {krankheitCount}</span>
+                <span className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-3 py-1.5 rounded-xl flex-1 text-center">Privat: {privatesCount}</span>
+                <span className="bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 px-3 py-1.5 rounded-xl flex-1 text-center">Verletzt: {verletzungCount}</span>
               </div>
             </div>
           </div>
 
           {/* Right Column (8 Cols): Fortschritts-Analyse Chart */}
-          <div className="lg:col-span-8 bg-gradient-to-b from-zinc-900/90 to-zinc-950/90 border border-zinc-800/80 rounded-3xl p-6 lg:p-7 backdrop-blur-2xl shadow-2xl relative overflow-hidden flex flex-col justify-between">
+          <div className="lg:col-span-8 bg-gradient-to-b from-white to-gray-50 dark:from-zinc-900/90 dark:to-zinc-950/90 border border-gray-200 dark:border-zinc-800/80 rounded-3xl p-6 lg:p-7 backdrop-blur-2xl shadow-xs dark:shadow-2xl relative overflow-hidden flex flex-col justify-between">
             {/* Ambient Glow */}
             <div className="absolute top-0 right-0 w-80 h-80 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
 
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 relative z-10">
               <div>
-                <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs uppercase tracking-wider mb-0.5">
+                <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold text-xs uppercase tracking-wider mb-0.5">
                   <TrendingUp className="w-4 h-4" />
                   <span>Fortschritts-Analyse</span>
                 </div>
-                <h2 className="text-lg font-extrabold text-white tracking-tight">Entwicklungsverlauf über die Quartale</h2>
+                <h2 className="text-lg font-extrabold text-gray-900 dark:text-white tracking-tight">Entwicklungsverlauf über die Quartale</h2>
               </div>
 
               {/* Interactive Toggle Pill Controls */}
@@ -531,10 +531,10 @@ export default function PlayerDetailPage() {
                   <button
                     key={opt.key}
                     onClick={() => setVisibleChartKeys(prev => ({ ...prev, [opt.key]: !prev[opt.key] }))}
-                    className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all flex items-center gap-1.5 border shadow-sm ${
+                    className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all flex items-center gap-1.5 border shadow-xs ${
                       visibleChartKeys[opt.key]
-                        ? 'bg-zinc-800 text-white border-zinc-600 shadow-zinc-900/50'
-                        : 'bg-zinc-950/60 text-zinc-500 border-zinc-800/80 hover:text-zinc-300 hover:border-zinc-700'
+                        ? 'bg-gray-800 text-white border-gray-700 dark:bg-zinc-800 dark:text-white dark:border-zinc-600'
+                        : 'bg-white dark:bg-zinc-950/60 text-gray-600 dark:text-zinc-500 border-gray-200 dark:border-zinc-800/80 hover:text-gray-900 dark:hover:text-zinc-300'
                     }`}
                   >
                     <span className="w-2 h-2 rounded-full shadow-sm" style={{ backgroundColor: opt.color }}></span>
@@ -546,8 +546,8 @@ export default function PlayerDetailPage() {
 
             {/* SVG Smooth Area & Line Chart (without fixed h-80/md:h-96) */}
             {evaluations.length === 0 ? (
-              <div className="py-16 text-center text-zinc-500 text-xs border border-dashed border-zinc-800/80 rounded-2xl bg-zinc-950/40 my-auto">
-                <TrendingUp className="w-8 h-8 text-zinc-700 mx-auto mb-2" />
+              <div className="py-16 text-center text-gray-500 dark:text-zinc-500 text-xs border border-dashed border-gray-200 dark:border-zinc-800/80 rounded-2xl bg-gray-50 dark:bg-zinc-950/40 my-auto">
+                <TrendingUp className="w-8 h-8 text-gray-400 dark:text-zinc-700 mx-auto mb-2" />
                 Noch keine Quartals-Bewertungen vorhanden. Erstelle die erste Bewertung, um das Verlaufsdiagramm zu aktivieren.
               </div>
             ) : (
@@ -678,14 +678,14 @@ export default function PlayerDetailPage() {
         </div>
 
         {/* Section: 16-Kriterien Quartals-Bewertungsmatrix (1-10) */}
-        <div className="bg-zinc-900/80 border border-zinc-800 rounded-3xl p-6 lg:p-8 backdrop-blur-xl">
+        <div className="bg-white dark:bg-zinc-900/80 border border-gray-200 dark:border-zinc-800 rounded-3xl p-6 lg:p-8 backdrop-blur-xl shadow-xs dark:shadow-xl">
           <div className="flex items-center justify-between mb-6">
             <div>
               <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider mb-1">
                 <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
                 <span>16-Kriterien Bewertung</span>
               </div>
-              <h2 className="text-xl font-bold text-white">Quartals-Bewertungsmatrix (Skala 1 bis 10)</h2>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Quartals-Bewertungsmatrix (Skala 1 bis 10)</h2>
             </div>
 
             {canEditPlayer && (
@@ -700,35 +700,35 @@ export default function PlayerDetailPage() {
           </div>
 
           {evaluations.length === 0 ? (
-            <div className="py-12 text-center text-zinc-500 text-xs border border-zinc-800 rounded-2xl">
+            <div className="py-12 text-center text-gray-500 dark:text-zinc-500 text-xs border border-gray-200 dark:border-zinc-800 rounded-2xl bg-gray-50 dark:bg-transparent">
               Noch keine Bewertungen angelegt. Klicke auf <strong>"Neue Bewertung"</strong>, um den Spieler nach den 16 Kriterien zu beurteilen.
             </div>
           ) : (
             <div className="space-y-6">
               {evaluations.map(ev => (
-                <div key={ev.id} className="bg-zinc-950/60 border border-zinc-800/80 rounded-2xl p-5 hover:border-zinc-700 transition-all space-y-4">
-                  <div className="flex flex-wrap items-center justify-between border-b border-zinc-800/80 pb-3 gap-3">
+                <div key={ev.id} className="bg-gray-50 dark:bg-zinc-950/60 border border-gray-200 dark:border-zinc-800/80 rounded-2xl p-5 hover:border-gray-300 dark:hover:border-zinc-700 transition-all space-y-4 shadow-xs dark:shadow-none">
+                  <div className="flex flex-wrap items-center justify-between border-b border-gray-200 dark:border-zinc-800/80 pb-3 gap-3">
                     <div className="flex flex-wrap items-center gap-3">
                       <span className="bg-primary/20 text-primary border border-primary/30 px-3 py-1 rounded-xl text-xs font-black">
                         {ev.evaluation_date ? new Date(ev.evaluation_date).toLocaleDateString('de-DE') : `${ev.eval_quarter || ''} ${ev.eval_year || ''}`}
                       </span>
-                      <span className="text-sm font-bold text-white">
-                        Gesamtschnitt: <strong className="text-amber-400 font-mono text-base">{ev.overall_rating.toFixed(1)} / 10</strong>
+                      <span className="text-sm font-bold text-gray-900 dark:text-white">
+                        Gesamtschnitt: <strong className="text-amber-500 dark:text-amber-400 font-mono text-base">{ev.overall_rating.toFixed(1)} / 10</strong>
                       </span>
 
                       {/* Ersteller Name */}
-                      <span className="text-xs text-zinc-400 font-medium bg-zinc-900 border border-zinc-800 px-2.5 py-1 rounded-lg">
-                        Erstellt von: <strong className="text-zinc-200">{ev.created_by_user_name || 'Trainer'}</strong>
+                      <span className="text-xs text-gray-600 dark:text-zinc-400 font-medium bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 px-2.5 py-1 rounded-lg">
+                        Erstellt von: <strong className="text-gray-800 dark:text-zinc-200">{ev.created_by_user_name || 'Trainer'}</strong>
                       </span>
 
                       {/* Approval Status */}
                       {!ev.is_approved ? (
-                        <span className="inline-flex items-center gap-1.5 text-amber-400 font-bold bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-lg text-xs">
+                        <span className="inline-flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-bold bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-lg text-xs">
                           <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
                           ⏳ Freigabe ausstehend (durch Admin/Team-Admin)
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1.5 text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg text-xs" title={ev.approved_by_user_name ? `Freigegeben von ${ev.approved_by_user_name}` : 'Freigegeben'}>
+                        <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg text-xs" title={ev.approved_by_user_name ? `Freigegeben von ${ev.approved_by_user_name}` : 'Freigegeben'}>
                           <span>✓ Freigegeben</span>
                         </span>
                       )}
@@ -749,7 +749,7 @@ export default function PlayerDetailPage() {
                       {canEditPlayer && (
                         <button
                           onClick={() => openEditEvalModal(ev)}
-                          className="flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+                          className="flex items-center gap-1.5 bg-white dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 text-gray-700 dark:text-zinc-300 border border-gray-200 dark:border-transparent px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
                         >
                           <Edit3 className="w-3.5 h-3.5 text-primary" />
                           <span>Bearbeiten</span>
@@ -759,7 +759,7 @@ export default function PlayerDetailPage() {
                       {canEditPlayer && (
                         <button
                           onClick={() => handleDeleteEvaluation(ev.id)}
-                          className="flex items-center gap-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+                          className="flex items-center gap-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
                           title="Diese Bewertung löschen"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -772,61 +772,61 @@ export default function PlayerDetailPage() {
                   {/* 4 Categories Accordion / Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
                     {/* Category 1 */}
-                    <div className="bg-zinc-900/50 p-3.5 rounded-xl border border-zinc-800/60">
-                      <h4 className="font-bold text-blue-400 mb-2 border-b border-zinc-800 pb-1">1. Technik</h4>
-                      <div className="space-y-1.5 text-[11px] text-zinc-300">
-                        <div className="flex justify-between"><span>Ballkontrolle:</span><strong className="font-mono text-white">{ev.tech_ball_control}/10</strong></div>
-                        <div className="flex justify-between"><span>Dribbling:</span><strong className="font-mono text-white">{ev.tech_dribbling}/10</strong></div>
-                        <div className="flex justify-between"><span>Passspiel:</span><strong className="font-mono text-white">{ev.tech_passing}/10</strong></div>
-                        <div className="flex justify-between"><span>Torschuss:</span><strong className="font-mono text-white">{ev.tech_shooting}/10</strong></div>
-                        <div className="flex justify-between"><span>Beidfüßigkeit:</span><strong className="font-mono text-white">{ev.tech_both_feet}/10</strong></div>
+                    <div className="bg-white dark:bg-zinc-900/50 p-3.5 rounded-xl border border-gray-200 dark:border-zinc-800/60 shadow-xs dark:shadow-none">
+                      <h4 className="font-bold text-blue-500 dark:text-blue-400 mb-2 border-b border-gray-100 dark:border-zinc-800 pb-1">1. Technik</h4>
+                      <div className="space-y-1.5 text-[11px] text-gray-600 dark:text-zinc-300">
+                        <div className="flex justify-between"><span>Ballkontrolle:</span><strong className="font-mono text-gray-900 dark:text-white">{ev.tech_ball_control}/10</strong></div>
+                        <div className="flex justify-between"><span>Dribbling:</span><strong className="font-mono text-gray-900 dark:text-white">{ev.tech_dribbling}/10</strong></div>
+                        <div className="flex justify-between"><span>Passspiel:</span><strong className="font-mono text-gray-900 dark:text-white">{ev.tech_passing}/10</strong></div>
+                        <div className="flex justify-between"><span>Torschuss:</span><strong className="font-mono text-gray-900 dark:text-white">{ev.tech_shooting}/10</strong></div>
+                        <div className="flex justify-between"><span>Beidfüßigkeit:</span><strong className="font-mono text-gray-900 dark:text-white">{ev.tech_both_feet}/10</strong></div>
                       </div>
                     </div>
 
                     {/* Category 2 */}
-                    <div className="bg-zinc-900/50 p-3.5 rounded-xl border border-zinc-800/60">
-                      <h4 className="font-bold text-purple-400 mb-2 border-b border-zinc-800 pb-1">2. Taktik</h4>
-                      <div className="space-y-1.5 text-[11px] text-zinc-300">
-                        <div className="flex justify-between"><span>Spielintelligenz:</span><strong className="font-mono text-white">{ev.tact_intelligence}/10</strong></div>
-                        <div className="flex justify-between"><span>Freilaufverhalten:</span><strong className="font-mono text-white">{ev.tact_space_creation}/10</strong></div>
-                        <div className="flex justify-between"><span>Umschaltspiel:</span><strong className="font-mono text-white">{ev.tact_transition}/10</strong></div>
-                        <div className="flex justify-between"><span>1-gegen-1:</span><strong className="font-mono text-white">{ev.tact_one_on_one}/10</strong></div>
+                    <div className="bg-white dark:bg-zinc-900/50 p-3.5 rounded-xl border border-gray-200 dark:border-zinc-800/60 shadow-xs dark:shadow-none">
+                      <h4 className="font-bold text-purple-500 dark:text-purple-400 mb-2 border-b border-gray-100 dark:border-zinc-800 pb-1">2. Taktik</h4>
+                      <div className="space-y-1.5 text-[11px] text-gray-600 dark:text-zinc-300">
+                        <div className="flex justify-between"><span>Spielintelligenz:</span><strong className="font-mono text-gray-900 dark:text-white">{ev.tact_intelligence}/10</strong></div>
+                        <div className="flex justify-between"><span>Freilaufverhalten:</span><strong className="font-mono text-gray-900 dark:text-white">{ev.tact_space_creation}/10</strong></div>
+                        <div className="flex justify-between"><span>Umschaltspiel:</span><strong className="font-mono text-gray-900 dark:text-white">{ev.tact_transition}/10</strong></div>
+                        <div className="flex justify-between"><span>1-gegen-1:</span><strong className="font-mono text-gray-900 dark:text-white">{ev.tact_one_on_one}/10</strong></div>
                       </div>
                     </div>
 
                     {/* Category 3 */}
-                    <div className="bg-zinc-900/50 p-3.5 rounded-xl border border-zinc-800/60">
-                      <h4 className="font-bold text-amber-400 mb-2 border-b border-zinc-800 pb-1">3. Physis & Koordination</h4>
-                      <div className="space-y-1.5 text-[11px] text-zinc-300">
-                        <div className="flex justify-between"><span>Schnelligkeit:</span><strong className="font-mono text-white">{ev.phys_speed}/10</strong></div>
-                        <div className="flex justify-between"><span>Gewandtheit:</span><strong className="font-mono text-white">{ev.phys_agility}/10</strong></div>
-                        <div className="flex justify-between"><span>Beweglichkeit:</span><strong className="font-mono text-white">{ev.phys_mobility}/10</strong></div>
+                    <div className="bg-white dark:bg-zinc-900/50 p-3.5 rounded-xl border border-gray-200 dark:border-zinc-800/60 shadow-xs dark:shadow-none">
+                      <h4 className="font-bold text-amber-500 dark:text-amber-400 mb-2 border-b border-gray-100 dark:border-zinc-800 pb-1">3. Physis & Koordination</h4>
+                      <div className="space-y-1.5 text-[11px] text-gray-600 dark:text-zinc-300">
+                        <div className="flex justify-between"><span>Schnelligkeit:</span><strong className="font-mono text-gray-900 dark:text-white">{ev.phys_speed}/10</strong></div>
+                        <div className="flex justify-between"><span>Gewandtheit:</span><strong className="font-mono text-gray-900 dark:text-white">{ev.phys_agility}/10</strong></div>
+                        <div className="flex justify-between"><span>Beweglichkeit:</span><strong className="font-mono text-gray-900 dark:text-white">{ev.phys_mobility}/10</strong></div>
                       </div>
                     </div>
 
                     {/* Category 4 */}
-                    <div className="bg-zinc-900/50 p-3.5 rounded-xl border border-zinc-800/60">
-                      <h4 className="font-bold text-emerald-400 mb-2 border-b border-zinc-800 pb-1">4. Mental & Sozial</h4>
-                      <div className="space-y-1.5 text-[11px] text-zinc-300">
-                        <div className="flex justify-between"><span>Teamgeist:</span><strong className="font-mono text-white">{ev.ment_teamwork}/10</strong></div>
-                        <div className="flex justify-between"><span>Einstellung:</span><strong className="font-mono text-white">{ev.ment_attitude}/10</strong></div>
-                        <div className="flex justify-between"><span>Lernbereitschaft:</span><strong className="font-mono text-white">{ev.ment_learning}/10</strong></div>
-                        <div className="flex justify-between"><span>Fairplay:</span><strong className="font-mono text-white">{ev.ment_fairplay}/10</strong></div>
+                    <div className="bg-white dark:bg-zinc-900/50 p-3.5 rounded-xl border border-gray-200 dark:border-zinc-800/60 shadow-xs dark:shadow-none">
+                      <h4 className="font-bold text-emerald-500 dark:text-emerald-400 mb-2 border-b border-gray-100 dark:border-zinc-800 pb-1">4. Mental & Sozial</h4>
+                      <div className="space-y-1.5 text-[11px] text-gray-600 dark:text-zinc-300">
+                        <div className="flex justify-between"><span>Teamgeist:</span><strong className="font-mono text-gray-900 dark:text-white">{ev.ment_teamwork}/10</strong></div>
+                        <div className="flex justify-between"><span>Einstellung:</span><strong className="font-mono text-gray-900 dark:text-white">{ev.ment_attitude}/10</strong></div>
+                        <div className="flex justify-between"><span>Lernbereitschaft:</span><strong className="font-mono text-gray-900 dark:text-white">{ev.ment_learning}/10</strong></div>
+                        <div className="flex justify-between"><span>Fairplay:</span><strong className="font-mono text-gray-900 dark:text-white">{ev.ment_fairplay}/10</strong></div>
                       </div>
                     </div>
                   </div>
 
                   {ev.overall_notes && (
-                    <div className="bg-zinc-900/40 p-3 rounded-xl border border-zinc-800 text-xs text-zinc-300 italic">
-                      <strong className="text-zinc-400 not-italic block mb-0.5">Trainerfazit:</strong>
+                    <div className="bg-white dark:bg-zinc-900/40 p-3 rounded-xl border border-gray-200 dark:border-zinc-800 text-xs text-gray-700 dark:text-zinc-300 italic shadow-xs dark:shadow-none">
+                      <strong className="text-gray-500 dark:text-zinc-400 not-italic block mb-0.5">Trainerfazit:</strong>
                       {ev.overall_notes}
                     </div>
                   )}
 
                   {ev.raw_transcript && (
-                    <div className="bg-emerald-500/5 p-3 rounded-xl border border-emerald-500/20 text-xs text-zinc-300">
-                      <strong className="text-emerald-400 not-italic block mb-0.5 flex items-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5 text-amber-300" /> KI-Spracheingabe / Transkript:
+                    <div className="bg-emerald-500/5 p-3 rounded-xl border border-emerald-500/20 text-xs text-gray-700 dark:text-zinc-300">
+                      <strong className="text-emerald-600 dark:text-emerald-400 not-italic block mb-0.5 flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-amber-500 dark:text-amber-300" /> KI-Spracheingabe / Transkript:
                       </strong>
                       "{ev.raw_transcript}"
                     </div>
@@ -838,7 +838,7 @@ export default function PlayerDetailPage() {
         </div>
 
         {/* --- Neuer Bereich: Video-Szenen --- */}
-        <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-6 shadow-xl mb-8 relative overflow-hidden">
+        <div className="bg-white dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 rounded-3xl p-6 shadow-xs dark:shadow-xl mb-8 relative overflow-hidden">
           <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
             <Sparkles className="w-48 h-48" />
           </div>
@@ -849,32 +849,32 @@ export default function PlayerDetailPage() {
                 <Sparkles className="w-4 h-4" />
                 <span>Video-Szenen</span>
               </div>
-              <h2 className="text-xl font-extrabold text-white tracking-tight">Erwähnungen in der Videoanalyse</h2>
+              <h2 className="text-xl font-extrabold text-gray-900 dark:text-white tracking-tight">Erwähnungen in der Videoanalyse</h2>
             </div>
           </div>
 
           {taggedEvents.length === 0 ? (
-            <div className="py-12 text-center text-zinc-500 text-sm border border-dashed border-zinc-800 rounded-2xl bg-zinc-900/50">
+            <div className="py-12 text-center text-gray-500 dark:text-zinc-500 text-sm border border-dashed border-gray-200 dark:border-zinc-800 rounded-2xl bg-gray-50 dark:bg-zinc-900/50">
               Dieser Spieler wurde noch in keinem Video-Kommentar erwähnt.
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {taggedEvents.map(event => (
-                <div key={event.id} className="bg-zinc-900 rounded-2xl border border-zinc-800 p-4 transition-all hover:border-zinc-600 group">
+                <div key={event.id} className="bg-gray-50 dark:bg-zinc-900 rounded-2xl border border-gray-200 dark:border-zinc-800 p-4 transition-all hover:border-gray-300 dark:hover:border-zinc-600 group shadow-xs dark:shadow-none">
                   <div className="flex justify-between items-start mb-2">
                     <div>
-                      <h4 className="font-bold text-white text-sm">{event.match_name}</h4>
-                      <div className="text-xs text-zinc-500 mt-0.5">
+                      <h4 className="font-bold text-gray-900 dark:text-white text-sm">{event.match_name}</h4>
+                      <div className="text-xs text-gray-500 dark:text-zinc-500 mt-0.5">
                         {event.match_date ? new Date(event.match_date).toLocaleDateString('de-DE') : ''}
                       </div>
                     </div>
-                    <div className="bg-zinc-800 px-2.5 py-1 rounded-full text-xs font-mono font-bold text-zinc-300">
+                    <div className="bg-gray-200 dark:bg-zinc-800 px-2.5 py-1 rounded-full text-xs font-mono font-bold text-gray-700 dark:text-zinc-300">
                       {Math.floor(event.video_time_ms / 60000)}:
                       {Math.floor((event.video_time_ms % 60000) / 1000).toString().padStart(2, '0')}
                     </div>
                   </div>
                   
-                  <div className="text-sm text-zinc-300 bg-black/20 p-3 rounded-xl border border-white/5 mb-3">
+                  <div className="text-sm text-gray-700 dark:text-zinc-300 bg-white dark:bg-black/20 p-3 rounded-xl border border-gray-200 dark:border-white/5 mb-3">
                     {event.details?.text}
                   </div>
                   
@@ -893,19 +893,19 @@ export default function PlayerDetailPage() {
       {/* --- Modal: Anwesenheit erfassen --- */}
       {isAttModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
-              <h2 className="text-lg font-bold text-white">Anwesenheit / Absage erfassen</h2>
-              <button onClick={() => setIsAttModalOpen(false)} className="text-zinc-400 hover:text-white text-xl font-bold">&times;</button>
+          <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 text-gray-900 dark:text-white">
+            <div className="flex items-center justify-between border-b border-gray-200 dark:border-zinc-800 pb-3">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Anwesenheit / Absage erfassen</h2>
+              <button onClick={() => setIsAttModalOpen(false)} className="text-gray-400 hover:text-gray-600 dark:text-zinc-400 dark:hover:text-white text-xl font-bold">&times;</button>
             </div>
 
             <form onSubmit={handleRecordAttendance} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">Typ</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-zinc-400 mb-1">Typ</label>
                 <select
                   value={attType}
                   onChange={(e) => setAttType(e.target.value)}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-primary"
+                  className="w-full bg-gray-50 dark:bg-zinc-950 border border-gray-300 dark:border-zinc-800 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-primary"
                 >
                   <option value="TRAINING">Training</option>
                   <option value="MATCH">Spiel</option>
@@ -913,11 +913,11 @@ export default function PlayerDetailPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">Status</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-zinc-400 mb-1">Status</label>
                 <select
                   value={attStatus}
                   onChange={(e) => setAttStatus(e.target.value)}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-primary"
+                  className="w-full bg-gray-50 dark:bg-zinc-950 border border-gray-300 dark:border-zinc-800 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-primary"
                 >
                   <option value="PRESENT">Anwesend</option>
                   <option value="EXCUSED">Entschuldigt abgesagt</option>
@@ -927,11 +927,11 @@ export default function PlayerDetailPage() {
 
               {attStatus !== 'PRESENT' && (
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">Absagegrund</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-zinc-400 mb-1">Absagegrund</label>
                   <select
                     value={attReason}
                     onChange={(e) => setAttReason(e.target.value)}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-primary"
+                    className="w-full bg-gray-50 dark:bg-zinc-950 border border-gray-300 dark:border-zinc-800 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-primary"
                   >
                     <option value="KRANKHEIT">Krankheit</option>
                     <option value="PRIVATES">Privates / Schule</option>
@@ -942,19 +942,19 @@ export default function PlayerDetailPage() {
               )}
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">Notizen (optional)</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-zinc-400 mb-1">Notizen (optional)</label>
                 <input
                   type="text"
                   value={attNotes}
                   onChange={(e) => setAttNotes(e.target.value)}
                   placeholder="z.B. Grippe, Schulausflug..."
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-primary"
+                  className="w-full bg-gray-50 dark:bg-zinc-950 border border-gray-300 dark:border-zinc-800 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-primary"
                 />
               </div>
 
-              <div className="flex justify-end gap-3 pt-3 border-t border-zinc-800">
-                <button type="button" onClick={() => setIsAttModalOpen(false)} className="px-4 py-2 bg-zinc-800 text-zinc-300 rounded-xl text-xs font-bold">Abbrechen</button>
-                <button type="submit" className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold">Speichern</button>
+              <div className="flex justify-end gap-3 pt-3 border-t border-gray-200 dark:border-zinc-800">
+                <button type="button" onClick={() => setIsAttModalOpen(false)} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-gray-700 dark:text-zinc-300 rounded-xl text-xs font-bold border border-gray-200 dark:border-transparent transition-all">Abbrechen</button>
+                <button type="submit" className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 transition-all">Speichern</button>
               </div>
             </form>
           </div>
@@ -964,106 +964,106 @@ export default function PlayerDetailPage() {
       {/* --- Modal: 16-Kriterien Quartals-Bewertung (1-10 Matrix) --- */}
       {isEvalModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-3 sm:p-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-3xl w-full flex flex-col max-h-[90vh] shadow-2xl overflow-hidden">
+          <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl max-w-3xl w-full flex flex-col max-h-[90vh] shadow-2xl overflow-hidden text-gray-900 dark:text-white">
             {/* Modal Header (Fixed) */}
-            <div className="flex items-center justify-between border-b border-zinc-800 p-4 sm:p-5 shrink-0 bg-zinc-950/60">
-              <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-                <Star className="w-5 h-5 text-amber-400 fill-amber-400 shrink-0" />
+            <div className="flex items-center justify-between border-b border-gray-200 dark:border-zinc-800 p-4 sm:p-5 shrink-0 bg-gray-50 dark:bg-zinc-950/60">
+              <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <Star className="w-5 h-5 text-amber-500 dark:text-amber-400 fill-amber-400 shrink-0" />
                 <span>{editingEvalId ? 'Bewertung bearbeiten' : 'Neue Bewertung (Skala 1 bis 10)'}</span>
               </h2>
-              <button onClick={() => setIsEvalModalOpen(false)} className="text-zinc-400 hover:text-white text-xl font-bold p-1">&times;</button>
+              <button onClick={() => setIsEvalModalOpen(false)} className="text-gray-400 hover:text-gray-600 dark:text-zinc-400 dark:hover:text-white text-xl font-bold p-1">&times;</button>
             </div>
 
             {/* Form with Scrollable Content & Sticky Footer */}
             <form onSubmit={handleSaveEvaluation} className="flex flex-col flex-1 min-h-0 overflow-hidden">
               <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
                 {/* Evaluation Date Selection */}
-                <div className="bg-zinc-950 p-4 rounded-xl border border-zinc-800">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">Bewertungs-Datum *</label>
+                <div className="bg-gray-50 dark:bg-zinc-950 p-4 rounded-xl border border-gray-200 dark:border-zinc-800">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-zinc-400 mb-1">Bewertungs-Datum *</label>
                   <input
                     type="date"
                     required
                     value={evalDate}
                     onChange={(e) => setEvalDate(e.target.value)}
-                    className="bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-primary w-full sm:w-auto"
+                    className="bg-white dark:bg-zinc-900 border border-gray-300 dark:border-zinc-800 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-primary w-full sm:w-auto"
                   />
                 </div>
 
                 {/* Info Banner when previous evaluation values are available */}
                 {!editingEvalId && prevEval && (
-                  <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-xs text-amber-300 flex items-center justify-between">
+                  <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-xs text-amber-700 dark:text-amber-300 flex items-center justify-between">
                     <span className="font-semibold">
                       💡 Vorbelegt mit den Werten der letzten Bewertung ({new Date(prevEval.evaluation_date).toLocaleDateString('de-DE')})
                     </span>
-                    <span className="text-[10px] bg-amber-500/20 border border-amber-500/30 text-amber-200 px-2 py-0.5 rounded-md font-mono">
+                    <span className="text-[10px] bg-amber-500/20 border border-amber-500/30 text-amber-800 dark:text-amber-200 px-2 py-0.5 rounded-md font-mono">
                       Alt: {prevEval.tech_ball_control ?? '-'}
                     </span>
                   </div>
                 )}
 
                 {/* 1. Technik (5 Kriterien) */}
-                <div className="bg-zinc-950/80 p-4 rounded-xl border border-zinc-800 space-y-3">
-                  <h3 className="font-bold text-blue-400 text-xs uppercase tracking-wider border-b border-zinc-800 pb-1.5 flex items-center justify-between">
+                <div className="bg-gray-50 dark:bg-zinc-950/80 p-4 rounded-xl border border-gray-200 dark:border-zinc-800 space-y-3">
+                  <h3 className="font-bold text-blue-500 dark:text-blue-400 text-xs uppercase tracking-wider border-b border-gray-200 dark:border-zinc-800 pb-1.5 flex items-center justify-between">
                     <span>1. Technische Fähigkeiten</span>
-                    {!editingEvalId && prevEval && <span className="text-[10px] text-zinc-500 font-normal normal-case">Badges zeigen den alten Wert</span>}
+                    {!editingEvalId && prevEval && <span className="text-[10px] text-gray-500 dark:text-zinc-500 font-normal normal-case">Badges zeigen den alten Wert</span>}
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                     <div>
                       <div className="flex justify-between items-center mb-1">
-                        <label className="font-medium text-zinc-300">Ballkontrolle & -annahme:</label>
+                        <label className="font-medium text-gray-700 dark:text-zinc-300">Ballkontrolle & -annahme:</label>
                         <div className="flex items-center gap-1.5 font-mono text-xs">
                           {!editingEvalId && prevEval && prevEval.tech_ball_control !== undefined && (
-                            <span className="px-1.5 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-400 text-[10px]" title="Letzter Wert">Alt: {prevEval.tech_ball_control}</span>
+                            <span className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 text-gray-600 dark:text-zinc-400 text-[10px]" title="Letzter Wert">Alt: {prevEval.tech_ball_control}</span>
                           )}
-                          <strong className="text-blue-400 font-bold">{techBallControl}</strong>
+                          <strong className="text-blue-500 dark:text-blue-400 font-bold">{techBallControl}</strong>
                         </div>
                       </div>
                       <input type="range" min="1" max="10" step="1" value={techBallControl} onChange={(e) => setTechBallControl(parseInt(e.target.value))} className="w-full h-2 accent-blue-500 cursor-pointer" />
                     </div>
                     <div>
                       <div className="flex justify-between items-center mb-1">
-                        <label className="font-medium text-zinc-300">Dribbling & Ballführung:</label>
+                        <label className="font-medium text-gray-700 dark:text-zinc-300">Dribbling & Ballführung:</label>
                         <div className="flex items-center gap-1.5 font-mono text-xs">
                           {!editingEvalId && prevEval && prevEval.tech_dribbling !== undefined && (
-                            <span className="px-1.5 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-400 text-[10px]" title="Letzter Wert">Alt: {prevEval.tech_dribbling}</span>
+                            <span className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 text-gray-600 dark:text-zinc-400 text-[10px]" title="Letzter Wert">Alt: {prevEval.tech_dribbling}</span>
                           )}
-                          <strong className="text-blue-400 font-bold">{techDribbling}</strong>
+                          <strong className="text-blue-500 dark:text-blue-400 font-bold">{techDribbling}</strong>
                         </div>
                       </div>
                       <input type="range" min="1" max="10" step="1" value={techDribbling} onChange={(e) => setTechDribbling(parseInt(e.target.value))} className="w-full h-2 accent-blue-500 cursor-pointer" />
                     </div>
                     <div>
                       <div className="flex justify-between items-center mb-1">
-                        <label className="font-medium text-zinc-300">Passspiel (Präzision & Schärfe):</label>
+                        <label className="font-medium text-gray-700 dark:text-zinc-300">Passspiel (Präzision & Schärfe):</label>
                         <div className="flex items-center gap-1.5 font-mono text-xs">
                           {!editingEvalId && prevEval && prevEval.tech_passing !== undefined && (
-                            <span className="px-1.5 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-400 text-[10px]" title="Letzter Wert">Alt: {prevEval.tech_passing}</span>
+                            <span className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 text-gray-600 dark:text-zinc-400 text-[10px]" title="Letzter Wert">Alt: {prevEval.tech_passing}</span>
                           )}
-                          <strong className="text-blue-400 font-bold">{techPassing}</strong>
+                          <strong className="text-blue-500 dark:text-blue-400 font-bold">{techPassing}</strong>
                         </div>
                       </div>
                       <input type="range" min="1" max="10" step="1" value={techPassing} onChange={(e) => setTechPassing(parseInt(e.target.value))} className="w-full h-2 accent-blue-500 cursor-pointer" />
                     </div>
                     <div>
                       <div className="flex justify-between items-center mb-1">
-                        <label className="font-medium text-zinc-300">Torschuss & Abschluss:</label>
+                        <label className="font-medium text-gray-700 dark:text-zinc-300">Torschuss & Abschluss:</label>
                         <div className="flex items-center gap-1.5 font-mono text-xs">
                           {!editingEvalId && prevEval && prevEval.tech_shooting !== undefined && (
-                            <span className="px-1.5 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-400 text-[10px]" title="Letzter Wert">Alt: {prevEval.tech_shooting}</span>
+                            <span className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 text-gray-600 dark:text-zinc-400 text-[10px]" title="Letzter Wert">Alt: {prevEval.tech_shooting}</span>
                           )}
-                          <strong className="text-blue-400 font-bold">{techShooting}</strong>
+                          <strong className="text-blue-500 dark:text-blue-400 font-bold">{techShooting}</strong>
                         </div>
                       </div>
                       <input type="range" min="1" max="10" step="1" value={techShooting} onChange={(e) => setTechShooting(parseInt(e.target.value))} className="w-full h-2 accent-blue-500 cursor-pointer" />
                     </div>
                     <div className="sm:col-span-2">
                       <div className="flex justify-between items-center mb-1">
-                        <label className="font-medium text-zinc-300">Beidfüßigkeit (Nutzung schwacher Fuß):</label>
+                        <label className="font-medium text-gray-700 dark:text-zinc-300">Beidfüßigkeit (Nutzung schwacher Fuß):</label>
                         <div className="flex items-center gap-1.5 font-mono text-xs">
                           {!editingEvalId && prevEval && prevEval.tech_both_feet !== undefined && (
-                            <span className="px-1.5 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-400 text-[10px]" title="Letzter Wert">Alt: {prevEval.tech_both_feet}</span>
+                            <span className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 text-gray-600 dark:text-zinc-400 text-[10px]" title="Letzter Wert">Alt: {prevEval.tech_both_feet}</span>
                           )}
-                          <strong className="text-blue-400 font-bold">{techBothFeet}</strong>
+                          <strong className="text-blue-500 dark:text-blue-400 font-bold">{techBothFeet}</strong>
                         </div>
                       </div>
                       <input type="range" min="1" max="10" step="1" value={techBothFeet} onChange={(e) => setTechBothFeet(parseInt(e.target.value))} className="w-full h-2 accent-blue-500 cursor-pointer" />
@@ -1072,53 +1072,53 @@ export default function PlayerDetailPage() {
                 </div>
 
                 {/* 2. Taktik (4 Kriterien) */}
-                <div className="bg-zinc-950/80 p-4 rounded-xl border border-zinc-800 space-y-3">
-                  <h3 className="font-bold text-purple-400 text-xs uppercase tracking-wider border-b border-zinc-800 pb-1.5">2. Taktisches Grundverhalten</h3>
+                <div className="bg-gray-50 dark:bg-zinc-950/80 p-4 rounded-xl border border-gray-200 dark:border-zinc-800 space-y-3">
+                  <h3 className="font-bold text-purple-500 dark:text-purple-400 text-xs uppercase tracking-wider border-b border-gray-200 dark:border-zinc-800 pb-1.5">2. Taktisches Grundverhalten</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                     <div>
                       <div className="flex justify-between items-center mb-1">
-                        <label className="font-medium text-zinc-300">Spielintelligenz & Übersicht:</label>
+                        <label className="font-medium text-gray-700 dark:text-zinc-300">Spielintelligenz & Übersicht:</label>
                         <div className="flex items-center gap-1.5 font-mono text-xs">
                           {!editingEvalId && prevEval && prevEval.tact_intelligence !== undefined && (
-                            <span className="px-1.5 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-400 text-[10px]" title="Letzter Wert">Alt: {prevEval.tact_intelligence}</span>
+                            <span className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 text-gray-600 dark:text-zinc-400 text-[10px]" title="Letzter Wert">Alt: {prevEval.tact_intelligence}</span>
                           )}
-                          <strong className="text-purple-400 font-bold">{tactIntelligence}</strong>
+                          <strong className="text-purple-500 dark:text-purple-400 font-bold">{tactIntelligence}</strong>
                         </div>
                       </div>
                       <input type="range" min="1" max="10" step="1" value={tactIntelligence} onChange={(e) => setTactIntelligence(parseInt(e.target.value))} className="w-full h-2 accent-purple-500 cursor-pointer" />
                     </div>
                     <div>
                       <div className="flex justify-between items-center mb-1">
-                        <label className="font-medium text-zinc-300">Freilaufverhalten & Räume:</label>
+                        <label className="font-medium text-gray-700 dark:text-zinc-300">Freilaufverhalten & Räume:</label>
                         <div className="flex items-center gap-1.5 font-mono text-xs">
                           {!editingEvalId && prevEval && prevEval.tact_space_creation !== undefined && (
-                            <span className="px-1.5 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-400 text-[10px]" title="Letzter Wert">Alt: {prevEval.tact_space_creation}</span>
+                            <span className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 text-gray-600 dark:text-zinc-400 text-[10px]" title="Letzter Wert">Alt: {prevEval.tact_space_creation}</span>
                           )}
-                          <strong className="text-purple-400 font-bold">{tactSpaceCreation}</strong>
+                          <strong className="text-purple-500 dark:text-purple-400 font-bold">{tactSpaceCreation}</strong>
                         </div>
                       </div>
                       <input type="range" min="1" max="10" step="1" value={tactSpaceCreation} onChange={(e) => setTactSpaceCreation(parseInt(e.target.value))} className="w-full h-2 accent-purple-500 cursor-pointer" />
                     </div>
                     <div>
                       <div className="flex justify-between items-center mb-1">
-                        <label className="font-medium text-zinc-300">Umschaltspiel (Offensiv/Defensiv):</label>
+                        <label className="font-medium text-gray-700 dark:text-zinc-300">Umschaltspiel (Offensiv/Defensiv):</label>
                         <div className="flex items-center gap-1.5 font-mono text-xs">
                           {!editingEvalId && prevEval && prevEval.tact_transition !== undefined && (
-                            <span className="px-1.5 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-400 text-[10px]" title="Letzter Wert">Alt: {prevEval.tact_transition}</span>
+                            <span className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 text-gray-600 dark:text-zinc-400 text-[10px]" title="Letzter Wert">Alt: {prevEval.tact_transition}</span>
                           )}
-                          <strong className="text-purple-400 font-bold">{tactTransition}</strong>
+                          <strong className="text-purple-500 dark:text-purple-400 font-bold">{tactTransition}</strong>
                         </div>
                       </div>
                       <input type="range" min="1" max="10" step="1" value={tactTransition} onChange={(e) => setTactTransition(parseInt(e.target.value))} className="w-full h-2 accent-purple-500 cursor-pointer" />
                     </div>
                     <div>
                       <div className="flex justify-between items-center mb-1">
-                        <label className="font-medium text-zinc-300">Zweikampfverhalten 1-gegen-1:</label>
+                        <label className="font-medium text-gray-700 dark:text-zinc-300">Zweikampfverhalten 1-gegen-1:</label>
                         <div className="flex items-center gap-1.5 font-mono text-xs">
                           {!editingEvalId && prevEval && prevEval.tact_one_on_one !== undefined && (
-                            <span className="px-1.5 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-400 text-[10px]" title="Letzter Wert">Alt: {prevEval.tact_one_on_one}</span>
+                            <span className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 text-gray-600 dark:text-zinc-400 text-[10px]" title="Letzter Wert">Alt: {prevEval.tact_one_on_one}</span>
                           )}
-                          <strong className="text-purple-400 font-bold">{tactOneOnOne}</strong>
+                          <strong className="text-purple-500 dark:text-purple-400 font-bold">{tactOneOnOne}</strong>
                         </div>
                       </div>
                       <input type="range" min="1" max="10" step="1" value={tactOneOnOne} onChange={(e) => setTactOneOnOne(parseInt(e.target.value))} className="w-full h-2 accent-purple-500 cursor-pointer" />
@@ -1127,41 +1127,41 @@ export default function PlayerDetailPage() {
                 </div>
 
                 {/* 3. Physis (3 Kriterien) */}
-                <div className="bg-zinc-950/80 p-4 rounded-xl border border-zinc-800 space-y-3">
-                  <h3 className="font-bold text-amber-400 text-xs uppercase tracking-wider border-b border-zinc-800 pb-1.5">3. Physische & Koordinative Aspekte</h3>
+                <div className="bg-gray-50 dark:bg-zinc-950/80 p-4 rounded-xl border border-gray-200 dark:border-zinc-800 space-y-3">
+                  <h3 className="font-bold text-amber-500 dark:text-amber-400 text-xs uppercase tracking-wider border-b border-gray-200 dark:border-zinc-800 pb-1.5">3. Physische & Koordinative Aspekte</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
                     <div>
                       <div className="flex justify-between items-center mb-1">
-                        <label className="font-medium text-zinc-300">Schnelligkeit & Antritt:</label>
+                        <label className="font-medium text-gray-700 dark:text-zinc-300">Schnelligkeit & Antritt:</label>
                         <div className="flex items-center gap-1.5 font-mono text-xs">
                           {!editingEvalId && prevEval && prevEval.phys_speed !== undefined && (
-                            <span className="px-1.5 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-400 text-[10px]" title="Letzter Wert">Alt: {prevEval.phys_speed}</span>
+                            <span className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 text-gray-600 dark:text-zinc-400 text-[10px]" title="Letzter Wert">Alt: {prevEval.phys_speed}</span>
                           )}
-                          <strong className="text-amber-400 font-bold">{physSpeed}</strong>
+                          <strong className="text-amber-500 dark:text-amber-400 font-bold">{physSpeed}</strong>
                         </div>
                       </div>
                       <input type="range" min="1" max="10" step="1" value={physSpeed} onChange={(e) => setPhysSpeed(parseInt(e.target.value))} className="w-full h-2 accent-amber-500 cursor-pointer" />
                     </div>
                     <div>
                       <div className="flex justify-between items-center mb-1">
-                        <label className="font-medium text-zinc-300">Gewandtheit & Wendigkeit:</label>
+                        <label className="font-medium text-gray-700 dark:text-zinc-300">Gewandtheit & Wendigkeit:</label>
                         <div className="flex items-center gap-1.5 font-mono text-xs">
                           {!editingEvalId && prevEval && prevEval.phys_agility !== undefined && (
-                            <span className="px-1.5 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-400 text-[10px]" title="Letzter Wert">Alt: {prevEval.phys_agility}</span>
+                            <span className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 text-gray-600 dark:text-zinc-400 text-[10px]" title="Letzter Wert">Alt: {prevEval.phys_agility}</span>
                           )}
-                          <strong className="text-amber-400 font-bold">{physAgility}</strong>
+                          <strong className="text-amber-500 dark:text-amber-400 font-bold">{physAgility}</strong>
                         </div>
                       </div>
                       <input type="range" min="1" max="10" step="1" value={physAgility} onChange={(e) => setPhysAgility(parseInt(e.target.value))} className="w-full h-2 accent-amber-500 cursor-pointer" />
                     </div>
                     <div>
                       <div className="flex justify-between items-center mb-1">
-                        <label className="font-medium text-zinc-300">Beweglichkeit & Koordination:</label>
+                        <label className="font-medium text-gray-700 dark:text-zinc-300">Beweglichkeit & Koordination:</label>
                         <div className="flex items-center gap-1.5 font-mono text-xs">
                           {!editingEvalId && prevEval && prevEval.phys_mobility !== undefined && (
-                            <span className="px-1.5 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-400 text-[10px]" title="Letzter Wert">Alt: {prevEval.phys_mobility}</span>
+                            <span className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 text-gray-600 dark:text-zinc-400 text-[10px]" title="Letzter Wert">Alt: {prevEval.phys_mobility}</span>
                           )}
-                          <strong className="text-amber-400 font-bold">{physMobility}</strong>
+                          <strong className="text-amber-500 dark:text-amber-400 font-bold">{physMobility}</strong>
                         </div>
                       </div>
                       <input type="range" min="1" max="10" step="1" value={physMobility} onChange={(e) => setPhysMobility(parseInt(e.target.value))} className="w-full h-2 accent-amber-500 cursor-pointer" />
@@ -1170,53 +1170,53 @@ export default function PlayerDetailPage() {
                 </div>
 
                 {/* 4. Mental & Sozial (4 Kriterien) */}
-                <div className="bg-zinc-950/80 p-4 rounded-xl border border-zinc-800 space-y-3">
-                  <h3 className="font-bold text-emerald-400 text-xs uppercase tracking-wider border-b border-zinc-800 pb-1.5">4. Mentale & Soziale Faktoren</h3>
+                <div className="bg-gray-50 dark:bg-zinc-950/80 p-4 rounded-xl border border-gray-200 dark:border-zinc-800 space-y-3">
+                  <h3 className="font-bold text-emerald-500 dark:text-emerald-400 text-xs uppercase tracking-wider border-b border-gray-200 dark:border-zinc-800 pb-1.5">4. Mentale & Soziale Faktoren</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                     <div>
                       <div className="flex justify-between items-center mb-1">
-                        <label className="font-medium text-zinc-300">Teamgeist & Hilfsbereitschaft:</label>
+                        <label className="font-medium text-gray-700 dark:text-zinc-300">Teamgeist & Hilfsbereitschaft:</label>
                         <div className="flex items-center gap-1.5 font-mono text-xs">
                           {!editingEvalId && prevEval && prevEval.ment_teamwork !== undefined && (
-                            <span className="px-1.5 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-400 text-[10px]" title="Letzter Wert">Alt: {prevEval.ment_teamwork}</span>
+                            <span className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 text-gray-600 dark:text-zinc-400 text-[10px]" title="Letzter Wert">Alt: {prevEval.ment_teamwork}</span>
                           )}
-                          <strong className="text-emerald-400 font-bold">{mentTeamwork}</strong>
+                          <strong className="text-emerald-500 dark:text-emerald-400 font-bold">{mentTeamwork}</strong>
                         </div>
                       </div>
                       <input type="range" min="1" max="10" step="1" value={mentTeamwork} onChange={(e) => setMentTeamwork(parseInt(e.target.value))} className="w-full h-2 accent-emerald-500 cursor-pointer" />
                     </div>
                     <div>
                       <div className="flex justify-between items-center mb-1">
-                        <label className="font-medium text-zinc-300">Einstellung & Trainingsfleiß:</label>
+                        <label className="font-medium text-gray-700 dark:text-zinc-300">Einstellung & Trainingsfleiß:</label>
                         <div className="flex items-center gap-1.5 font-mono text-xs">
                           {!editingEvalId && prevEval && prevEval.ment_attitude !== undefined && (
-                            <span className="px-1.5 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-400 text-[10px]" title="Letzter Wert">Alt: {prevEval.ment_attitude}</span>
+                            <span className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 text-gray-600 dark:text-zinc-400 text-[10px]" title="Letzter Wert">Alt: {prevEval.ment_attitude}</span>
                           )}
-                          <strong className="text-emerald-400 font-bold">{mentAttitude}</strong>
+                          <strong className="text-emerald-500 dark:text-emerald-400 font-bold">{mentAttitude}</strong>
                         </div>
                       </div>
                       <input type="range" min="1" max="10" step="1" value={mentAttitude} onChange={(e) => setMentAttitude(parseInt(e.target.value))} className="w-full h-2 accent-emerald-500 cursor-pointer" />
                     </div>
                     <div>
                       <div className="flex justify-between items-center mb-1">
-                        <label className="font-medium text-zinc-300">Lernbereitschaft (Anweisungen):</label>
+                        <label className="font-medium text-gray-700 dark:text-zinc-300">Lernbereitschaft (Anweisungen):</label>
                         <div className="flex items-center gap-1.5 font-mono text-xs">
                           {!editingEvalId && prevEval && prevEval.ment_learning !== undefined && (
-                            <span className="px-1.5 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-400 text-[10px]" title="Letzter Wert">Alt: {prevEval.ment_learning}</span>
+                            <span className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 text-gray-600 dark:text-zinc-400 text-[10px]" title="Letzter Wert">Alt: {prevEval.ment_learning}</span>
                           )}
-                          <strong className="text-emerald-400 font-bold">{mentLearning}</strong>
+                          <strong className="text-emerald-500 dark:text-emerald-400 font-bold">{mentLearning}</strong>
                         </div>
                       </div>
                       <input type="range" min="1" max="10" step="1" value={mentLearning} onChange={(e) => setMentLearning(parseInt(e.target.value))} className="w-full h-2 accent-emerald-500 cursor-pointer" />
                     </div>
                     <div>
                       <div className="flex justify-between items-center mb-1">
-                        <label className="font-medium text-zinc-300">Fairplay & Respekt:</label>
+                        <label className="font-medium text-gray-700 dark:text-zinc-300">Fairplay & Respekt:</label>
                         <div className="flex items-center gap-1.5 font-mono text-xs">
                           {!editingEvalId && prevEval && prevEval.ment_fairplay !== undefined && (
-                            <span className="px-1.5 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-400 text-[10px]" title="Letzter Wert">Alt: {prevEval.ment_fairplay}</span>
+                            <span className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 text-gray-600 dark:text-zinc-400 text-[10px]" title="Letzter Wert">Alt: {prevEval.ment_fairplay}</span>
                           )}
-                          <strong className="text-emerald-400 font-bold">{mentFairplay}</strong>
+                          <strong className="text-emerald-500 dark:text-emerald-400 font-bold">{mentFairplay}</strong>
                         </div>
                       </div>
                       <input type="range" min="1" max="10" step="1" value={mentFairplay} onChange={(e) => setMentFairplay(parseInt(e.target.value))} className="w-full h-2 accent-emerald-500 cursor-pointer" />
@@ -1226,20 +1226,20 @@ export default function PlayerDetailPage() {
 
                 {/* Overall Fazit */}
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">Gesamteinschätzung / Trainerfazit</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-zinc-400 mb-1">Gesamteinschätzung / Trainerfazit</label>
                   <textarea
                     rows={3}
                     value={overallNotes}
                     onChange={(e) => setOverallNotes(e.target.value)}
                     placeholder="Zusammenfassung der Stärken, Potenziale und Entwicklungsziele..."
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-primary"
+                    className="w-full bg-white dark:bg-zinc-950 border border-gray-300 dark:border-zinc-800 rounded-xl p-3 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-primary"
                   ></textarea>
                 </div>
               </div>
 
               {/* Sticky Modal Footer (Fixed at Bottom for Mobile) */}
-              <div className="flex justify-end gap-3 p-4 sm:p-5 border-t border-zinc-800 shrink-0 bg-zinc-950/80 backdrop-blur-md">
-                <button type="button" onClick={() => setIsEvalModalOpen(false)} className="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs font-bold transition-all">Abbrechen</button>
+              <div className="flex justify-end gap-3 p-4 sm:p-5 border-t border-gray-200 dark:border-zinc-800 shrink-0 bg-gray-50 dark:bg-zinc-950/80 backdrop-blur-md">
+                <button type="button" onClick={() => setIsEvalModalOpen(false)} className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-gray-700 dark:text-zinc-300 rounded-xl text-xs font-bold border border-gray-200 dark:border-transparent transition-all">Abbrechen</button>
                 <button type="submit" className="px-5 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-xl text-xs font-bold shadow-lg shadow-primary/20 transition-all">Bewertung Speichern</button>
               </div>
             </form>

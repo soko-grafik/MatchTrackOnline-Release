@@ -154,12 +154,13 @@ api.interceptors.response.use(
       if (typeof window !== 'undefined') {
         const currentPath = (window.location.pathname || '').replace(/\/$/, '') || '/';
         const isMatchesPage = currentPath.startsWith('/matches');
+        const isLivePage = currentPath.startsWith('/live');
 
         const isMatchDetailOrAnalyticsRequest =
           originalRequestUrl &&
-          (originalRequestUrl.match(/^\/matches\/[^/]+/) || originalRequestUrl.match(/^\/analytics\/[^/]+\/heatmap/));
+          (originalRequestUrl.match(/^\/matches\/[^/]+/) || originalRequestUrl.match(/^\/analytics\/[^/]+\/heatmap/) || originalRequestUrl.startsWith('/public/livestream'));
 
-        if (isMatchesPage || isMatchDetailOrAnalyticsRequest) {
+        if (isMatchesPage || isLivePage || isMatchDetailOrAnalyticsRequest) {
           return Promise.reject(error);
         }
 
@@ -167,7 +168,8 @@ api.interceptors.response.use(
           currentPath === '/login' ||
           currentPath === '/register' ||
           currentPath === '/reset-password' ||
-          currentPath.startsWith('/install');
+          currentPath.startsWith('/install') ||
+          currentPath.startsWith('/live');
 
         localStorage.removeItem('matchtracker_token');
         localStorage.removeItem('matchtracker_user');

@@ -419,7 +419,7 @@ export default function AdminSettingsPage() {
 
   if (loading || authLoading) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center bg-zinc-950 text-white">
+      <div className="flex h-screen flex-col items-center justify-center bg-gray-50 dark:bg-zinc-950 text-gray-900 dark:text-white">
         <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
         <p className="animate-pulse font-medium text-zinc-500">Initialisiere System-Konfiguration...</p>
       </div>
@@ -429,7 +429,7 @@ export default function AdminSettingsPage() {
   if (user?.role.toUpperCase() !== 'ADMIN') return null;
 
   return (
-    <div className="relative flex min-h-screen flex-col bg-zinc-950 font-sans text-white">
+    <div className="relative flex min-h-screen flex-col bg-gray-50 dark:bg-zinc-950 font-sans text-gray-900 dark:text-white">
       <Navbar />
 
       <main className="flex-1 w-full px-4 py-8 sm:px-6 lg:px-8">
@@ -478,7 +478,7 @@ export default function AdminSettingsPage() {
           )}
 
           {/* Navigation Tabs */}
-          <div className="flex overflow-x-auto gap-2 border-b border-zinc-800 pb-3 mb-8 scrollbar-none">
+          <div className="flex overflow-x-auto gap-2 border-b border-gray-200 dark:border-zinc-800 pb-3 mb-8 scrollbar-none">
             {[
               { id: 'modules', label: 'Modulverwaltung', icon: <Layers className="w-4 h-4 text-emerald-400" /> },
               { id: 'storage', label: 'Speicher & Defaults', icon: <HardDrive className="w-4 h-4 text-blue-400" /> },
@@ -493,8 +493,8 @@ export default function AdminSettingsPage() {
                 onClick={() => setActiveTab(tab.id as any)}
                 className={`flex items-center gap-2 px-4 h-11 rounded-lg text-sm font-medium transition-colors shrink-0 ${
                   activeTab === tab.id
-                    ? 'bg-zinc-800 text-white font-bold'
-                    : 'bg-transparent text-zinc-400 hover:bg-zinc-800/50 hover:text-white'
+                    ? 'bg-white dark:bg-zinc-800 text-gray-900 dark:text-white font-bold shadow-sm border border-gray-200 dark:border-transparent'
+                    : 'bg-transparent text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800/50 hover:text-gray-900 dark:hover:text-white'
                 }`}
               >
                 {tab.icon}
@@ -505,7 +505,7 @@ export default function AdminSettingsPage() {
 
           {/* Tab 1: Modulverwaltung */}
           {activeTab === 'modules' && (
-            <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 md:p-8 space-y-6">
+            <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-3xl p-6 md:p-8 space-y-6">
               <div>
                 <h3 className="text-lg font-bold text-white flex items-center gap-2">
                   <Layers className="w-5 h-5 text-emerald-400" />
@@ -530,11 +530,11 @@ export default function AdminSettingsPage() {
                     key={mod.id}
                     onClick={() => handleToggle(mod.id)}
                     className={`group flex cursor-pointer items-center justify-between rounded-2xl border p-4 transition-all ${
-                      settings[mod.id] ? 'border-zinc-700 bg-zinc-950/80' : 'border-zinc-900 bg-zinc-950/30 opacity-50 grayscale'
+                      settings[mod.id] ? 'border-gray-300 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-950/80' : 'border-gray-200 dark:border-zinc-900 bg-gray-100/50 dark:bg-zinc-950/30 opacity-50 grayscale'
                     }`}
                   >
                     <div className="flex items-center gap-4">
-                      <div className={`flex h-11 w-11 items-center justify-center rounded-xl bg-zinc-900 ${settings[mod.id] ? mod.color : 'text-zinc-700'}`}>
+                      <div className={`flex h-11 w-11 items-center justify-center rounded-xl bg-gray-100 dark:bg-zinc-900 ${settings[mod.id] ? mod.color : 'text-zinc-400 dark:text-zinc-700'}`}>
                         <mod.icon className="h-5 w-5" />
                       </div>
                       <div>
@@ -550,7 +550,7 @@ export default function AdminSettingsPage() {
               </div>
 
               {/* Wartung & Datenbereinigung Card */}
-              <div className="border-t border-zinc-800/80 pt-6">
+              <div className="border-t border-gray-200 dark:border-zinc-800/80 pt-6">
                 <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-5">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
@@ -587,7 +587,7 @@ export default function AdminSettingsPage() {
 
           {/* Tab 2: Speicher & Defaults */}
           {activeTab === 'storage' && (
-            <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 md:p-8 space-y-6">
+            <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-3xl p-6 md:p-8 space-y-6">
               <div>
                 <h3 className="text-lg font-bold text-white flex items-center gap-2">
                   <HardDrive className="w-5 h-5 text-blue-400" />
@@ -604,7 +604,7 @@ export default function AdminSettingsPage() {
                   <select
                     value={settings.default_resolution}
                     onChange={(e) => handleChange('default_resolution', e.target.value)}
-                    className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-xs text-white focus:border-primary focus:outline-none"
+                    className="w-full rounded-xl border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-950 px-4 py-2.5 text-xs text-gray-900 dark:text-white focus:border-primary focus:outline-none"
                   >
                     <option value="720p">720p (HD)</option>
                     <option value="1080p">1080p (Full HD)</option>
@@ -617,7 +617,7 @@ export default function AdminSettingsPage() {
                   <select
                     value={settings.default_video_quality}
                     onChange={(e) => handleChange('default_video_quality', e.target.value)}
-                    className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-xs text-white focus:border-primary focus:outline-none"
+                    className="w-full rounded-xl border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-950 px-4 py-2.5 text-xs text-gray-900 dark:text-white focus:border-primary focus:outline-none"
                   >
                     <option value="Standard">Standard</option>
                     <option value="High">High</option>
@@ -631,17 +631,17 @@ export default function AdminSettingsPage() {
                     type="text"
                     value={settings.default_storage_path}
                     onChange={(e) => handleChange('default_storage_path', e.target.value)}
-                    className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-xs text-white focus:border-primary focus:outline-none"
+                    className="w-full rounded-xl border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-950 px-4 py-2.5 text-xs text-gray-900 dark:text-white focus:border-primary focus:outline-none"
                   />
                   <p className="text-[11px] text-zinc-500 mt-1">Pfad zum Speichern hochgeladener Rohvideos und Renderdateien.</p>
                 </div>
               </div>
 
-              <div className="border-t border-zinc-800/80 pt-6">
+              <div className="border-t border-gray-200 dark:border-zinc-800/80 pt-6">
                 <div
                   onClick={() => handleToggle('auto_hls_conversion')}
                   className={`flex cursor-pointer items-center justify-between rounded-2xl border p-4 transition-all max-w-md ${
-                    settings.auto_hls_conversion ? 'border-zinc-700 bg-zinc-950/80' : 'border-zinc-900 bg-zinc-950/30 opacity-50'
+                    settings.auto_hls_conversion ? 'border-gray-300 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-950/80' : 'border-gray-200 dark:border-zinc-900 bg-gray-100/50 dark:bg-zinc-950/30 opacity-50'
                   }`}
                 >
                   <div>
@@ -658,7 +658,7 @@ export default function AdminSettingsPage() {
 
           {/* Tab 3: E-Mail & SMTP */}
           {activeTab === 'smtp' && (
-            <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 md:p-8 space-y-6">
+            <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-3xl p-6 md:p-8 space-y-6">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <h3 className="text-lg font-bold text-white flex items-center gap-2">
@@ -693,7 +693,7 @@ export default function AdminSettingsPage() {
               <div
                 onClick={() => handleToggle('smtp_enabled')}
                 className={`flex cursor-pointer items-center justify-between rounded-2xl border p-4 transition-all ${
-                  settings.smtp_enabled ? 'border-purple-500/50 bg-purple-500/10' : 'border-zinc-800 bg-zinc-950/50 opacity-60'
+                  settings.smtp_enabled ? 'border-purple-500/50 bg-purple-50 dark:bg-purple-500/10' : 'border-gray-200 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-950/50 opacity-60'
                 }`}
               >
                 <div>
@@ -713,7 +713,7 @@ export default function AdminSettingsPage() {
                     value={settings.smtp_host || ''}
                     onChange={(e) => handleChange('smtp_host', e.target.value)}
                     placeholder="smtp.example.com"
-                    className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-xs text-white focus:border-primary focus:outline-none"
+                    className="w-full rounded-xl border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-950 px-4 py-2.5 text-xs text-gray-900 dark:text-white focus:border-primary focus:outline-none"
                   />
                 </div>
 
@@ -723,7 +723,7 @@ export default function AdminSettingsPage() {
                     type="number"
                     value={settings.smtp_port || 587}
                     onChange={(e) => handleChange('smtp_port', parseInt(e.target.value))}
-                    className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-xs text-white focus:border-primary focus:outline-none"
+                    className="w-full rounded-xl border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-950 px-4 py-2.5 text-xs text-gray-900 dark:text-white focus:border-primary focus:outline-none"
                   />
                 </div>
 
@@ -734,7 +734,7 @@ export default function AdminSettingsPage() {
                     value={settings.smtp_user || ''}
                     onChange={(e) => handleChange('smtp_user', e.target.value)}
                     placeholder="user@example.com"
-                    className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-xs text-white focus:border-primary focus:outline-none"
+                    className="w-full rounded-xl border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-950 px-4 py-2.5 text-xs text-gray-900 dark:text-white focus:border-primary focus:outline-none"
                   />
                 </div>
 
@@ -744,7 +744,7 @@ export default function AdminSettingsPage() {
                     type="password"
                     value={settings.smtp_password || ''}
                     onChange={(e) => handleChange('smtp_password', e.target.value)}
-                    className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-xs text-white focus:border-primary focus:outline-none"
+                    className="w-full rounded-xl border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-950 px-4 py-2.5 text-xs text-gray-900 dark:text-white focus:border-primary focus:outline-none"
                   />
                 </div>
 
@@ -755,7 +755,7 @@ export default function AdminSettingsPage() {
                     value={settings.smtp_sender_email || ''}
                     onChange={(e) => handleChange('smtp_sender_email', e.target.value)}
                     placeholder="noreply@matchtrack.de"
-                    className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-xs text-white focus:border-primary focus:outline-none"
+                    className="w-full rounded-xl border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-950 px-4 py-2.5 text-xs text-gray-900 dark:text-white focus:border-primary focus:outline-none"
                   />
                 </div>
 
@@ -766,7 +766,7 @@ export default function AdminSettingsPage() {
                     value={settings.smtp_sender_name || ''}
                     onChange={(e) => handleChange('smtp_sender_name', e.target.value)}
                     placeholder="MatchTrack"
-                    className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-xs text-white focus:border-primary focus:outline-none"
+                    className="w-full rounded-xl border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-950 px-4 py-2.5 text-xs text-gray-900 dark:text-white focus:border-primary focus:outline-none"
                   />
                 </div>
 
@@ -787,7 +787,7 @@ export default function AdminSettingsPage() {
 
           {/* Tab 4: FTP Backup & Sync */}
           {activeTab === 'ftp' && (
-            <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 md:p-8 space-y-6">
+            <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-3xl p-6 md:p-8 space-y-6">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <h3 className="text-lg font-bold text-white flex items-center gap-2">
@@ -834,7 +834,7 @@ export default function AdminSettingsPage() {
               <div
                 onClick={() => handleToggle('ftp_enabled')}
                 className={`flex cursor-pointer items-center justify-between rounded-2xl border p-4 transition-all ${
-                  settings.ftp_enabled ? 'border-amber-500/50 bg-amber-500/10' : 'border-zinc-800 bg-zinc-950/50 opacity-60'
+                  settings.ftp_enabled ? 'border-amber-500/50 bg-amber-50 dark:bg-amber-500/10' : 'border-gray-200 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-950/50 opacity-60'
                 }`}
               >
                 <div>
@@ -854,7 +854,7 @@ export default function AdminSettingsPage() {
                     value={settings.ftp_host || ''}
                     onChange={(e) => handleChange('ftp_host', e.target.value)}
                     placeholder="ftp.deine-domain.de"
-                    className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-xs text-white focus:border-primary focus:outline-none"
+                    className="w-full rounded-xl border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-950 px-4 py-2.5 text-xs text-gray-900 dark:text-white focus:border-primary focus:outline-none"
                   />
                 </div>
 
@@ -864,7 +864,7 @@ export default function AdminSettingsPage() {
                     type="number"
                     value={settings.ftp_port || 21}
                     onChange={(e) => handleChange('ftp_port', parseInt(e.target.value))}
-                    className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-xs text-white focus:border-primary focus:outline-none"
+                    className="w-full rounded-xl border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-950 px-4 py-2.5 text-xs text-gray-900 dark:text-white focus:border-primary focus:outline-none"
                   />
                 </div>
 
@@ -874,7 +874,7 @@ export default function AdminSettingsPage() {
                     type="text"
                     value={settings.ftp_user || ''}
                     onChange={(e) => handleChange('ftp_user', e.target.value)}
-                    className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-xs text-white focus:border-primary focus:outline-none"
+                    className="w-full rounded-xl border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-950 px-4 py-2.5 text-xs text-gray-900 dark:text-white focus:border-primary focus:outline-none"
                   />
                 </div>
 
@@ -885,7 +885,7 @@ export default function AdminSettingsPage() {
                       type={showFtpPassword ? 'text' : 'password'}
                       value={settings.ftp_password || ''}
                       onChange={(e) => handleChange('ftp_password', e.target.value)}
-                      className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-xs text-white focus:border-primary focus:outline-none pr-10"
+                      className="w-full rounded-xl border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-950 px-4 py-2.5 text-xs text-gray-900 dark:text-white focus:border-primary focus:outline-none pr-10"
                     />
                     <button
                       type="button"
@@ -903,7 +903,7 @@ export default function AdminSettingsPage() {
                     type="text"
                     value={settings.ftp_path || '/backups'}
                     onChange={(e) => handleChange('ftp_path', e.target.value)}
-                    className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-xs text-white focus:border-primary focus:outline-none"
+                    className="w-full rounded-xl border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-950 px-4 py-2.5 text-xs text-gray-900 dark:text-white focus:border-primary focus:outline-none"
                   />
                 </div>
 
@@ -912,7 +912,7 @@ export default function AdminSettingsPage() {
                   <select
                     value={settings.ftp_backup_schedule || 'DAILY'}
                     onChange={(e) => handleChange('ftp_backup_schedule', e.target.value)}
-                    className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-xs text-white focus:border-primary focus:outline-none"
+                    className="w-full rounded-xl border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-950 px-4 py-2.5 text-xs text-gray-900 dark:text-white focus:border-primary focus:outline-none"
                   >
                     <option value="HOURLY">Stündlich</option>
                     <option value="DAILY">Täglich (Nachts 02:00 Uhr)</option>
@@ -925,7 +925,7 @@ export default function AdminSettingsPage() {
 
           {/* Tab 5: Rechtstexte & DSGVO */}
           {activeTab === 'legal' && (
-            <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 md:p-8 space-y-6">
+            <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-3xl p-6 md:p-8 space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-6">
                 <div>
                   <h3 className="text-lg font-bold text-white flex items-center gap-2">
@@ -951,7 +951,7 @@ export default function AdminSettingsPage() {
               </div>
 
               {/* Legal Sub-Navigation */}
-              <div className="flex flex-wrap gap-2 p-1.5 bg-zinc-950 rounded-2xl border border-zinc-800/80">
+              <div className="flex flex-wrap gap-2 p-1.5 bg-gray-100 dark:bg-zinc-950 rounded-2xl border border-gray-200 dark:border-zinc-800/80">
                 {[
                   { id: 'imprint', label: '1. Impressum (§ 5 DDG)', icon: <Building className="w-3.5 h-3.5 text-blue-400" /> },
                   { id: 'privacy', label: '2. Datenschutzerklärung (DSGVO)', icon: <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> },
@@ -965,7 +965,7 @@ export default function AdminSettingsPage() {
                     className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
                       legalSubTab === st.id
                         ? 'bg-zinc-800 text-white shadow-sm'
-                        : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
+                        : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200/60 dark:hover:bg-zinc-900'
                     }`}
                   >
                     {st.icon}
@@ -977,7 +977,7 @@ export default function AdminSettingsPage() {
               {/* Sub-Tab 1: Impressum */}
               {legalSubTab === 'imprint' && (
                 <div className="space-y-4 animate-in fade-in">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-zinc-950/60 p-4 rounded-2xl border border-zinc-800">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gray-50 dark:bg-zinc-950/60 p-4 rounded-2xl border border-gray-200 dark:border-zinc-800">
                     <div>
                       <h4 className="text-sm font-bold text-white">Individuelles Impressum</h4>
                       <p className="text-xs text-zinc-400">
@@ -1000,7 +1000,7 @@ export default function AdminSettingsPage() {
                       value={settings.legal_imprint_content || ''}
                       onChange={(e) => handleChange('legal_imprint_content', e.target.value)}
                       placeholder="Füge hier deinen individuellen Impressumstext ein oder klicke oben auf 'Standard-Vorlage einfügen'..."
-                      className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 p-4 font-mono text-xs text-zinc-200 focus:border-primary focus:outline-none leading-relaxed resize-y"
+                      className="w-full rounded-2xl border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-950 p-4 font-mono text-xs text-gray-900 dark:text-zinc-200 focus:border-primary focus:outline-none leading-relaxed resize-y"
                     />
                   </div>
                 </div>
@@ -1009,7 +1009,7 @@ export default function AdminSettingsPage() {
               {/* Sub-Tab 2: Datenschutzerklärung */}
               {legalSubTab === 'privacy' && (
                 <div className="space-y-4 animate-in fade-in">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-zinc-950/60 p-4 rounded-2xl border border-zinc-800">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gray-50 dark:bg-zinc-950/60 p-4 rounded-2xl border border-gray-200 dark:border-zinc-800">
                     <div>
                       <h4 className="text-sm font-bold text-white">Individuelle Datenschutzerklärung (DSGVO / TDDDG)</h4>
                       <p className="text-xs text-zinc-400">
@@ -1032,7 +1032,7 @@ export default function AdminSettingsPage() {
                       value={settings.legal_privacy_content || ''}
                       onChange={(e) => handleChange('legal_privacy_content', e.target.value)}
                       placeholder="Füge hier deine individuelle Datenschutzerklärung ein..."
-                      className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 p-4 font-mono text-xs text-zinc-200 focus:border-primary focus:outline-none leading-relaxed resize-y"
+                      className="w-full rounded-2xl border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-950 p-4 font-mono text-xs text-gray-900 dark:text-zinc-200 focus:border-primary focus:outline-none leading-relaxed resize-y"
                     />
                   </div>
                 </div>
@@ -1041,7 +1041,7 @@ export default function AdminSettingsPage() {
               {/* Sub-Tab 3: Nutzungsbedingungen */}
               {legalSubTab === 'terms' && (
                 <div className="space-y-4 animate-in fade-in">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-zinc-950/60 p-4 rounded-2xl border border-zinc-800">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gray-50 dark:bg-zinc-950/60 p-4 rounded-2xl border border-gray-200 dark:border-zinc-800">
                     <div>
                       <h4 className="text-sm font-bold text-white">Nutzungsbedingungen / Terms of Service</h4>
                       <p className="text-xs text-zinc-400">
@@ -1064,7 +1064,7 @@ export default function AdminSettingsPage() {
                       value={settings.legal_terms_content || ''}
                       onChange={(e) => handleChange('legal_terms_content', e.target.value)}
                       placeholder="Füge hier deine Nutzungsbedingungen ein..."
-                      className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 p-4 font-mono text-xs text-zinc-200 focus:border-primary focus:outline-none leading-relaxed resize-y"
+                      className="w-full rounded-2xl border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-950 p-4 font-mono text-xs text-gray-900 dark:text-zinc-200 focus:border-primary focus:outline-none leading-relaxed resize-y"
                     />
                   </div>
                 </div>
@@ -1073,7 +1073,7 @@ export default function AdminSettingsPage() {
               {/* Sub-Tab 4: Vereins- & Betreiberdaten */}
               {legalSubTab === 'club' && (
                 <div className="space-y-6 animate-in fade-in">
-                  <div className="bg-zinc-950/60 p-4 rounded-2xl border border-zinc-800">
+                  <div className="bg-gray-50 dark:bg-zinc-950/60 p-4 rounded-2xl border border-gray-200 dark:border-zinc-800">
                     <h4 className="text-sm font-bold text-white">Vereins- & Betreiber-Stammdaten</h4>
                     <p className="text-xs text-zinc-400 mt-1">
                       Diese Angaben werden automatisch als Platzhalter in Standard-Vorlagen für Impressum und Datenschutzerklärung eingesetzt.
@@ -1088,7 +1088,7 @@ export default function AdminSettingsPage() {
                         value={settings.legal_club_name || ''}
                         onChange={(e) => handleChange('legal_club_name', e.target.value)}
                         placeholder="z. B. FC Musterstadt 1920 e.V."
-                        className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-xs text-white focus:border-primary focus:outline-none"
+                        className="w-full rounded-xl border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-950 px-4 py-2.5 text-xs text-gray-900 dark:text-white focus:border-primary focus:outline-none"
                       />
                     </div>
 
@@ -1099,7 +1099,7 @@ export default function AdminSettingsPage() {
                         value={settings.legal_contact_email || ''}
                         onChange={(e) => handleChange('legal_contact_email', e.target.value)}
                         placeholder="datenschutz@verein.de"
-                        className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-xs text-white focus:border-primary focus:outline-none"
+                        className="w-full rounded-xl border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-950 px-4 py-2.5 text-xs text-gray-900 dark:text-white focus:border-primary focus:outline-none"
                       />
                     </div>
 
@@ -1110,7 +1110,7 @@ export default function AdminSettingsPage() {
                         value={settings.legal_representative || ''}
                         onChange={(e) => handleChange('legal_representative', e.target.value)}
                         placeholder="z. B. 1. Vorsitzender Max Mustermann"
-                        className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-xs text-white focus:border-primary focus:outline-none"
+                        className="w-full rounded-xl border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-950 px-4 py-2.5 text-xs text-gray-900 dark:text-white focus:border-primary focus:outline-none"
                       />
                     </div>
 
@@ -1121,7 +1121,7 @@ export default function AdminSettingsPage() {
                         value={settings.legal_register_info || ''}
                         onChange={(e) => handleChange('legal_register_info', e.target.value)}
                         placeholder="z. B. VR 12345 Amtsgericht Musterstadt"
-                        className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-xs text-white focus:border-primary focus:outline-none"
+                        className="w-full rounded-xl border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-950 px-4 py-2.5 text-xs text-gray-900 dark:text-white focus:border-primary focus:outline-none"
                       />
                     </div>
 
@@ -1132,7 +1132,7 @@ export default function AdminSettingsPage() {
                         value={settings.legal_address || ''}
                         onChange={(e) => handleChange('legal_address', e.target.value)}
                         placeholder="Musterstraße 1&#10;12345 Musterstadt&#10;Deutschland"
-                        className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-xs text-white focus:border-primary focus:outline-none"
+                        className="w-full rounded-xl border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-950 px-4 py-2.5 text-xs text-gray-900 dark:text-white focus:border-primary focus:outline-none"
                       />
                     </div>
                   </div>
@@ -1146,7 +1146,7 @@ export default function AdminSettingsPage() {
             <div className="space-y-6">
               {/* Stats Overview */}
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                <div className="bg-zinc-900 border border-zinc-800/80 rounded-2xl p-4 flex flex-col justify-between">
+                <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800/80 rounded-2xl p-4 flex flex-col justify-between">
                   <div className="flex items-center justify-between text-zinc-400 text-xs font-semibold">
                     <span>Gesamt</span>
                     <Terminal className="w-4 h-4 text-zinc-500" />
@@ -1162,7 +1162,7 @@ export default function AdminSettingsPage() {
                   className={`border rounded-2xl p-4 flex flex-col justify-between cursor-pointer transition-all ${
                     logLevelFilter === 'ERROR'
                       ? 'bg-red-500/10 border-red-500 ring-1 ring-red-500'
-                      : 'bg-zinc-900 border-zinc-800/80 hover:border-red-500/40'
+                      : 'bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800/80 hover:border-red-500/40'
                   }`}
                 >
                   <div className="flex items-center justify-between text-red-400 text-xs font-semibold">
@@ -1180,7 +1180,7 @@ export default function AdminSettingsPage() {
                   className={`border rounded-2xl p-4 flex flex-col justify-between cursor-pointer transition-all ${
                     logLevelFilter === 'WARNING'
                       ? 'bg-amber-500/10 border-amber-500 ring-1 ring-amber-500'
-                      : 'bg-zinc-900 border-zinc-800/80 hover:border-amber-500/40'
+                      : 'bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800/80 hover:border-amber-500/40'
                   }`}
                 >
                   <div className="flex items-center justify-between text-amber-400 text-xs font-semibold">
@@ -1198,7 +1198,7 @@ export default function AdminSettingsPage() {
                   className={`border rounded-2xl p-4 flex flex-col justify-between cursor-pointer transition-all ${
                     logSourceFilter === 'backend'
                       ? 'bg-cyan-500/10 border-cyan-500 ring-1 ring-cyan-500'
-                      : 'bg-zinc-900 border-zinc-800/80 hover:border-cyan-500/40'
+                      : 'bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800/80 hover:border-cyan-500/40'
                   }`}
                 >
                   <div className="flex items-center justify-between text-cyan-400 text-xs font-semibold">
@@ -1216,7 +1216,7 @@ export default function AdminSettingsPage() {
                   className={`border rounded-2xl p-4 flex flex-col justify-between cursor-pointer transition-all ${
                     logSourceFilter === 'frontend'
                       ? 'bg-purple-500/10 border-purple-500 ring-1 ring-purple-500'
-                      : 'bg-zinc-900 border-zinc-800/80 hover:border-purple-500/40'
+                      : 'bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800/80 hover:border-purple-500/40'
                   }`}
                 >
                   <div className="flex items-center justify-between text-purple-400 text-xs font-semibold">
@@ -1234,7 +1234,7 @@ export default function AdminSettingsPage() {
                   className={`border rounded-2xl p-4 flex flex-col justify-between cursor-pointer transition-all ${
                     logIrrelevantFilter === 'only'
                       ? 'bg-zinc-800 border-zinc-600 ring-1 ring-zinc-500'
-                      : 'bg-zinc-900 border-zinc-800/80 hover:border-zinc-700'
+                      : 'bg-white dark:bg-zinc-900 border-gray-200 dark:border-zinc-800/80 hover:border-gray-300 dark:hover:border-zinc-700'
                   }`}
                 >
                   <div className="flex items-center justify-between text-zinc-400 text-xs font-semibold">
@@ -1249,7 +1249,7 @@ export default function AdminSettingsPage() {
               </div>
 
               {/* Main Log Management Card */}
-              <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 md:p-8 space-y-6">
+              <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-3xl p-6 md:p-8 space-y-6">
                 {/* Top Title & Quick Actions */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-800 pb-5">
                   <div>
@@ -1316,17 +1316,17 @@ export default function AdminSettingsPage() {
                 </div>
 
                 {/* Filter Control Bar */}
-                <div className="bg-zinc-950 border border-zinc-800/80 rounded-2xl p-4 space-y-4">
+                <div className="bg-white dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800/80 rounded-2xl p-4 space-y-4">
                   <div className="flex flex-wrap items-center justify-between gap-4">
                     {/* Source Filter */}
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Quelle:</span>
-                      <div className="flex items-center gap-1 bg-zinc-900 p-1 rounded-xl border border-zinc-800">
+                      <div className="flex items-center gap-1 bg-gray-100 dark:bg-zinc-900 p-1 rounded-xl border border-gray-200 dark:border-zinc-800">
                         <button
                           type="button"
                           onClick={() => setLogSourceFilter('all')}
                           className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                            logSourceFilter === 'all' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-400 hover:text-white'
+                            logSourceFilter === 'all' ? 'bg-white dark:bg-zinc-800 text-gray-900 dark:text-white shadow' : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white'
                           }`}
                         >
                           Alle
@@ -1357,7 +1357,7 @@ export default function AdminSettingsPage() {
                     {/* Level Filter */}
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Level:</span>
-                      <div className="flex flex-wrap items-center gap-1 bg-zinc-900 p-1 rounded-xl border border-zinc-800">
+                      <div className="flex flex-wrap items-center gap-1 bg-gray-100 dark:bg-zinc-900 p-1 rounded-xl border border-gray-200 dark:border-zinc-800">
                         {['all', 'ERROR', 'WARNING', 'INFO', 'DEBUG'].map((lvl) => (
                           <button
                             type="button"
@@ -1371,7 +1371,7 @@ export default function AdminSettingsPage() {
                                   ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
                                   : lvl === 'INFO'
                                   ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                                  : 'bg-zinc-800 text-white'
+                                  : 'bg-white dark:bg-zinc-800 text-gray-900 dark:text-white'
                                 : 'text-zinc-400 hover:text-white'
                             }`}
                           >
@@ -1384,7 +1384,7 @@ export default function AdminSettingsPage() {
                     {/* Irrelevance Mode Filter */}
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Ansicht:</span>
-                      <div className="flex items-center gap-1 bg-zinc-900 p-1 rounded-xl border border-zinc-800">
+                      <div className="flex items-center gap-1 bg-gray-100 dark:bg-zinc-900 p-1 rounded-xl border border-gray-200 dark:border-zinc-800">
                         <button
                           type="button"
                           onClick={() => setLogIrrelevantFilter('false')}
@@ -1398,7 +1398,7 @@ export default function AdminSettingsPage() {
                           type="button"
                           onClick={() => setLogIrrelevantFilter('true')}
                           className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                            logIrrelevantFilter === 'true' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-white'
+                            logIrrelevantFilter === 'true' ? 'bg-white dark:bg-zinc-800 text-gray-900 dark:text-white' : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white'
                           }`}
                         >
                           Alle
@@ -1424,7 +1424,7 @@ export default function AdminSettingsPage() {
                       value={logSearch}
                       onChange={(e) => setLogSearch(e.target.value)}
                       placeholder="Suchbegriff in Meldung, Modul oder Stacktrace filtern..."
-                      className="w-full rounded-xl border border-zinc-800 bg-zinc-900 pl-10 pr-10 py-2.5 text-xs text-white placeholder:text-zinc-500 focus:border-primary focus:outline-none font-sans"
+                      className="w-full rounded-xl border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900 pl-10 pr-10 py-2.5 text-xs text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-zinc-500 focus:border-primary focus:outline-none font-sans"
                     />
                     {logSearch && (
                       <button
@@ -1439,9 +1439,9 @@ export default function AdminSettingsPage() {
                 </div>
 
                 {/* Log Stream List */}
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-950 overflow-hidden font-mono text-xs">
+                <div className="rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 overflow-hidden font-mono text-xs">
                   {/* Table Header */}
-                  <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-zinc-900/90 border-b border-zinc-800 text-zinc-400 font-bold uppercase text-[11px] tracking-wider">
+                  <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-gray-100 dark:bg-zinc-900/90 border-b border-gray-200 dark:border-zinc-800 text-gray-600 dark:text-zinc-400 font-bold uppercase text-[11px] tracking-wider">
                     <div className="col-span-3 sm:col-span-2">Zeitstempel</div>
                     <div className="col-span-2 sm:col-span-1">Quelle</div>
                     <div className="col-span-2 sm:col-span-1">Level</div>
@@ -1486,8 +1486,8 @@ export default function AdminSettingsPage() {
                         return (
                           <div
                             key={item.id}
-                            className={`transition-colors hover:bg-zinc-900/50 ${
-                              item.is_irrelevant ? 'opacity-50 bg-zinc-950/40' : ''
+                            className={`transition-colors hover:bg-gray-100/60 dark:hover:bg-zinc-900/50 ${
+                              item.is_irrelevant ? 'opacity-50 bg-gray-100/40 dark:bg-zinc-950/40' : ''
                             }`}
                           >
                             <div
@@ -1560,7 +1560,7 @@ export default function AdminSettingsPage() {
                                   className={`p-1.5 rounded-lg border transition-all ${
                                     item.is_irrelevant
                                       ? 'bg-purple-500/20 text-purple-300 border-purple-500/40 hover:bg-purple-500/30'
-                                      : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:text-white hover:border-zinc-700'
+                                      : 'bg-white dark:bg-zinc-900 text-gray-600 dark:text-zinc-400 border-gray-200 dark:border-zinc-800 hover:text-gray-900 dark:hover:text-white hover:border-gray-300 dark:hover:border-zinc-700'
                                   }`}
                                 >
                                   {item.is_irrelevant ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
@@ -1570,7 +1570,7 @@ export default function AdminSettingsPage() {
                                   type="button"
                                   title="Muster künftig ignorieren"
                                   onClick={() => handleMarkPattern(item.message.slice(0, 60))}
-                                  className="p-1.5 rounded-lg bg-zinc-900 text-zinc-400 border border-zinc-800 hover:text-purple-400 hover:border-purple-500/40 transition-all hidden sm:inline-flex"
+                                  className="p-1.5 rounded-lg bg-gray-100 dark:bg-zinc-900 text-gray-500 dark:text-zinc-400 border border-gray-200 dark:border-zinc-800 hover:text-purple-600 dark:hover:text-purple-400 transition-all hidden sm:inline-flex"
                                 >
                                   <Ban className="w-3.5 h-3.5" />
                                 </button>
@@ -1579,7 +1579,7 @@ export default function AdminSettingsPage() {
 
                             {/* Expanded Detail View */}
                             {isExpanded && (
-                              <div className="px-6 py-4 bg-zinc-950/80 border-t border-zinc-900 text-xs space-y-3 font-sans">
+                              <div className="px-6 py-4 bg-gray-50 dark:bg-zinc-950/80 border-t border-gray-200 dark:border-zinc-900 text-xs space-y-3 font-sans">
                                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800/80 pb-2">
                                   <div className="flex items-center gap-2 text-zinc-400 font-mono text-[11px]">
                                     <span className="font-bold text-zinc-300">Log-ID:</span> {item.id}
@@ -1613,7 +1613,7 @@ export default function AdminSettingsPage() {
 
                                 <div>
                                   <div className="text-zinc-400 text-xs font-bold mb-1">Vollständige Meldung:</div>
-                                  <div className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 font-mono text-xs text-white break-words select-text">
+                                  <div className="p-3 rounded-xl bg-gray-100 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 font-mono text-xs text-gray-900 dark:text-white break-words select-text">
                                     {item.message}
                                   </div>
                                 </div>
@@ -1621,7 +1621,7 @@ export default function AdminSettingsPage() {
                                 {item.details && Object.keys(item.details).length > 0 && (
                                   <div>
                                     <div className="text-zinc-400 text-xs font-bold mb-1">Kontext & Technische Details:</div>
-                                    <pre className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 font-mono text-[11px] text-zinc-300 overflow-x-auto select-text">
+                                    <pre className="p-3 rounded-xl bg-gray-100 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 font-mono text-[11px] text-gray-700 dark:text-zinc-300 overflow-x-auto select-text">
                                       {typeof item.details === 'object' ? JSON.stringify(item.details, null, 2) : String(item.details)}
                                     </pre>
                                   </div>
@@ -1639,7 +1639,7 @@ export default function AdminSettingsPage() {
               {/* Modal: Irrelevanz-Muster verwalten */}
               {isPatternModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
-                  <div className="w-full max-w-lg rounded-3xl bg-zinc-900 border border-purple-500/30 p-6 shadow-2xl space-y-5">
+                  <div className="w-full max-w-lg rounded-3xl bg-white dark:bg-zinc-900 border border-purple-500/30 p-6 shadow-2xl space-y-5 text-gray-900 dark:text-white">
                     <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
                       <div className="flex items-center gap-3 text-purple-400">
                         <div className="p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20">
@@ -1667,7 +1667,7 @@ export default function AdminSettingsPage() {
                           value={newPatternText}
                           onChange={(e) => setNewPatternText(e.target.value)}
                           placeholder="z.B. ResizeObserver loop oder Timeout nach 5000ms"
-                          className="flex-1 rounded-xl border border-zinc-800 bg-zinc-950 px-3.5 py-2 text-xs text-white focus:border-purple-500 focus:outline-none"
+                          className="flex-1 rounded-xl border border-gray-300 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-950 px-3.5 py-2 text-xs text-gray-900 dark:text-white focus:border-purple-500 focus:outline-none"
                         />
                         <button
                           type="button"
@@ -1683,7 +1683,7 @@ export default function AdminSettingsPage() {
                     <div className="space-y-2">
                       <div className="text-xs font-bold text-zinc-400">Aktive Ignorier-Muster ({ignorePatterns.length}):</div>
                       {ignorePatterns.length === 0 ? (
-                        <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-800 text-center text-xs text-zinc-500">
+                        <div className="p-4 rounded-xl bg-gray-50 dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 text-center text-xs text-gray-500 dark:text-zinc-500">
                           Noch keine automatischen Ignorier-Muster hinterlegt.
                         </div>
                       ) : (
@@ -1691,7 +1691,7 @@ export default function AdminSettingsPage() {
                           {ignorePatterns.map((pat, idx) => (
                             <div
                               key={idx}
-                              className="flex items-center justify-between px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-zinc-200"
+                              className="flex items-center justify-between px-3 py-2 rounded-xl bg-gray-50 dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 text-xs text-gray-800 dark:text-zinc-200"
                             >
                               <span className="font-mono text-[11px] truncate max-w-[320px]">{pat}</span>
                               <button
@@ -1724,7 +1724,7 @@ export default function AdminSettingsPage() {
               {/* Modal: Logs leeren */}
               {isClearLogsModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
-                  <div className="w-full max-w-md rounded-3xl bg-zinc-900 border border-red-500/30 p-6 shadow-2xl space-y-5">
+                  <div className="w-full max-w-md rounded-3xl bg-white dark:bg-zinc-900 border border-red-500/30 p-6 shadow-2xl space-y-5 text-gray-900 dark:text-white">
                     <div className="flex items-center gap-3 text-red-400 border-b border-zinc-800 pb-3">
                       <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20">
                         <Trash2 className="w-5 h-5" />
@@ -1747,7 +1747,7 @@ export default function AdminSettingsPage() {
                           className={`flex items-start gap-3 p-3 rounded-2xl border cursor-pointer transition-all ${
                             clearLogsOption === opt.id
                               ? 'bg-red-500/10 border-red-500/50 text-white'
-                              : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:border-zinc-700'
+                              : 'bg-gray-50 dark:bg-zinc-950 border-gray-200 dark:border-zinc-800 text-gray-600 dark:text-zinc-400 hover:border-gray-300 dark:hover:border-zinc-700'
                           }`}
                         >
                           <input
@@ -1755,7 +1755,7 @@ export default function AdminSettingsPage() {
                             name="clearOption"
                             checked={clearLogsOption === opt.id}
                             onChange={() => setClearLogsOption(opt.id as any)}
-                            className="mt-0.5 text-primary bg-zinc-900 border-zinc-700 focus:ring-0"
+                            className="mt-0.5 text-primary bg-white dark:bg-zinc-900 border-gray-300 dark:border-zinc-700 focus:ring-0"
                           />
                           <div>
                             <div className="font-bold text-white text-xs">{opt.title}</div>
@@ -1793,7 +1793,7 @@ export default function AdminSettingsPage() {
         {/* Modal: Spieltermine löschen Bestätigung */}
         {isConfirmCleanupModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
-            <div className="w-full max-w-md rounded-3xl bg-zinc-900 border border-red-500/30 p-6 shadow-2xl space-y-5">
+            <div className="w-full max-w-md rounded-3xl bg-white dark:bg-zinc-900 border border-red-500/30 p-6 shadow-2xl space-y-5 text-gray-900 dark:text-white">
               <div className="flex items-center gap-3 text-red-400">
                 <div className="p-3 rounded-2xl bg-red-500/10 border border-red-500/20">
                   <Trash2 className="w-6 h-6" />
@@ -1808,13 +1808,13 @@ export default function AdminSettingsPage() {
                 Möchtest du wirklich alle erfassten Spieltermine aus dem Organizer-Kalender aller Teams löschen?
               </p>
 
-              <div className="rounded-2xl bg-zinc-950 border border-zinc-800 p-3 space-y-2">
+              <div className="rounded-2xl bg-gray-50 dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 p-3 space-y-2">
                 <label className="flex items-center gap-3 cursor-pointer text-xs font-semibold text-zinc-300">
                   <input
                     type="checkbox"
                     checked={cleanupFussballDeOnly}
                     onChange={(e) => setCleanupFussballDeOnly(e.target.checked)}
-                    className="rounded border-zinc-700 bg-zinc-900 text-primary focus:ring-0 w-4 h-4"
+                    className="rounded border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-primary focus:ring-0 w-4 h-4"
                   />
                   <span>Nur über fussball.de importierte Spiele löschen</span>
                 </label>

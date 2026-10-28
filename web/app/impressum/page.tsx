@@ -37,14 +37,14 @@ export default function ImpressumPage() {
   const isAdmin = user?.role?.toUpperCase() === 'ADMIN';
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white selection:bg-primary/30 selection:text-white">
+    <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 text-gray-900 dark:text-white selection:bg-primary/30">
       {/* Top Bar Header */}
-      <header className="sticky top-0 z-40 bg-zinc-950/90 border-b border-zinc-800/80 backdrop-blur-md">
+      <header className="sticky top-0 z-40 bg-white/90 dark:bg-zinc-950/90 border-b border-gray-200 dark:border-zinc-800/80 backdrop-blur-md">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
               href="/"
-              className="p-2 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+              className="p-2 rounded-xl bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
               title="Zurück zur Startseite"
             >
               <ChevronLeft className="w-5 h-5" />
@@ -86,8 +86,8 @@ export default function ImpressumPage() {
 
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-10">
-        <div className="bg-zinc-900/60 border border-zinc-800 rounded-3xl p-6 sm:p-10 shadow-2xl backdrop-blur-sm">
-          <div className="flex items-center gap-3 mb-6 pb-4 border-b border-zinc-800/80 text-primary">
+        <div className="bg-white dark:bg-zinc-900/60 border border-gray-200 dark:border-zinc-800 rounded-3xl p-6 sm:p-10 shadow-sm dark:shadow-2xl backdrop-blur-sm text-gray-900 dark:text-white">
+          <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-200 dark:border-zinc-800/80 text-primary">
             <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20">
               <Building className="w-6 h-6 text-primary" />
             </div>
@@ -107,7 +107,7 @@ export default function ImpressumPage() {
           )}
 
           {/* Legal Navigation Links */}
-          <div className="mt-12 pt-6 border-t border-zinc-800 flex flex-wrap gap-4 justify-between items-center text-xs text-zinc-500">
+          <div className="mt-12 pt-6 border-t border-gray-200 dark:border-zinc-800 flex flex-wrap gap-4 justify-between items-center text-xs text-zinc-500">
             <span>© {new Date().getFullYear()} MatchTrack Online</span>
             <div className="flex gap-4">
               <Link href="/datenschutz" className="hover:text-primary transition-colors">Datenschutzerklärung</Link>
