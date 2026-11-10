@@ -3,11 +3,13 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional, Dict, List
 from datetime import datetime
+import asyncio
 import hashlib
 import json
 import os
 import shutil
 import subprocess
+import threading
 import uuid
 
 from db.session import get_db, UPLOAD_DIR, BASE_DIR
@@ -22,6 +24,17 @@ router = APIRouter()
 
 STAGING_ROOT = os.path.join(UPLOAD_DIR, "_staging")
 os.makedirs(STAGING_ROOT, exist_ok=True)
+
+_SESSION_ASYNC_LOCKS: Dict[str, asyncio.Lock] = {}
+_SESSION_LOCK_MUTEX = threading.Lock()
+
+
+def _get_session_async_lock(upload_id: str) -> asyncio.Lock:
+    with _SESSION_LOCK_MUTEX:
+        if upload_id not in _SESSION_ASYNC_LOCKS:
+            _SESSION_ASYNC_LOCKS[upload_id] = asyncio.Lock()
+        return _SESSION_ASYNC_LOCKS[upload_id]
+
 
 
 @router.post("/chunk")
@@ -368,6 +381,13 @@ async def init_upload_session(
     manifest_path = os.path.join(session_dir, "manifest.json")
     _save_session_manifest(manifest_path, manifest)
 
+    # Pre-create empty .part files to allow safe concurrent chunk uploads across multiple worker threads
+    for s_type in payload.streams.keys():
+        part_file = os.path.join(session_dir, f"{s_type}.part")
+        if not os.path.exists(part_file):
+            with open(part_file, "wb") as pf:
+                pass
+
     return {
         "status": "initialized",
         "upload_id": upload_id,
@@ -390,6 +410,7 @@ async def upload_session_part(
     """
     Nimmt einen einzelnen Binär-Chunk (application/octet-stream) entgegen,
     prüft dessen SHA-256-Prüfsumme und schreibt ihn an die exakte Position der .part-Datei.
+    Vollständig threadsicher für parallele Multi-Stream-Uploads aus mehreren Client-Threads.
     """
     session_dir, manifest_path, manifest = _load_session_manifest(upload_id, current_user)
 
@@ -400,6 +421,7 @@ async def upload_session_part(
     chunk_size = int(manifest.get("chunk_size_bytes", DEFAULT_CHUNK_SIZE))
     write_offset = offset if offset is not None else (chunk_index * chunk_size)
 
+    # 1. Empfange Chunk-Bytes über das Netzwerk parallel ohne Lock
     body_bytes = await request.body()
     if not body_bytes:
         raise HTTPException(status_code=400, detail="Leerer Chunk-Body empfangen.")
@@ -410,6 +432,7 @@ async def upload_session_part(
             detail=f"Chunk überschreitet deklarierte Gesamtgröße für Stream '{stream_type}'."
         )
 
+    # 2. SHA-256 Hash-Validierung parallel ohne Lock
     if x_chunk_sha256:
         actual_hash = hashlib.sha256(body_bytes).hexdigest().lower()
         if actual_hash != x_chunk_sha256.strip().lower():
@@ -419,19 +442,27 @@ async def upload_session_part(
             )
 
     part_file_path = os.path.join(session_dir, f"{stream_type}.part")
-    mode = "r+b" if os.path.exists(part_file_path) else "wb"
-    with open(part_file_path, mode) as f:
-        f.seek(write_offset)
-        f.write(body_bytes)
 
-    received_list = manifest.get("received_chunks", {}).get(stream_type, [])
-    if chunk_index not in received_list:
-        received_list.append(chunk_index)
-        received_list.sort()
-        manifest["received_chunks"][stream_type] = received_list
-        _save_session_manifest(manifest_path, manifest)
+    # 3. Schreiben auf Festplatte & Manifest-Aktualisierung mit Session-Lock
+    async with _get_session_async_lock(upload_id):
+        if not os.path.exists(part_file_path):
+            with open(part_file_path, "wb") as f_init:
+                pass
+        with open(part_file_path, "r+b") as f:
+            f.seek(write_offset)
+            f.write(body_bytes)
 
-    current_file_size = os.path.getsize(part_file_path)
+        # Aktuelles Manifest frisch einlesen um Concurrency-Konflikte zu vermeiden
+        _, fresh_manifest_path, fresh_manifest = _load_session_manifest(upload_id, current_user)
+        received_list = fresh_manifest.get("received_chunks", {}).get(stream_type, [])
+        if chunk_index not in received_list:
+            received_list.append(chunk_index)
+            received_list.sort()
+            fresh_manifest["received_chunks"][stream_type] = received_list
+            _save_session_manifest(fresh_manifest_path, fresh_manifest)
+
+        current_file_size = os.path.getsize(part_file_path)
+
     return {
         "status": "ok",
         "stream_type": stream_type,
@@ -673,6 +704,8 @@ async def complete_upload_session(
 
     # Staging-Verzeichnis aufräumen
     shutil.rmtree(session_dir, ignore_errors=True)
+    with _SESSION_LOCK_MUTEX:
+        _SESSION_ASYNC_LOCKS.pop(upload_id, None)
 
     # Cache invalidieren
     try:
@@ -724,4 +757,6 @@ async def cancel_upload_session(
     """Bricht eine aktive Upload-Session ab und löscht alle temporären .part-Dateien."""
     session_dir, _, _ = _load_session_manifest(upload_id, current_user)
     shutil.rmtree(session_dir, ignore_errors=True)
+    with _SESSION_LOCK_MUTEX:
+        _SESSION_ASYNC_LOCKS.pop(upload_id, None)
     return {"status": "cancelled", "upload_id": upload_id}

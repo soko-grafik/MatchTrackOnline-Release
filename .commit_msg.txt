@@ -1,11 +1,11 @@
-release: remove (dev: 854714b0)
+release: perf(upload): support thread-safe parallel chunk streaming and multi-stream concurrency (dev: 059ac8f3)
 
 Letzte Änderungen:
+* perf(upload): support thread-safe parallel chunk streaming and multi-stream concurrency (059ac8f3)
 * remove (854714b0)
 * feat(auth): add Admin API-Key generator & management for MatchTrack-Stitcher (8ef1b5e6)
 * feat(upload): add resumable chunked upload session API with SHA-256 & ffprobe verification for MatchTrack-Stitcher (126afb4c)
 * feat(hls): add cancel/clear-all for HLS conversion queue and auto-clean stale processing tasks (2eee435c)
 * fix(hls): use db_session instead of undefined db in generate_hls_playlist (ae17ab1d)
-* fix(hls): add missing Optional import in hls_service.py (0a7d69c1)
 
-Build-Zeitstempel: 2026-11-10 12:30:27
+Build-Zeitstempel: 2026-11-10 13:07:22
