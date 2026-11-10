@@ -1,10 +1,12 @@
+import hashlib
+from datetime import datetime
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from typing import Union, Dict, Any, Optional
 
 from core.security import verify_token
-from models import User, UserRole
+from models import User, UserRole, ApiKey
 from db.session import get_db
 
 # Standard OAuth2 scheme, will raise 401 if no token or invalid token
@@ -17,8 +19,8 @@ from sqlalchemy import func
 
 def get_current_user_or_share_token(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> Union[User, Dict[str, Any]]:
     """
-    Diese Dependency prüft, ob das Token ein reguläres Benutzer-Token
-    oder ein spezielles Token für ein geteiltes Match ist.
+    Diese Dependency prüft, ob das Token ein reguläres Benutzer-Token,
+    ein API-Key (Präfix 'mto_ak_') oder ein spezielles Token für ein geteiltes Match ist.
     Gibt entweder das User-Objekt oder das Token-Payload-Dictionary zurück.
     """
     credentials_exception = HTTPException(
@@ -26,6 +28,40 @@ def get_current_user_or_share_token(token: str = Depends(oauth2_scheme), db: Ses
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+    # 1. API-Key Authentifizierung (MatchTrack-Stitcher / externe Tools)
+    if token and token.strip().startswith("mto_ak_"):
+        raw_key = token.strip()
+        key_hash = hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
+        api_key = db.query(ApiKey).filter(
+            ApiKey.key_hash == key_hash,
+            ApiKey.is_active == True
+        ).first()
+        if not api_key:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Ungültiger oder widerrufener API-Key.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        now = datetime.utcnow()
+        if api_key.expires_at and api_key.expires_at < now:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Dieser API-Key ist abgelaufen.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        user = db.query(User).filter(User.id == api_key.user_id).first()
+        if not user or not user.is_approved:
+            raise credentials_exception
+
+        try:
+            if not api_key.last_used_at or (now - api_key.last_used_at).total_seconds() > 60:
+                api_key.last_used_at = now
+                db.commit()
+        except Exception:
+            pass
+
+        return user
 
     try:
         payload = verify_token(token, credentials_exception)
@@ -50,8 +86,6 @@ def get_current_user_or_share_token(token: str = Depends(oauth2_scheme), db: Ses
         print(f"DEBUG: User '{username}' found in token, but not in database.")
         raise credentials_exception
     return user
-
-from datetime import datetime
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> User:
     """Normale Dependency für reguläre Endpunkte, die einen echten User erfordern."""

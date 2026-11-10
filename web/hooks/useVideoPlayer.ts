@@ -49,18 +49,80 @@ export function useVideoPlayer({
 
     setIsBuffering(false); // Reset buffering on source change
 
+    let fallbackAttempted = false;
+    let mp4FallbackAttempted = false;
+
+    const checkVideoTrackHealth = () => {
+      if (!videoElement) return;
+      // Wenn Metadaten geladen sind oder bereits Ton läuft (currentTime > 0.3s), aber videoWidth === 0 ist,
+      // enthält die aktive Spur keinen dekodierbaren Videostream (z.B. HEVC in MPEG-TS bei älteren Uploads).
+      if (videoElement.readyState >= 1 && videoElement.videoWidth === 0 && videoElement.videoHeight === 0) {
+        const hls = hlsRef.current;
+        if (hls && hls.levels && hls.levels.length > 1 && !fallbackAttempted) {
+          fallbackAttempted = true;
+          const safeLevel = Math.max(0, hls.levels.length - 2); // Wechsel von v2 (copy) auf v1 (720p libx264)
+          console.warn(
+            `[MatchPlayer] Kein Videobild auf HLS-Level ${hls.currentLevel} erkannt (videoWidth=0). ` +
+            `Wechsle automatisch auf transkodiertes Level ${safeLevel} (${hls.levels[safeLevel]?.height || 720}p).`
+          );
+          const savedTime = videoElement.currentTime;
+          hls.autoLevelCapping = safeLevel;
+          hls.currentLevel = safeLevel;
+          setCurrentQuality(
+            hls.levels[safeLevel]?.height ? `${hls.levels[safeLevel].height}p` : `Qualität ${safeLevel + 1}`
+          );
+          if (savedTime > 0) {
+            setTimeout(() => {
+              if (videoRef.current) videoRef.current.currentTime = savedTime;
+            }, 150);
+          }
+          return;
+        }
+
+        if (hls && videoUrl && !mp4FallbackAttempted && videoElement.currentTime > 0.5) {
+          mp4FallbackAttempted = true;
+          console.warn('[MatchPlayer] HLS liefert nur Ton ohne Bild (videoWidth=0). Wechsle auf direkten MP4-Stream und stoße Server-Reparatur an.');
+          const savedTime = videoElement.currentTime;
+          const wasPlaying = !videoElement.paused;
+          hls.destroy();
+          hlsRef.current = null;
+          videoElement.src = videoUrl;
+          videoElement.load();
+          videoElement.currentTime = savedTime;
+          if (wasPlaying) {
+            videoElement.play().catch(() => {});
+          }
+          // Stoße im Hintergrund die automatische Stream-Reparatur auf dem Server an
+          const matchUrlMatch = (videoUrl || hlsPlaylistUrl || '').match(/uploads\/([a-zA-Z0-9_-]+)\//);
+          if (matchUrlMatch && matchUrlMatch[1]) {
+            fetch(`/api/videos/matches/${matchUrlMatch[1]}/repair-stream`, { method: 'POST' }).catch(() => {});
+          }
+        }
+      }
+    };
+
     // Buffering & Seeking event handlers
     const onWaiting = () => setIsBuffering(true);
     const onSeeking = () => setIsBuffering(true);
     const onSeeked = () => setIsBuffering(false);
-    const onPlaying = () => setIsBuffering(false);
-    const onCanPlay = () => setIsBuffering(false);
+    const onPlaying = () => {
+      setIsBuffering(false);
+      setTimeout(checkVideoTrackHealth, 400);
+    };
+    const onCanPlay = () => {
+      setIsBuffering(false);
+      setTimeout(checkVideoTrackHealth, 300);
+    };
+    const onLoadedMetadata = () => {
+      setTimeout(checkVideoTrackHealth, 250);
+    };
 
     videoElement.addEventListener('waiting', onWaiting);
     videoElement.addEventListener('seeking', onSeeking);
     videoElement.addEventListener('seeked', onSeeked);
     videoElement.addEventListener('playing', onPlaying);
     videoElement.addEventListener('canplay', onCanPlay);
+    videoElement.addEventListener('loadedmetadata', onLoadedMetadata);
 
     // Reset ABR states on playlist change
     setQualities([]);
@@ -135,6 +197,7 @@ export function useVideoPlayer({
       videoElement.removeEventListener('seeked', onSeeked);
       videoElement.removeEventListener('playing', onPlaying);
       videoElement.removeEventListener('canplay', onCanPlay);
+      videoElement.removeEventListener('loadedmetadata', onLoadedMetadata);
       if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
       if (hlsRef.current) {
         hlsRef.current.destroy();

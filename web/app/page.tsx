@@ -12,16 +12,18 @@ import {
   Sparkles,
   Dumbbell,
   UploadCloud,
-  LayoutGrid
+  LayoutGrid,
+  Radio
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import PageHeader from '@/components/PageHeader';
 import MatchCard from '@/components/MatchCard';
 import EditMatchModal from '@/components/EditMatchModal';
 import EditCalendarEventModal from '@/components/EditCalendarEventModal';
+import LiveStreamModal from '@/components/LiveStreamModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMatches } from '@/hooks/useMatches';
-import { getCalendarEvents, getExercises, getMediaUrl } from '@/services/api';
+import { getCalendarEvents, getExercises, getMediaUrl, api } from '@/services/api';
 
 export default function DashboardLandingPage() {
   const { user } = useAuth();
@@ -30,6 +32,8 @@ export default function DashboardLandingPage() {
   const [recentExercises, setRecentExercises] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeMobileTab, setActiveMobileTab] = useState<'EVENTS' | 'MATCHES' | 'EXERCISES'>('EVENTS');
+  const [isLiveActive, setIsLiveActive] = useState(false);
+  const [isLiveStreamModalOpen, setIsLiveStreamModalOpen] = useState(false);
 
   // Edit Calendar Event Modal State
   const [eventToEdit, setEventToEdit] = useState<any>(null);
@@ -66,7 +70,7 @@ export default function DashboardLandingPage() {
   const userRole = user?.role?.toUpperCase() || 'VIEWER';
   const isAdmin = userRole === 'ADMIN';
   const isTeamAdmin = userRole === 'TEAM_ADMIN';
-  const canUpload = isAdmin || isTeamAdmin;
+  const canUpload = isAdmin;
 
   const perms = (user as any)?.module_permissions || {};
   const isDefaultNo = userRole === 'VIEWER';
@@ -79,7 +83,21 @@ export default function DashboardLandingPage() {
 
   useEffect(() => {
     loadOverviewData();
+    checkLiveStatus();
+    const interval = setInterval(checkLiveStatus, 20000);
+    return () => clearInterval(interval);
   }, []);
+
+  const checkLiveStatus = async () => {
+    try {
+      const res = await api.get('/public/livestream');
+      if (res.data) {
+        setIsLiveActive(!!res.data.is_live);
+      }
+    } catch (e) {
+      // ignore
+    }
+  };
 
   const loadOverviewData = async () => {
     setLoading(true);
@@ -134,7 +152,20 @@ export default function DashboardLandingPage() {
               </p>
             </div>
 
-            {canUpload && (
+            {isLiveActive ? (
+              <button
+                onClick={() => setIsLiveStreamModalOpen(true)}
+                className="shrink-0 flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-lg shadow-red-600/30 transition-all active:scale-95 animate-pulse"
+                title="Aktiven Livestream ansehen"
+              >
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                </span>
+                <Radio className="w-4 h-4" />
+                <span>Live-Stream</span>
+              </button>
+            ) : canUpload && (
               <Link
                 href="/admin/upload"
                 className="shrink-0 flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-lg shadow-primary/20 transition-all active:scale-95"
@@ -426,6 +457,11 @@ export default function DashboardLandingPage() {
             match={matchToEdit}
           />
         )}
+
+        <LiveStreamModal
+          isOpen={isLiveStreamModalOpen}
+          onClose={() => setIsLiveStreamModalOpen(false)}
+        />
 
         {eventToEdit && (
           <EditCalendarEventModal

@@ -19,7 +19,12 @@ import {
   deleteLogIrrelevantPattern,
   clearSystemLogs,
   createTestLogs,
-  SystemLogItem
+  SystemLogItem,
+  getAdminApiKeys,
+  createAdminApiKey,
+  toggleAdminApiKey,
+  deleteAdminApiKey,
+  ApiKeyItem
 } from '@/services/api';
 import {
   Settings2,
@@ -62,7 +67,10 @@ import {
   Terminal,
   AlertTriangle,
   ListFilter,
-  Clock
+  Clock,
+  KeyRound,
+  Plus,
+  Power
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import PageHeader from '@/components/PageHeader';
@@ -72,7 +80,7 @@ export default function AdminSettingsPage() {
   const { toast } = useToast();
   const router = useRouter();
 
-  const [activeTab, setActiveTab] = useState<'modules' | 'storage' | 'smtp' | 'ftp' | 'legal' | 'logs'>('modules');
+  const [activeTab, setActiveTab] = useState<'modules' | 'storage' | 'smtp' | 'ftp' | 'legal' | 'apikeys' | 'logs'>('modules');
   const [legalSubTab, setLegalSubTab] = useState<'imprint' | 'privacy' | 'terms' | 'club'>('imprint');
 
   const [settings, setSettings] = useState<any>({
@@ -154,6 +162,88 @@ export default function AdminSettingsPage() {
   const [clearLogsOption, setClearLogsOption] = useState<'all' | '7days' | '30days' | 'only_irrelevant'>('all');
   const [clearingLogs, setClearingLogs] = useState(false);
 
+  // API Keys State (MatchTrack-Stitcher)
+  const [apiKeys, setApiKeys] = useState<ApiKeyItem[]>([]);
+  const [apiKeysLoading, setApiKeysLoading] = useState(false);
+  const [newApiKeyName, setNewApiKeyName] = useState('');
+  const [newApiKeyExpiryDays, setNewApiKeyExpiryDays] = useState<string>('0');
+  const [creatingApiKey, setCreatingApiKey] = useState(false);
+  const [newlyGeneratedPlainKey, setNewlyGeneratedPlainKey] = useState<string | null>(null);
+  const [copiedNewKey, setCopiedNewKey] = useState(false);
+
+  const fetchApiKeys = async () => {
+    setApiKeysLoading(true);
+    try {
+      const res = await getAdminApiKeys();
+      if (res && Array.isArray(res.keys)) {
+        setApiKeys(res.keys);
+      }
+    } catch (err) {
+      toast.error('Fehler beim Laden der API-Keys');
+    } finally {
+      setApiKeysLoading(false);
+    }
+  };
+
+  const handleCreateApiKey = async () => {
+    if (!newApiKeyName.trim()) {
+      toast.error('Bitte gib einen Namen für den API-Key ein (z.B. Stitcher PC Vereinsheim).');
+      return;
+    }
+    setCreatingApiKey(true);
+    try {
+      const days = parseInt(newApiKeyExpiryDays, 10);
+      const res = await createAdminApiKey({
+        name: newApiKeyName.trim(),
+        expires_in_days: days > 0 ? days : null,
+      });
+      setNewlyGeneratedPlainKey(res.api_key);
+      setCopiedNewKey(false);
+      setNewApiKeyName('');
+      setApiKeys((prev) => [res.item, ...prev]);
+      toast.success('Neuer API-Key erfolgreich generiert!');
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || 'Fehler beim Erstellen des API-Keys');
+    } finally {
+      setCreatingApiKey(false);
+    }
+  };
+
+  const handleToggleApiKeyStatus = async (keyId: string) => {
+    try {
+      const res = await toggleAdminApiKey(keyId);
+      setApiKeys((prev) => prev.map((k) => (k.id === keyId ? res.item : k)));
+      toast.success(res.item.is_active ? 'API-Key aktiviert' : 'API-Key pausiert');
+    } catch (err) {
+      toast.error('Fehler beim Ändern des API-Key-Status');
+    }
+  };
+
+  const handleDeleteApiKey = async (keyId: string, keyName: string) => {
+    if (!window.confirm(`Möchtest du den API-Key "${keyName}" wirklich unwiderruflich widerrufen?`)) {
+      return;
+    }
+    try {
+      await deleteAdminApiKey(keyId);
+      setApiKeys((prev) => prev.filter((k) => k.id !== keyId));
+      toast.info(`API-Key "${keyName}" widerrufen`);
+    } catch (err) {
+      toast.error('Fehler beim Widerrufen des API-Keys');
+    }
+  };
+
+  const handleCopyPlainKey = async () => {
+    if (!newlyGeneratedPlainKey) return;
+    try {
+      await navigator.clipboard.writeText(newlyGeneratedPlainKey);
+      setCopiedNewKey(true);
+      toast.success('API-Key in die Zwischenablage kopiert!');
+      setTimeout(() => setCopiedNewKey(false), 3000);
+    } catch {
+      toast.error('Kopieren fehlgeschlagen – bitte manuell markieren.');
+    }
+  };
+
   const fetchLogs = async (silent = false) => {
     if (!silent) setLogsLoading(true);
     try {
@@ -191,6 +281,8 @@ export default function AdminSettingsPage() {
     if (activeTab === 'logs') {
       fetchLogs();
       fetchIgnorePatterns();
+    } else if (activeTab === 'apikeys') {
+      fetchApiKeys();
     }
   }, [activeTab, logSourceFilter, logLevelFilter, logIrrelevantFilter]);
 
@@ -455,6 +547,16 @@ export default function AdminSettingsPage() {
                      <RefreshCw className={`h-4 w-4 ${logsLoading ? 'animate-spin' : ''}`} />
                      <span>Logs Aktualisieren</span>
                    </button>
+                 ) : activeTab === 'apikeys' ? (
+                   <button
+                     type="button"
+                     onClick={() => fetchApiKeys()}
+                     disabled={apiKeysLoading}
+                     className="flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-xl transition-all hover:bg-emerald-500 active:scale-95 disabled:opacity-50"
+                   >
+                     <RefreshCw className={`h-4 w-4 ${apiKeysLoading ? 'animate-spin' : ''}`} />
+                     <span>API-Keys Aktualisieren</span>
+                   </button>
                  ) : (
                    <button
                      type="submit"
@@ -485,6 +587,7 @@ export default function AdminSettingsPage() {
               { id: 'smtp', label: 'E-Mail & SMTP', icon: <Send className="w-4 h-4 text-purple-400" /> },
               { id: 'ftp', label: 'FTP Backup & Sync', icon: <Database className="w-4 h-4 text-amber-400" /> },
               { id: 'legal', label: 'Rechtstexte & DSGVO', icon: <Scale className="w-4 h-4 text-rose-400" /> },
+              { id: 'apikeys', label: 'API-Keys & Stitcher', icon: <KeyRound className="w-4 h-4 text-emerald-400" /> },
               { id: 'logs', label: 'System-Logs', icon: <FileText className="w-4 h-4 text-cyan-400" /> },
             ].map((tab) => (
               <button
@@ -1786,6 +1889,212 @@ export default function AdminSettingsPage() {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Tab 6: API-Keys & Stitcher */}
+          {activeTab === 'apikeys' && (
+            <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-3xl p-6 md:p-8 space-y-6">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-200 dark:border-zinc-800 pb-5">
+                <div>
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    <KeyRound className="w-5 h-5 text-emerald-400" />
+                    API-Keys für MatchTrack-Stitcher (Desktop-App)
+                  </h3>
+                  <p className="text-xs text-zinc-400 mt-1">
+                    Erstelle kryptografisch gesicherte API-Keys (<code className="text-emerald-400">mto_ak_...</code>), mit denen das Windows-Tool <strong>MatchTrack-Stitcher</strong> fertige Spiele direkt und ohne Benutzerpasswort hochladen kann.
+                  </p>
+                </div>
+              </div>
+
+              {/* Neuen API-Key generieren */}
+              <div className="rounded-2xl border border-gray-200 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-950 p-5 space-y-4">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-2">
+                  <Plus className="w-4 h-4 text-emerald-400" />
+                  Neuen API-Key generieren
+                </h4>
+
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="md:col-span-6">
+                    <label className="text-xs font-bold text-zinc-400 block mb-1.5">
+                      Bezeichnung / Gerät
+                    </label>
+                    <input
+                      type="text"
+                      value={newApiKeyName}
+                      onChange={(e) => setNewApiKeyName(e.target.value)}
+                      placeholder="z.B. Stitcher PC Vereinsheim oder Laptop Trainer"
+                      className="w-full rounded-xl border border-gray-300 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 py-2.5 text-xs text-gray-900 dark:text-white focus:border-emerald-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="md:col-span-3">
+                    <label className="text-xs font-bold text-zinc-400 block mb-1.5">
+                      Gültigkeitsdauer
+                    </label>
+                    <select
+                      value={newApiKeyExpiryDays}
+                      onChange={(e) => setNewApiKeyExpiryDays(e.target.value)}
+                      className="w-full rounded-xl border border-gray-300 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3.5 py-2.5 text-xs text-gray-900 dark:text-white focus:border-emerald-500 focus:outline-none"
+                    >
+                      <option value="0">Unbegrenzt gültig</option>
+                      <option value="30">30 Tage</option>
+                      <option value="90">90 Tage</option>
+                      <option value="365">1 Jahr (365 Tage)</option>
+                    </select>
+                  </div>
+
+                  <div className="md:col-span-3">
+                    <button
+                      type="button"
+                      onClick={handleCreateApiKey}
+                      disabled={creatingApiKey}
+                      className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-emerald-600/20 transition-all disabled:opacity-50"
+                    >
+                      {creatingApiKey ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
+                      <span>API-Key erzeugen</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Einmalige Anzeige des neu generierten API-Keys */}
+                {newlyGeneratedPlainKey && (
+                  <div className="mt-4 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-4 space-y-3 animate-in fade-in">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold">
+                        <ShieldCheck className="w-4 h-4 shrink-0" />
+                        <span>Neuer API-Key generiert – Bitte jetzt kopieren!</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setNewlyGeneratedPlainKey(null)}
+                        className="text-xs text-zinc-400 hover:text-white"
+                      >
+                        Schließen ✕
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-zinc-300">
+                      Aus Sicherheitsgründen wird dieser Schlüssel in der Datenbank nur als SHA-256-Hash gespeichert und <strong>nur dieses eine Mal im Klartext angezeigt</strong>. Kopiere ihn in das Windows-Tool <em>MatchTrack-Stitcher</em> unter <strong>Mit Server verbinden → API-Key</strong>.
+                    </p>
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                      <code className="flex-1 rounded-xl bg-zinc-950 border border-emerald-500/30 px-4 py-2.5 font-mono text-xs text-emerald-300 select-all break-all">
+                        {newlyGeneratedPlainKey}
+                      </code>
+                      <button
+                        type="button"
+                        onClick={handleCopyPlainKey}
+                        className="flex items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 px-4 py-2.5 text-xs font-bold text-zinc-950 transition-all shrink-0"
+                      >
+                        {copiedNewKey ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                        <span>{copiedNewKey ? 'Kopiert!' : 'Key kopieren'}</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Liste der vorhandenen API-Keys */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+                    Aktive & hinterlegte API-Keys ({apiKeys.length})
+                  </h4>
+                </div>
+
+                {apiKeysLoading ? (
+                  <div className="flex items-center justify-center py-12 text-zinc-500 gap-2 text-xs">
+                    <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
+                    <span>Lade API-Keys...</span>
+                  </div>
+                ) : apiKeys.length === 0 ? (
+                  <div className="rounded-2xl border border-gray-200 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-950/60 p-8 text-center space-y-2">
+                    <KeyRound className="w-8 h-8 text-zinc-600 mx-auto" />
+                    <p className="text-xs font-bold text-zinc-400">Noch keine API-Keys vorhanden</p>
+                    <p className="text-[11px] text-zinc-500">
+                      Erstelle oben einen API-Key, um MatchTrack-Stitcher ohne Passworteingabe anzubinden.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {apiKeys.map((ak) => (
+                      <div
+                        key={ak.id}
+                        className={`flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-2xl border p-4 transition-all ${
+                          ak.is_active && !ak.is_expired
+                            ? 'border-gray-200 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-950'
+                            : 'border-gray-200 dark:border-zinc-900 bg-gray-100/50 dark:bg-zinc-950/40 opacity-60'
+                        }`}
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2.5 flex-wrap">
+                            <span className="text-xs font-bold text-white">{ak.name}</span>
+                            <code className="rounded-lg bg-zinc-900 border border-zinc-800 px-2 py-0.5 font-mono text-[11px] text-emerald-400">
+                              {ak.key_prefix}
+                            </code>
+                            {ak.is_expired ? (
+                              <span className="rounded-md bg-red-500/10 border border-red-500/30 px-2 py-0.5 text-[10px] font-bold text-red-400">
+                                ABGELAUFEN
+                              </span>
+                            ) : ak.is_active ? (
+                              <span className="rounded-md bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold text-emerald-400">
+                                AKTIV
+                              </span>
+                            ) : (
+                              <span className="rounded-md bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 text-[10px] font-bold text-amber-400">
+                                PAUSIERT
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-zinc-500">
+                            <span>Account: <strong className="text-zinc-300">{ak.username}</strong> ({ak.user_role})</span>
+                            {ak.created_at && (
+                              <span>Erstellt: {new Date(ak.created_at).toLocaleDateString('de-DE')}</span>
+                            )}
+                            {ak.expires_at ? (
+                              <span>Gültig bis: {new Date(ak.expires_at).toLocaleDateString('de-DE')}</span>
+                            ) : (
+                              <span>Gültigkeit: Unbegrenzt</span>
+                            )}
+                            <span>
+                              Zuletzt verwendet:{' '}
+                              <strong className="text-zinc-400">
+                                {ak.last_used_at
+                                  ? new Date(ak.last_used_at).toLocaleString('de-DE')
+                                  : 'Noch nie'}
+                              </strong>
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleApiKeyStatus(ak.id)}
+                            className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all ${
+                              ak.is_active
+                                ? 'border-zinc-700 bg-zinc-900 text-zinc-300 hover:bg-zinc-800'
+                                : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
+                            }`}
+                            title={ak.is_active ? 'API-Key temporär pausieren' : 'API-Key wieder aktivieren'}
+                          >
+                            <Power className="w-3.5 h-3.5" />
+                            <span>{ak.is_active ? 'Pausieren' : 'Aktivieren'}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteApiKey(ak.id, ak.name)}
+                            className="px-3 py-1.5 rounded-xl border border-red-500/30 bg-red-500/10 text-xs font-bold text-red-400 hover:bg-red-500/20 flex items-center gap-1.5 transition-all"
+                            title="API-Key unwiderruflich widerrufen"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Widerrufen</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </form>

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Body, Query
 from sqlalchemy.orm import Session
 from db.session import get_db
-from models import Match, User, SystemSettings, Team
+from models import Match, User, SystemSettings, Team, VideoChunk
 from .dependencies import require_admin
 from services.fisheye_service import get_preview_frame, process_fisheye_correction_task
 from typing import List, Optional, Dict
@@ -152,3 +152,72 @@ async def update_video_adjustments(
     }
 
 
+
+@router.post("/matches/{match_id}/repair-stream")
+async def repair_match_video_stream(
+    match_id: str,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
+    """
+    Prüft und repariert die Videospuren (H.264 8-Bit yuv420p & HLS ABR) eines Matches,
+    falls im Player nur Ton ohne Bild wiedergegeben wird.
+    """
+    match = db.query(Match).filter(Match.id == match_id).first()
+    if not match:
+        raise HTTPException(status_code=404, detail="Match nicht gefunden")
+
+    chunks = db.query(VideoChunk).filter(VideoChunk.match_id == match_id).all()
+    if not chunks:
+        raise HTTPException(status_code=404, detail="Keine Video-Chunks für dieses Match gefunden")
+
+    from services.hls_service import generate_hls_playlist
+    for ch in chunks:
+        ch.conversion_status = "processing"
+        ch.conversion_progress = 5
+        background_tasks.add_task(generate_hls_playlist, ch.id, None, False)
+    db.commit()
+
+    return {
+        "status": "started",
+        "message": "Video-Konvertierung (H.264 8-Bit & HLS) zur Reparatur im Hintergrund gestartet.",
+        "chunks_count": len(chunks)
+    }
+
+
+@router.post("/matches/{match_id}/cancel-hls")
+async def cancel_match_hls_endpoint(
+    match_id: str,
+    current_user: User = Depends(require_admin)
+):
+    """
+    Bricht laufende oder in der Queue hängengebliebene HLS-Konvertierungen für dieses Match ab.
+    """
+    from services.hls_service import cancel_match_hls_conversion
+    from services.cache_service import backend_cache
+    count = cancel_match_hls_conversion(match_id)
+    backend_cache.clear()
+    return {
+        "status": "cancelled",
+        "match_id": match_id,
+        "cancelled_count": count,
+        "message": f"HLS-Konvertierung für Match abgebrochen ({count} Task(s))."
+    }
+
+
+@router.post("/cancel-all-hls")
+async def cancel_all_hls_endpoint(
+    current_user: User = Depends(require_admin)
+):
+    """
+    Bricht alle laufenden oder unvollständigen HLS-Konvertierungen ab und leert die Queue.
+    """
+    from services.hls_service import cancel_all_hls_conversions
+    from services.cache_service import backend_cache
+    count = cancel_all_hls_conversions()
+    backend_cache.clear()
+    return {
+        "status": "cancelled_all",
+        "cancelled_count": count,
+        "message": f"Alle {count} HLS-Konvertierungen wurden abgebrochen und aus der Queue entfernt."
+    }

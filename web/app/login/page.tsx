@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { loginUser, forgotPassword, getMyProfile, api } from '@/services/api';
 import Image from 'next/image';
 import Link from 'next/link';
 import Footer from '@/components/Footer';
-import { Download, Smartphone } from 'lucide-react';
+import { Download, Smartphone, Radio, ArrowRight } from 'lucide-react';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -16,6 +16,23 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { login } = useAuth();
+
+  // Livestream active state
+  const [isLiveActive, setIsLiveActive] = useState(false);
+  const [liveTitle, setLiveTitle] = useState('MatchTrack Livestream');
+
+  useEffect(() => {
+    let isMounted = true;
+    api.get('/public/livestream')
+      .then(res => {
+        if (isMounted && res.data) {
+          setIsLiveActive(!!res.data.is_live);
+          if (res.data.title) setLiveTitle(res.data.title);
+        }
+      })
+      .catch(() => {});
+    return () => { isMounted = false; };
+  }, []);
 
   // Forgot password states
   const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
@@ -123,6 +140,37 @@ export default function LoginPage() {
           <p className="mb-8 text-center text-sm text-zinc-400">
             Bitte melde dich an, um auf das Match Dashboard zuzugreifen.
           </p>
+
+          {isLiveActive && (
+            <Link
+              href="/live"
+              className="mb-6 flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-red-500/10 hover:bg-red-500/15 border border-red-500/30 hover:border-red-500/50 shadow-md shadow-red-500/10 transition-all group"
+            >
+              <div className="flex items-center gap-3">
+                <span className="relative flex h-3 w-3 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                </span>
+                <div className="text-left min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-red-600 dark:text-red-400 bg-red-500/20 px-1.5 py-0.5 rounded font-mono">
+                      LIVE
+                    </span>
+                    <span className="text-xs font-bold text-gray-900 dark:text-white truncate">
+                      {liveTitle}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-500 dark:text-zinc-400 truncate">
+                    Livestream läuft jetzt – hier ansehen
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 text-xs font-bold text-red-600 dark:text-red-400 group-hover:translate-x-0.5 transition-transform shrink-0">
+                <span>Ansehen</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </div>
+            </Link>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>

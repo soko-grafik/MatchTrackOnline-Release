@@ -190,7 +190,7 @@ export default function Navbar() {
   const userRole = user?.role?.toUpperCase() || '';
   const isAdmin = userRole === 'ADMIN';
   const isTeamAdmin = userRole === 'TEAM_ADMIN';
-  const canUpload = isAdmin || isTeamAdmin;
+  const canUpload = isAdmin;
 
   const perms = (user as any)?.module_permissions || {};
   const isDefaultNo = userRole === 'VIEWER';

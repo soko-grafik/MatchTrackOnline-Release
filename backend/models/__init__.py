@@ -5,6 +5,7 @@ from .models import (
     CalendarEvent, calendar_event_teams, calendar_event_attendees, PushSubscription, Player,
     SchoolHoliday, PlayerAttendance, PlayerEvaluation,
     UserTacticsPreference, TacticsBoard, TacticsFormationPreset,
-    VideoStitchJob, UserActivityLog, UserActivityType, SystemLog
+    VideoStitchJob, UserActivityLog, UserActivityType, SystemLog, LivestreamRecording,
+    ApiKey
 )
 

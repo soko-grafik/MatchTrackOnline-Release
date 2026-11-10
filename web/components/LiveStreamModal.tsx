@@ -2,9 +2,15 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Hls from 'hls.js';
-import { X, Radio, Copy, Check, Tv, AlertCircle, Video, Settings2, Share2, Shield } from 'lucide-react';
+import { 
+  X, Radio, Copy, Check, Tv, AlertCircle, Video, Settings2, 
+  Share2, Shield, Sliders, Film, Layers, Play 
+} from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { api } from '@/services/api';
 import LiveStreamShareModal from '@/components/LiveStreamShareModal';
+import LiveStitchPreviewModal from '@/components/LiveStitchPreviewModal';
+import LiveRecordingsModal from '@/components/LiveRecordingsModal';
 
 interface LiveStreamModalProps {
   isOpen: boolean;
@@ -15,18 +21,28 @@ interface LiveStreamModalProps {
 export default function LiveStreamModal({
   isOpen,
   onClose,
-  streamUrl = "/live/osmo4/index.m3u8",
+  streamUrl
 }: LiveStreamModalProps) {
   const { user } = useAuth();
-  const isAdmin = user?.role?.toUpperCase() === 'ADMIN' || user?.role?.toUpperCase() === 'TRAINER';
+  const isAdmin = user?.role?.toUpperCase() === 'ADMIN';
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const [isLive, setIsLive] = useState<boolean | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [host, setHost] = useState('');
+  
+  // Settings & Modes
+  const [streamMode, setStreamMode] = useState<'multi_cam' | 'stitched'>('multi_cam');
+  const [selectedCam, setSelectedCam] = useState<'cam1' | 'cam2'>('cam1');
+  const [streams, setStreams] = useState<any>({});
+  const [activeCamIngestTab, setActiveCamIngestTab] = useState<'cam1' | 'cam2'>('cam1');
   const [streamClientTab, setStreamClientTab] = useState<'dji' | 'obs'>('dji');
+
+  // Modals
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isStitchModalOpen, setIsStitchModalOpen] = useState(false);
+  const [isRecordingsModalOpen, setIsRecordingsModalOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -34,9 +50,28 @@ export default function LiveStreamModal({
     }
   }, []);
 
-  const fullRtmpUrl = `rtmp://${host || 'matchtrack.de'}:1935/live/osmo4`;
-  const obsServerUrl = `rtmp://${host || 'matchtrack.de'}:1935/live`;
-  const obsStreamKey = `osmo4`;
+  // Status & Mode laden
+  useEffect(() => {
+    if (isOpen) {
+      api.get('/public/livestream').then((res) => {
+        if (res.data) {
+          if (res.data.mode) setStreamMode(res.data.mode);
+          if (res.data.streams) setStreams(res.data.streams);
+        }
+      }).catch(() => {});
+    }
+  }, [isOpen]);
+
+  const domain = host || 'matchtrack.de';
+  const effectiveStreamUrl = streamUrl || (
+    streamMode === 'stitched' 
+      ? "/live/stitched/index.m3u8" 
+      : `/live/${selectedCam}/index.m3u8`
+  );
+
+  const fullRtmpUrlCam1 = `rtmp://${domain}:1935/live/cam1`;
+  const fullRtmpUrlCam2 = `rtmp://${domain}:1935/live/cam2`;
+  const obsServerUrl = `rtmp://${domain}:1935/live`;
 
   useEffect(() => {
     if (!isOpen) {
@@ -57,7 +92,7 @@ export default function LiveStreamModal({
       if (!isSubscribed) return;
 
       if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
-        videoElement.src = streamUrl;
+        videoElement.src = effectiveStreamUrl;
         videoElement.muted = true;
         videoElement.play().then(() => {
           if (isSubscribed) setIsLive(true);
@@ -83,7 +118,7 @@ export default function LiveStreamModal({
         });
         hlsRef.current = hls;
 
-        hls.loadSource(streamUrl);
+        hls.loadSource(effectiveStreamUrl);
         hls.attachMedia(videoElement);
 
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
@@ -124,7 +159,7 @@ export default function LiveStreamModal({
         hlsRef.current = null;
       }
     };
-  }, [isOpen, streamUrl]);
+  }, [isOpen, effectiveStreamUrl]);
 
   const copyToClipboard = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -134,191 +169,220 @@ export default function LiveStreamModal({
 
   if (!isOpen) return null;
 
+  const bothCamsActive = streams.cam1?.is_live && streams.cam2?.is_live;
+
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md animate-in fade-in duration-200">
         <div className="w-full max-w-3xl overflow-hidden rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-2xl">
           
-          {/* Modal Header */}
+          {/* Header */}
           <div className="flex items-center justify-between border-b border-gray-200 dark:border-zinc-800 px-6 py-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-500/10 text-red-500">
-                <Radio className="h-5 w-5 animate-pulse" />
-              </div>
+              <span className="flex h-3 w-3 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+              </span>
               <div>
-                <h2 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                  MatchTrack Livestream
-                  {isLive && (
-                    <span className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-white">
-                      LIVE
+                <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  MatchTrack Live-Stream
+                  {streamMode === 'stitched' ? (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                      Panorama
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                      Multi-Cam
                     </span>
                   )}
-                </h2>
+                </h3>
                 <p className="text-xs text-gray-500 dark:text-zinc-400">
-                  {isAdmin ? "RTMP Stream & Echtzeit-Vorschau (Admin-Modus)" : "Echtzeit-Videoübertragung"}
+                  Echtzeit-Übertragung direkt vom Platz
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => setIsShareModalOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-xs font-semibold text-gray-700 dark:text-zinc-200 transition-colors"
-                title="Stream-Link teilen"
-              >
-                <Share2 className="w-3.5 h-3.5" />
-                <span>Teilen</span>
-              </button>
-
+              {isAdmin && (
+                <>
+                  <button
+                    onClick={() => setIsStitchModalOpen(true)}
+                    className="p-2 rounded-lg text-gray-500 dark:text-zinc-400 hover:text-emerald-500 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
+                    title="Live-Stitching Nahtstellen-Editor"
+                  >
+                    <Sliders className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setIsRecordingsModalOpen(true)}
+                    className="p-2 rounded-lg text-gray-500 dark:text-zinc-400 hover:text-blue-500 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
+                    title="Aufnahmen verwalten"
+                  >
+                    <Film className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setIsShareModalOpen(true)}
+                    className="p-2 rounded-lg text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
+                    title="Stream-Einstellungen & Zugangsdaten"
+                  >
+                    <Settings2 className="h-4 w-4" />
+                  </button>
+                </>
+              )}
               <button
                 onClick={onClose}
-                className="rounded-lg p-2 text-gray-500 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-900 hover:text-gray-900 dark:hover:text-white transition-colors"
+                className="rounded-full p-1.5 text-gray-500 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 hover:text-gray-900 dark:hover:text-white transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
           </div>
 
-          {/* Player Container */}
-          <div className="relative aspect-video w-full bg-black flex items-center justify-center overflow-hidden">
+          {/* Video Player */}
+          <div className="relative aspect-video w-full bg-black flex items-center justify-center">
             <video
               ref={videoRef}
+              className="h-full w-full object-contain"
               controls
               playsInline
-              autoPlay
               muted
-              className="w-full h-full object-contain"
             />
 
-            {!isLive && (
-              <div className="absolute inset-0 bg-zinc-950/90 backdrop-blur-sm flex flex-col items-center justify-center p-8 text-center z-10 animate-in fade-in">
-                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-900 border border-zinc-800 text-zinc-500">
-                  <Tv className="h-8 w-8" />
+            {/* Live Indicator Overlay */}
+            <div className="absolute top-3 left-3 flex items-center gap-2 pointer-events-none">
+              {isLive ? (
+                <div className="flex items-center gap-1.5 rounded-md bg-red-600 px-2.5 py-1 text-xs font-bold text-white shadow-lg">
+                  <span className="h-2 w-2 rounded-full bg-white animate-pulse" />
+                  LIVE
                 </div>
-                <h3 className="text-lg font-bold text-white">Kein aktiver Stream empfangen</h3>
-                <p className="mt-2 text-xs text-zinc-400 leading-relaxed max-w-md">
-                  {isAdmin ? (
-                    <>Starte den RTMP-Stream über deine <strong>DJI Mimo App</strong> oder <strong>OBS Studio</strong> mit den untenstehenden Zugangsdaten.</>
-                  ) : (
-                    <>Die Live-Übertragung hat noch nicht begonnen oder wurde kurzzeitig unterbrochen. Das Bild aktualisiert sich automatisch, sobald gesendet wird.</>
-                  )}
-                </p>
+              ) : (
+                <div className="flex items-center gap-1.5 rounded-md bg-black/60 px-2.5 py-1 text-xs font-medium text-zinc-300 backdrop-blur-md border border-white/10">
+                  <AlertCircle className="h-3.5 w-3.5 text-amber-400" />
+                  Wartet auf Live-Signal...
+                </div>
+              )}
+            </div>
+
+            {/* Multi-Cam Umschalter im Modal */}
+            {streamMode === 'multi_cam' && bothCamsActive && (
+              <div className="absolute top-3 right-3 z-10 flex items-center gap-1 p-1 rounded-xl bg-black/70 backdrop-blur-md border border-white/10">
+                <button
+                  onClick={() => setSelectedCam('cam1')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                    selectedCam === 'cam1' ? 'bg-emerald-600 text-white' : 'text-zinc-300 hover:text-white'
+                  }`}
+                >
+                  Cam 1
+                </button>
+                <button
+                  onClick={() => setSelectedCam('cam2')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                    selectedCam === 'cam2' ? 'bg-emerald-600 text-white' : 'text-zinc-300 hover:text-white'
+                  }`}
+                >
+                  Cam 2
+                </button>
               </div>
             )}
           </div>
 
-          {/* Footer: Stream Settings (NUR FÜR ADMINS & TRAINER) */}
+          {/* Admin Zugangsdaten */}
           {isAdmin ? (
-            <div className="border-t border-gray-200 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900/50 p-6 space-y-4">
-              <div className="flex items-center justify-between border-b border-gray-200 dark:border-zinc-800 pb-2">
+            <div className="border-t border-gray-200 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900/50 p-5 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
+                  <span className="flex items-center gap-1.5 text-xs font-bold text-gray-900 dark:text-white">
+                    <Radio className="h-3.5 w-3.5 text-primary" />
+                    Stream Ingest-Einstellungen
+                  </span>
+                  <div className="flex rounded-lg bg-gray-200 dark:bg-zinc-800 p-0.5 text-xs">
+                    <button
+                      onClick={() => setActiveCamIngestTab('cam1')}
+                      className={`px-2 py-0.5 rounded font-medium ${activeCamIngestTab === 'cam1' ? 'bg-white dark:bg-zinc-900 text-primary shadow-xs' : 'text-gray-500'}`}
+                    >
+                      Kamera 1
+                    </button>
+                    <button
+                      onClick={() => setActiveCamIngestTab('cam2')}
+                      className={`px-2 py-0.5 rounded font-medium ${activeCamIngestTab === 'cam2' ? 'bg-white dark:bg-zinc-900 text-primary shadow-xs' : 'text-gray-500'}`}
+                    >
+                      Kamera 2
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex rounded-lg bg-gray-200 dark:bg-zinc-800 p-0.5 text-xs">
                   <button
                     onClick={() => setStreamClientTab('dji')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                      streamClientTab === 'dji'
-                        ? 'bg-primary text-white shadow-sm'
-                        : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white'
+                    className={`px-2.5 py-1 rounded font-semibold transition-all ${
+                      streamClientTab === 'dji' ? 'bg-white dark:bg-zinc-900 text-primary shadow-xs' : 'text-gray-600 dark:text-zinc-400'
                     }`}
                   >
-                    <Video className="w-3.5 h-3.5" />
-                    <span>DJI Mimo App</span>
+                    DJI Mimo
                   </button>
                   <button
                     onClick={() => setStreamClientTab('obs')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                      streamClientTab === 'obs'
-                        ? 'bg-primary text-white shadow-sm'
-                        : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white'
+                    className={`px-2.5 py-1 rounded font-semibold transition-all ${
+                      streamClientTab === 'obs' ? 'bg-white dark:bg-zinc-900 text-primary shadow-xs' : 'text-gray-600 dark:text-zinc-400'
                     }`}
                   >
-                    <Settings2 className="w-3.5 h-3.5" />
-                    <span>OBS Studio</span>
+                    OBS Studio
                   </button>
                 </div>
-
-                <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
-                  <Shield className="w-3 h-3" /> Nur Admins sichtbar
-                </span>
               </div>
 
               {streamClientTab === 'dji' ? (
-                <div className="space-y-3">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-3.5">
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-3">
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500 block mb-0.5">
+                      RTMP-URL für {activeCamIngestTab === 'cam1' ? 'Kamera 1' : 'Kamera 2'}
+                    </span>
+                    <code className="text-xs font-mono text-blue-600 dark:text-blue-400 truncate block select-all">
+                      {activeCamIngestTab === 'cam1' ? fullRtmpUrlCam1 : fullRtmpUrlCam2}
+                    </code>
+                  </div>
+                  <button
+                    onClick={() => copyToClipboard(activeCamIngestTab === 'cam1' ? fullRtmpUrlCam1 : fullRtmpUrlCam2, 'dji')}
+                    className="flex shrink-0 items-center gap-1.5 rounded-lg bg-gray-100 dark:bg-zinc-800 px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-zinc-200 hover:bg-gray-200 dark:hover:bg-zinc-700 transition-colors"
+                  >
+                    {copiedKey === 'dji' ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                    {copiedKey === 'dji' ? 'Kopiert' : 'Kopieren'}
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="flex items-center justify-between gap-2 rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-2.5">
                     <div className="min-w-0 flex-1">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500 block mb-1">
-                        Komplette RTMP-URL für DJI Mimo
-                      </span>
+                      <span className="text-[10px] font-bold text-gray-500 dark:text-zinc-500 block">OBS Server</span>
                       <code className="text-xs font-mono text-blue-600 dark:text-blue-400 truncate block select-all">
-                        {fullRtmpUrl}
+                        {obsServerUrl}
                       </code>
                     </div>
                     <button
-                      onClick={() => copyToClipboard(fullRtmpUrl, 'dji-full')}
-                      className="flex shrink-0 items-center gap-1.5 rounded-lg bg-gray-100 dark:bg-zinc-800 px-3 py-2 text-xs font-semibold text-gray-700 dark:text-zinc-200 hover:bg-gray-200 dark:hover:bg-zinc-700 transition-colors"
+                      onClick={() => copyToClipboard(obsServerUrl, 'obs-server')}
+                      className="p-1 rounded text-gray-400 hover:text-gray-700 dark:hover:text-white"
                     >
-                      {copiedKey === 'dji-full' ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
-                      {copiedKey === 'dji-full' ? 'Kopiert!' : 'Kopieren'}
+                      {copiedKey === 'obs-server' ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
                     </button>
                   </div>
 
-                  <div className="flex items-start gap-2.5 text-[11px] text-gray-600 dark:text-zinc-400">
-                    <AlertCircle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-                    <p>
-                      <strong>DJI Anleitung:</strong> Osmo Action 4 einschalten → DJI Mimo App öffnen → Livestreaming → RTMP wählen → WLAN/Hotspot verbinden → Obige RTMP-URL einfügen & Stream starten.
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="flex items-center justify-between gap-2 rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-3">
-                      <div className="min-w-0 flex-1">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500 block">
-                          OBS Server
-                        </span>
-                        <code className="text-xs font-mono text-blue-600 dark:text-blue-400 truncate block select-all">
-                          {obsServerUrl}
-                        </code>
-                      </div>
-                      <button
-                        onClick={() => copyToClipboard(obsServerUrl, 'obs-server')}
-                        className="p-1.5 rounded-lg bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-zinc-200 hover:bg-gray-200 dark:hover:bg-zinc-700 transition-colors"
-                        title="Server kopieren"
-                      >
-                        {copiedKey === 'obs-server' ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
-                      </button>
+                  <div className="flex items-center justify-between gap-2 rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-2.5">
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[10px] font-bold text-gray-500 dark:text-zinc-500 block">Stream-Schlüssel</span>
+                      <code className="text-xs font-mono text-emerald-600 dark:text-emerald-400 font-bold block select-all">
+                        {activeCamIngestTab === 'cam1' ? 'cam1' : 'cam2'}
+                      </code>
                     </div>
-
-                    <div className="flex items-center justify-between gap-2 rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-3">
-                      <div className="min-w-0 flex-1">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-500 block">
-                          OBS Stream-Schlüssel
-                        </span>
-                        <code className="text-xs font-mono text-emerald-600 dark:text-emerald-400 font-bold block select-all">
-                          {obsStreamKey}
-                        </code>
-                      </div>
-                      <button
-                        onClick={() => copyToClipboard(obsStreamKey, 'obs-key')}
-                        className="p-1.5 rounded-lg bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-zinc-200 hover:bg-gray-200 dark:hover:bg-zinc-700 transition-colors"
-                        title="Key kopieren"
-                      >
-                        {copiedKey === 'obs-key' ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-2.5 text-[11px] text-gray-600 dark:text-zinc-400">
-                    <AlertCircle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-                    <p>
-                      <strong>OBS Studio Anleitung:</strong> Einstellungen → Stream → Dienst: <em>Benutzerdefiniert...</em> → Server: <code>{obsServerUrl}</code> → Stream-Schlüssel: <code>{obsStreamKey}</code> → Streaming starten.
-                    </p>
+                    <button
+                      onClick={() => copyToClipboard(activeCamIngestTab === 'cam1' ? 'cam1' : 'cam2', 'obs-key')}
+                      className="p-1 rounded text-gray-400 hover:text-gray-700 dark:hover:text-white"
+                    >
+                      {copiedKey === 'obs-key' ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                    </button>
                   </div>
                 </div>
               )}
             </div>
           ) : (
-            /* Für reguläre Nutzer / Spieler */
             <div className="border-t border-gray-200 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-900/50 px-6 py-4 flex items-center justify-between text-xs text-gray-600 dark:text-zinc-400">
               <div className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -333,14 +397,29 @@ export default function LiveStreamModal({
               </button>
             </div>
           )}
+
         </div>
       </div>
 
-      {/* Share & Password Protection Modal */}
+      {/* Modals */}
       <LiveStreamShareModal
         isOpen={isShareModalOpen}
         onClose={() => setIsShareModalOpen(false)}
         isAdmin={isAdmin}
+      />
+
+      <LiveStitchPreviewModal
+        isOpen={isStitchModalOpen}
+        onClose={() => setIsStitchModalOpen(false)}
+        onOpenRecordings={() => {
+          setIsStitchModalOpen(false);
+          setIsRecordingsModalOpen(true);
+        }}
+      />
+
+      <LiveRecordingsModal
+        isOpen={isRecordingsModalOpen}
+        onClose={() => setIsRecordingsModalOpen(false)}
       />
     </>
   );

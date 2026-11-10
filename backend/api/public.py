@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Dict, List, Any
 from datetime import datetime, timedelta
 from db.session import get_db
 from models import Match, SystemSettings
@@ -135,9 +135,71 @@ def get_legal_templates(db: Session = Depends(get_db)):
         "default_terms": get_default_terms(club_name)
     }
 
+import time
+import urllib.request
+import json
+
+_last_streams_check_time = 0.0
+_cached_active_streams = set()
+
+def get_active_stream_names() -> set:
+    global _last_streams_check_time, _cached_active_streams
+    now = time.time()
+    if now - _last_streams_check_time < 2.0:
+        return _cached_active_streams
+
+    _last_streams_check_time = now
+    found = set()
+
+    # 1. MediaMTX API pruefen (Port 9997)
+    try:
+        req = urllib.request.Request("http://127.0.0.1:9997/v3/paths/list", headers={"User-Agent": "FastAPI"})
+        with urllib.request.urlopen(req, timeout=0.8) as resp:
+            if resp.status == 200:
+                data = json.loads(resp.read().decode())
+                for item in data.get("items", []):
+                    if item.get("ready"):
+                        raw_name = str(item.get("name", "")).strip().lower()
+                        cleaned = raw_name.split("/")[-1]
+                        if cleaned:
+                            found.add(cleaned)
+                            if cleaned == "osmo4":
+                                found.add("cam1")
+    except Exception:
+        pass
+
+    # 2. Fallback: HLS Playlist Ports pruefen
+    if not found:
+        for probe_key in ["cam1", "cam2", "stitched", "osmo4"]:
+            for probe_url in [f"http://127.0.0.1:8888/live/{probe_key}/index.m3u8", f"http://127.0.0.1:8888/{probe_key}/index.m3u8"]:
+                try:
+                    req = urllib.request.Request(probe_url, headers={"User-Agent": "FastAPI"})
+                    with urllib.request.urlopen(req, timeout=0.5) as resp:
+                        if resp.status == 200:
+                            found.add(probe_key)
+                            if probe_key == "osmo4":
+                                found.add("cam1")
+                            break
+                except Exception:
+                    pass
+
+    _cached_active_streams = found
+    return _cached_active_streams
+
+class StreamDetail(BaseModel):
+    is_live: bool
+    name: str
+    url: str
+
 class PublicLivestreamOut(BaseModel):
     is_protected: bool
     title: str
+    is_live: bool = False
+    is_published: bool = False
+    mode: str = "multi_cam"
+    active_stream_count: int = 0
+    active_streams: List[str] = []
+    streams: Dict[str, StreamDetail] = {}
 
 class LivestreamVerifyIn(BaseModel):
     password: str
@@ -145,17 +207,48 @@ class LivestreamVerifyIn(BaseModel):
 @router.get("/livestream", response_model=PublicLivestreamOut)
 def get_public_livestream_status(db: Session = Depends(get_db)):
     """
-    Öffentliche Status-Abfrage für den Livestream:
-    Liefert den Schutz-Status und Titel.
+    Oeffentliche Status-Abfrage fuer den Livestream:
+    Liefert Schutz-Status, Titel, Freigabe (is_published), Modus und die einzelnen Streams.
     """
     settings = db.query(SystemSettings).first()
     is_protected = bool(getattr(settings, "livestream_is_protected", False)) if settings else False
     has_pass = bool(getattr(settings, "livestream_password", None)) if settings else False
     title = (getattr(settings, "livestream_title", None) or "MatchTrack Livestream") if settings else "MatchTrack Livestream"
-    
+    is_published = bool(getattr(settings, "livestream_is_published", False)) if settings else False
+    mode = getattr(settings, "livestream_mode", "multi_cam") or "multi_cam"
+    cam1_name = getattr(settings, "livestream_cam1_name", "Kamera 1 (Links)") or "Kamera 1 (Links)"
+    cam2_name = getattr(settings, "livestream_cam2_name", "Kamera 2 (Rechts)") or "Kamera 2 (Rechts)"
+
+    active_set = get_active_stream_names()
+    cam1_live = ("cam1" in active_set) or ("osmo4" in active_set)
+    cam2_live = "cam2" in active_set
+    stitched_live = "stitched" in active_set
+
+    is_live = False
+    if mode == "stitched":
+        is_live = stitched_live or (cam1_live and cam2_live)
+    else:
+        is_live = cam1_live or cam2_live
+
+    cam1_url = "/live/osmo4/index.m3u8" if ("osmo4" in active_set and "cam1" not in active_set) else "/live/cam1/index.m3u8"
+
+    streams = {
+        "cam1": StreamDetail(is_live=cam1_live, name=cam1_name, url=cam1_url),
+        "cam2": StreamDetail(is_live=cam2_live, name=cam2_name, url="/live/cam2/index.m3u8"),
+        "stitched": StreamDetail(is_live=stitched_live, name="Panorama (Gestitcht)", url="/live/stitched/index.m3u8")
+    }
+
+    active_keys = [k for k, v in streams.items() if v.is_live]
+
     return {
         "is_protected": is_protected and has_pass,
-        "title": title
+        "title": title,
+        "is_live": is_live,
+        "is_published": is_published,
+        "mode": mode,
+        "active_stream_count": len(active_keys),
+        "active_streams": active_keys,
+        "streams": streams
     }
 
 @router.post("/livestream/verify")
@@ -166,11 +259,11 @@ def verify_livestream_password(data: LivestreamVerifyIn, db: Session = Depends(g
     settings = db.query(SystemSettings).first()
     if not settings or not getattr(settings, "livestream_is_protected", False):
         return {"success": True}
-    
+
     stored_password = getattr(settings, "livestream_password", "") or ""
     if not stored_password:
         return {"success": True}
-        
+
     if data.password.strip() == stored_password.strip():
         return {"success": True}
     else:

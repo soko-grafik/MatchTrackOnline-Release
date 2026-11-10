@@ -2,18 +2,20 @@ import os
 import glob
 import shutil
 import uuid
+import hashlib
+import secrets
 import subprocess
 import traceback
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 from fastapi.responses import Response
 
 from db.session import get_db, BASE_DIR, UPLOAD_DIR
-from models import User, UserRole, Match, VideoChunk, SystemSettings, HeatmapStatus, StitchingStatus, Team, MatchEvent, TacticsBoard, TrainingSession, PlayerEvaluation, UserActivityLog, SystemLog
+from models import User, UserRole, Match, VideoChunk, SystemSettings, HeatmapStatus, StitchingStatus, Team, MatchEvent, TacticsBoard, TrainingSession, PlayerEvaluation, UserActivityLog, SystemLog, LivestreamRecording, ApiKey
 from pydantic import BaseModel
-from .dependencies import require_admin, require_trainer
+from .dependencies import require_admin
 from core.security import get_password_hash
 from services.notification_service import notify_user_approved, notify_users_new_video
 from services.thumbnail_service import generate_thumbnail
@@ -21,6 +23,8 @@ from services.hls_service import generate_hls_playlist
 
 from services.backup_service import generate_sql_dump, upload_to_ftp, run_ftp_backup_job
 from services.logger_service import create_system_log, generate_test_logs
+from services.stream_recorder import start_recording, stop_recording, get_active_recording_status
+from services.live_stitcher import start_stitching, stop_stitching, is_stitching_active
 
 router = APIRouter()
 
@@ -916,7 +920,7 @@ async def delete_match_stream(
     stream_id: str,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_trainer)
+    current_user: User = Depends(require_admin)
 ):
     """
     Löscht eine einzelne Videospur (Standard oder Panorama) aus einem Match.
@@ -1033,7 +1037,7 @@ async def convert_match_stream_type(
     req: ConvertStreamTypeRequest,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_trainer)
+    current_user: User = Depends(require_admin)
 ):
     """
     Ändert den Typ einer Videospur zwischen Standard (16:9) und Panorama (32:9).
@@ -1846,17 +1850,51 @@ def create_test_system_logs(
     return {"success": True, "count": len(created)}
 
 # ==========================================
-# LIVESTREAM SHARING & PASSWORT-SCHUTZ
+# LIVESTREAM VERWALTUNG, REGIE & AUFNAHME
 # ==========================================
 class AdminLivestreamSettings(BaseModel):
     is_protected: bool
     password: Optional[str] = None
     title: Optional[str] = "MatchTrack Livestream"
+    mode: Optional[str] = "multi_cam"
+    is_published: Optional[bool] = False
+    cam1_name: Optional[str] = "Kamera 1 (Links)"
+    cam2_name: Optional[str] = "Kamera 2 (Rechts)"
+    stitch_delay: Optional[int] = 8
+    stitch_config: Optional[Dict[str, Any]] = None
+    save_recording: Optional[bool] = True
+    is_recording: Optional[bool] = False
+    recording_duration: Optional[float] = 0.0
+
+class PublishToggleIn(BaseModel):
+    is_published: bool
+
+class StitchConfigIn(BaseModel):
+    overlap_px: Optional[int] = 320
+    y_offset_px: Optional[int] = 0
+    feather_width_px: Optional[int] = 80
+    cam2_brightness: Optional[float] = 0.0
+    cam2_contrast: Optional[float] = 1.0
+    sync_offset_ms: Optional[int] = 0
+
+class StartRecordingIn(BaseModel):
+    stream_key: Optional[str] = "stitched"
+    title: Optional[str] = None
+    save_permanently: Optional[bool] = True
+
+class StopRecordingIn(BaseModel):
+    discard: Optional[bool] = None
+
+class ConvertRecordingToMatchIn(BaseModel):
+    name: str
+    team_id: Optional[str] = None
+    category: Optional[str] = "Punktspiel"
+    recording_date: Optional[str] = None
 
 @router.get("/livestream", response_model=AdminLivestreamSettings)
 def get_admin_livestream_settings(
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_trainer)
+    current_user: User = Depends(require_admin)
 ):
     settings = db.query(SystemSettings).first()
     if not settings:
@@ -1864,35 +1902,509 @@ def get_admin_livestream_settings(
         db.add(settings)
         db.commit()
         db.refresh(settings)
-        
+
+    default_stitch_cfg = {
+        "overlap_px": 320,
+        "y_offset_px": 0,
+        "feather_width_px": 80,
+        "cam2_brightness": 0.0,
+        "cam2_contrast": 1.0,
+        "sync_offset_ms": 0
+    }
+    stored_cfg = getattr(settings, "livestream_stitch_config", None) or {}
+    merged_cfg = {**default_stitch_cfg, **stored_cfg}
+
+    rec_status = get_active_recording_status()
+
     return {
         "is_protected": bool(getattr(settings, "livestream_is_protected", False)),
         "password": getattr(settings, "livestream_password", "") or "",
-        "title": getattr(settings, "livestream_title", None) or "MatchTrack Livestream"
+        "title": getattr(settings, "livestream_title", None) or "MatchTrack Livestream",
+        "mode": getattr(settings, "livestream_mode", "multi_cam") or "multi_cam",
+        "is_published": bool(getattr(settings, "livestream_is_published", False)),
+        "cam1_name": getattr(settings, "livestream_cam1_name", "Kamera 1 (Links)") or "Kamera 1 (Links)",
+        "cam2_name": getattr(settings, "livestream_cam2_name", "Kamera 2 (Rechts)") or "Kamera 2 (Rechts)",
+        "stitch_delay": getattr(settings, "livestream_stitch_delay", 8) or 8,
+        "stitch_config": merged_cfg,
+        "save_recording": bool(getattr(settings, "livestream_save_recording", True)),
+        "is_recording": rec_status["is_recording"],
+        "recording_duration": rec_status["duration_seconds"]
     }
 
 @router.put("/livestream", response_model=AdminLivestreamSettings)
 def update_admin_livestream_settings(
     data: AdminLivestreamSettings,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_trainer)
+    current_user: User = Depends(require_admin)
 ):
     settings = db.query(SystemSettings).first()
     if not settings:
         settings = SystemSettings(id=1)
         db.add(settings)
-        
+
     settings.livestream_is_protected = data.is_protected
     if data.password is not None:
         settings.livestream_password = data.password.strip()
     if data.title:
         settings.livestream_title = data.title.strip()
-        
+    if data.mode:
+        settings.livestream_mode = data.mode
+    if data.is_published is not None:
+        settings.livestream_is_published = data.is_published
+    if data.cam1_name:
+        settings.livestream_cam1_name = data.cam1_name.strip()
+    if data.cam2_name:
+        settings.livestream_cam2_name = data.cam2_name.strip()
+    if data.stitch_delay is not None:
+        settings.livestream_stitch_delay = data.stitch_delay
+    if data.stitch_config:
+        settings.livestream_stitch_config = data.stitch_config
+    if data.save_recording is not None:
+        settings.livestream_save_recording = data.save_recording
+
     db.commit()
     db.refresh(settings)
-    
+
+    rec_status = get_active_recording_status()
+
     return {
         "is_protected": bool(getattr(settings, "livestream_is_protected", False)),
         "password": getattr(settings, "livestream_password", "") or "",
-        "title": getattr(settings, "livestream_title", None) or "MatchTrack Livestream"
+        "title": getattr(settings, "livestream_title", None) or "MatchTrack Livestream",
+        "mode": getattr(settings, "livestream_mode", "multi_cam") or "multi_cam",
+        "is_published": bool(getattr(settings, "livestream_is_published", False)),
+        "cam1_name": getattr(settings, "livestream_cam1_name", "Kamera 1 (Links)") or "Kamera 1 (Links)",
+        "cam2_name": getattr(settings, "livestream_cam2_name", "Kamera 2 (Rechts)") or "Kamera 2 (Rechts)",
+        "stitch_delay": getattr(settings, "livestream_stitch_delay", 8) or 8,
+        "stitch_config": getattr(settings, "livestream_stitch_config", None) or {},
+        "save_recording": bool(getattr(settings, "livestream_save_recording", True)),
+        "is_recording": rec_status["is_recording"],
+        "recording_duration": rec_status["duration_seconds"]
     }
+
+@router.post("/livestream/publish")
+def toggle_livestream_publish(
+    body: PublishToggleIn,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """
+    Schaltet die Live-Übertragung für reguläre Zuschauer frei oder zieht die Freigabe zurück.
+    """
+    settings = db.query(SystemSettings).first()
+    if not settings:
+        settings = SystemSettings(id=1)
+        db.add(settings)
+
+    settings.livestream_is_published = body.is_published
+    db.commit()
+    return {"success": True, "is_published": settings.livestream_is_published}
+
+@router.put("/livestream/stitch-config")
+def update_livestream_stitch_config(
+    body: StitchConfigIn,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """
+    Aktualisiert die Nahtstellen-Parameter für das Live-Stitching in Echtzeit.
+    """
+    settings = db.query(SystemSettings).first()
+    if not settings:
+        settings = SystemSettings(id=1)
+        db.add(settings)
+
+    cfg = {
+        "overlap_px": body.overlap_px if body.overlap_px is not None else 320,
+        "y_offset_px": body.y_offset_px if body.y_offset_px is not None else 0,
+        "feather_width_px": body.feather_width_px if body.feather_width_px is not None else 80,
+        "cam2_brightness": body.cam2_brightness if body.cam2_brightness is not None else 0.0,
+        "cam2_contrast": body.cam2_contrast if body.cam2_contrast is not None else 1.0,
+        "sync_offset_ms": body.sync_offset_ms if body.sync_offset_ms is not None else 0
+    }
+    settings.livestream_stitch_config = cfg
+    db.commit()
+
+    return {"success": True, "stitch_config": cfg}
+
+@router.post("/livestream/auto-sync")
+def trigger_audio_auto_sync(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """
+    Führt eine automatische Audio-basierte Latenzmessung zwischen Cam 1 und Cam 2 durch,
+    um den optimalen Sync-Offset zu ermitteln und direkt im Stitcher zu aktivieren.
+    """
+    settings = db.query(SystemSettings).first()
+    if not settings:
+        settings = SystemSettings(id=1)
+        db.add(settings)
+
+    from services.live_stitcher import check_cams_active
+    from services.audio_sync import detect_audio_sync_offset
+
+    cams = check_cams_active()
+    if not cams.get("cam1") or not cams.get("cam2"):
+        raise HTTPException(
+            status_code=400,
+            detail="Beide Kameras müssen aktiv senden, um eine Audio-Synchronisation durchführen zu können."
+        )
+
+    # 6 Sekunden Audioanalyse durchführen
+    result = detect_audio_sync_offset(duration_sec=6.0)
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("message", "Auto-Sync fehlgeschlagen."))
+
+    offset_ms = int(result.get("offset_ms", 0))
+
+    # Aktuelle Stitch-Konfiguration laden und sync_offset_ms aktualisieren
+    cfg = getattr(settings, "livestream_stitch_config", None) or {}
+    cfg["sync_offset_ms"] = offset_ms
+    settings.livestream_stitch_config = dict(cfg)
+    db.commit()
+
+    return {
+        "success": True,
+        "offset_ms": offset_ms,
+        "confidence": result.get("confidence", 1.0),
+        "cam_to_delay": result.get("cam_to_delay", "none"),
+        "delay_amount_ms": result.get("delay_amount_ms", 0),
+        "message": result.get("message")
+    }
+
+@router.post("/livestream/recordings/start")
+def start_livestream_recording(
+    body: StartRecordingIn,
+    current_user: User = Depends(require_admin)
+):
+    """
+    Startet die Server-Aufnahme des Livestreams via FFmpeg Stream-Copy (0% CPU).
+    save_permanently bestimmt, ob die Datei nach dem Stream behalten oder gelöscht wird.
+    """
+    save_perm = body.save_permanently if body.save_permanently is not None else True
+    res = start_recording(stream_key=body.stream_key or "stitched", title=body.title, save_permanently=save_perm)
+    if not res.get("success"):
+        raise HTTPException(status_code=400, detail=res.get("message", "Aufnahme konnte nicht gestartet werden."))
+    return res
+
+@router.post("/livestream/recordings/stop")
+def stop_livestream_recording(
+    body: Optional[StopRecordingIn] = None,
+    current_user: User = Depends(require_admin)
+):
+    """
+    Beendet die aktive Aufnahme. Falls discard=True angegeben ist, wird die Datei sofort gelöscht.
+    """
+    discard_val = body.discard if body else None
+    res = stop_recording(discard=discard_val)
+    if not res.get("success"):
+        raise HTTPException(status_code=400, detail=res.get("message", "Aufnahme konnte nicht gestoppt werden."))
+    return res
+
+@router.get("/livestream/recordings")
+def get_livestream_recordings(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """
+    Liefert alle gespeicherten Livestream-Aufnahmen.
+    """
+    rec_status = get_active_recording_status()
+    recordings = db.query(LivestreamRecording).order_by(LivestreamRecording.created_at.desc()).all()
+    
+    out = []
+    for r in recordings:
+        out.append({
+            "id": r.id,
+            "title": r.title,
+            "file_path": r.file_path,
+            "file_size_bytes": r.file_size_bytes,
+            "duration_seconds": r.duration_seconds,
+            "mode": r.mode,
+            "status": r.status,
+            "converted_match_id": r.converted_match_id,
+            "created_at": r.created_at.isoformat() if r.created_at else None
+        })
+
+    return {
+        "active_recording": rec_status,
+        "recordings": out
+    }
+
+@router.delete("/livestream/recordings/{recording_id}")
+def delete_livestream_recording(
+    recording_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """
+    Löscht eine Aufnahme von der Festplatte und aus der Datenbank.
+    """
+    rec = db.query(LivestreamRecording).filter(LivestreamRecording.id == recording_id).first()
+    if not rec:
+        raise HTTPException(status_code=404, detail="Aufnahme nicht gefunden.")
+
+    if rec.file_path and os.path.exists(rec.file_path):
+        try:
+            os.remove(rec.file_path)
+        except Exception as e:
+            print(f"[Admin] Fehler beim Löschen der Datei {rec.file_path}: {e}")
+
+    db.delete(rec)
+    db.commit()
+    return {"success": True, "message": "Aufnahme erfolgreich gelöscht."}
+
+@router.post("/livestream/recordings/{recording_id}/convert-to-match")
+async def convert_recording_to_match(
+    recording_id: str,
+    body: ConvertRecordingToMatchIn,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """
+    Konvertiert eine gespeicherte Livestream-Aufnahme in ein reguläres Match.
+    """
+    rec = db.query(LivestreamRecording).filter(LivestreamRecording.id == recording_id).first()
+    if not rec:
+        raise HTTPException(status_code=404, detail="Aufnahme nicht gefunden.")
+
+    if not rec.file_path or not os.path.exists(rec.file_path):
+        raise HTTPException(status_code=400, detail="Aufnahmedatei existiert nicht mehr auf der Festplatte.")
+
+    match_id = str(uuid.uuid4())
+    match_folder = os.path.join(UPLOAD_DIR, match_id)
+    os.makedirs(match_folder, exist_ok=True)
+
+    target_video_path = os.path.join(match_folder, "match.mp4")
+    shutil.copy2(rec.file_path, target_video_path)
+
+    # Team ermitteln
+    team_name = None
+    if body.team_id:
+        team_obj = db.query(Team).filter(Team.id == body.team_id).first()
+        if team_obj:
+            team_name = team_obj.name
+
+    rec_date_dt = None
+    if body.recording_date:
+        try:
+            rec_date_dt = datetime.fromisoformat(body.recording_date)
+        except Exception:
+            rec_date_dt = datetime.utcnow()
+    else:
+        rec_date_dt = rec.created_at or datetime.utcnow()
+
+    # Match in DB anlegen
+    new_match = Match(
+        id=match_id,
+        name=body.name.strip() if body.name else rec.title,
+        team_name=team_name,
+        team_id=body.team_id,
+        category=body.category or "Punktspiel",
+        recording_date=rec_date_dt,
+        video_quality="720p",
+        stitching_status="NONE",
+        stitching_time_offset=0
+    )
+    db.add(new_match)
+
+    rec.status = "CONVERTED"
+    rec.converted_match_id = match_id
+    size_mb = int(os.path.getsize(target_video_path) / (1024 * 1024)) if os.path.exists(target_video_path) else 0
+    new_chunk = VideoChunk(
+        match_id=match_id,
+        video_path=f"uploads/{match_id}/match.mp4",
+        file_size_mb=size_mb,
+        conversion_status="processing",
+        conversion_progress=0
+    )
+    db.add(new_chunk)
+    db.commit()
+    db.refresh(new_match)
+
+    db.refresh(new_chunk)
+    background_tasks.add_task(generate_hls_playlist, new_chunk.id, None, False)
+
+    # Thumbnail im Hintergrund erzeugen
+    try:
+        thumb_dir = os.path.join(UPLOAD_DIR, "thumbnails")
+        os.makedirs(thumb_dir, exist_ok=True)
+        thumb_name = f"thumb_{match_id}.jpg"
+        thumb_path = os.path.join(thumb_dir, thumb_name)
+        
+        # Schnell Thumbnail via ffmpeg erzeugen
+        cmd_thumb = [
+            "ffmpeg", "-nostdin", "-y",
+            "-ss", "00:00:05",
+            "-i", target_video_path,
+            "-vframes", "1",
+            "-vf", "scale=640:-1",
+            thumb_path
+        ]
+        subprocess.run(cmd_thumb, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5)
+        if os.path.exists(thumb_path):
+            new_match.thumbnail_path = f"/api/uploads/thumbnails/{thumb_name}"
+            db.commit()
+    except Exception as thumb_err:
+        print(f"[Convert] Thumbnail Generierung Hinweis: {thumb_err}")
+
+    return {
+        "success": True,
+        "match_id": match_id,
+        "message": f"Aufnahme erfolgreich als Match '{new_match.name}' angelegt!"
+    }
+
+
+# ==============================================================================
+# API-KEY VERWALTUNG (Für MatchTrack-Stitcher & Externe Integrationen)
+# ==============================================================================
+
+class ApiKeyCreateIn(BaseModel):
+    name: str
+    user_id: Optional[str] = None
+    expires_in_days: Optional[int] = None
+
+
+def _serialize_api_key(ak: ApiKey) -> Dict[str, Any]:
+    now = datetime.utcnow()
+    is_expired = bool(ak.expires_at and ak.expires_at < now)
+    return {
+        "id": ak.id,
+        "name": ak.name,
+        "key_prefix": ak.key_prefix,
+        "user_id": ak.user_id,
+        "username": ak.user.username if ak.user else "Unbekannt",
+        "user_role": str(ak.user.role.value if ak.user and hasattr(ak.user.role, "value") else (ak.user.role if ak.user else "")),
+        "is_active": ak.is_active,
+        "is_expired": is_expired,
+        "expires_at": ak.expires_at.isoformat() if ak.expires_at else None,
+        "last_used_at": ak.last_used_at.isoformat() if ak.last_used_at else None,
+        "created_at": ak.created_at.isoformat() if ak.created_at else None,
+    }
+
+
+@router.get("/api-keys")
+def list_api_keys(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    """Listet alle generierten API-Keys auf (nur Präfix & Metadaten, niemals Klartext)."""
+    keys = db.query(ApiKey).order_by(ApiKey.created_at.desc()).all()
+    return {
+        "keys": [_serialize_api_key(k) for k in keys]
+    }
+
+
+@router.post("/api-keys")
+def create_api_key(
+    body: ApiKeyCreateIn,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    """
+    Generiert einen neuen kryptografisch sicheren API-Key ('mto_ak_...').
+    Speichert ausschließlich den SHA-256-Hash in der Datenbank und gibt den
+    Klartext-Schlüssel einmalig bei der Erstellung zurück.
+    """
+    clean_name = (body.name or "").strip()
+    if not clean_name:
+        raise HTTPException(status_code=400, detail="Bitte einen Namen für den API-Key angeben.")
+
+    target_user_id = body.user_id or current_user.id
+    target_user = db.query(User).filter(User.id == target_user_id).first()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Zugewiesener Benutzer wurde nicht gefunden.")
+
+    raw_key = f"mto_ak_{secrets.token_hex(24)}"
+    key_hash = hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
+    key_prefix = f"{raw_key[:13]}...{raw_key[-4:]}"
+
+    expires_at = None
+    if body.expires_in_days and body.expires_in_days > 0:
+        expires_at = datetime.utcnow() + timedelta(days=int(body.expires_in_days))
+
+    new_key = ApiKey(
+        id=str(uuid.uuid4()),
+        name=clean_name[:120],
+        key_prefix=key_prefix,
+        key_hash=key_hash,
+        user_id=target_user.id,
+        is_active=True,
+        expires_at=expires_at,
+        created_at=datetime.utcnow(),
+    )
+    db.add(new_key)
+    db.commit()
+    db.refresh(new_key)
+
+    try:
+        create_system_log(
+            db=db,
+            source="backend",
+            level="INFO",
+            message=f"Neuer API-Key '{clean_name}' ({key_prefix}) von Admin '{current_user.username}' für '{target_user.username}' erstellt.",
+            module="api.admin.api_keys",
+        )
+    except Exception:
+        pass
+
+    return {
+        "api_key": raw_key,
+        "item": _serialize_api_key(new_key),
+    }
+
+
+@router.patch("/api-keys/{key_id}/toggle")
+def toggle_api_key(
+    key_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    """Aktiviert oder pausiert einen bestehenden API-Key."""
+    ak = db.query(ApiKey).filter(ApiKey.id == key_id).first()
+    if not ak:
+        raise HTTPException(status_code=404, detail="API-Key nicht gefunden.")
+
+    ak.is_active = not ak.is_active
+    db.commit()
+    db.refresh(ak)
+    return {
+        "success": True,
+        "item": _serialize_api_key(ak),
+    }
+
+
+@router.delete("/api-keys/{key_id}")
+def delete_api_key(
+    key_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    """Widerruft und löscht einen API-Key unwiderruflich."""
+    ak = db.query(ApiKey).filter(ApiKey.id == key_id).first()
+    if not ak:
+        raise HTTPException(status_code=404, detail="API-Key nicht gefunden.")
+
+    key_name = ak.name
+    key_prefix = ak.key_prefix
+    db.delete(ak)
+    db.commit()
+
+    try:
+        create_system_log(
+            db=db,
+            source="backend",
+            level="WARNING",
+            message=f"API-Key '{key_name}' ({key_prefix}) wurde von Admin '{current_user.username}' widerrufen.",
+            module="api.admin.api_keys",
+        )
+    except Exception:
+        pass
+
+    return {
+        "success": True,
+        "message": f"API-Key '{key_name}' wurde widerrufen.",
+    }
+

@@ -118,6 +118,14 @@ MIGRATION_COLUMNS = [
     ("system_settings", "livestream_is_protected", "BOOLEAN DEFAULT 0"),
     ("system_settings", "livestream_password", "VARCHAR(255)"),
     ("system_settings", "livestream_title", "VARCHAR(255) DEFAULT 'MatchTrack Livestream'"),
+    ("system_settings", "livestream_mode", "VARCHAR(30) DEFAULT 'multi_cam'"),
+    ("system_settings", "livestream_is_published", "BOOLEAN DEFAULT 0"),
+    ("system_settings", "livestream_cam1_name", "VARCHAR(100) DEFAULT 'Kamera 1 (Links)'"),
+    ("system_settings", "livestream_cam2_name", "VARCHAR(100) DEFAULT 'Kamera 2 (Rechts)'"),
+    ("system_settings", "livestream_stitch_delay", "INTEGER DEFAULT 8"),
+    ("system_settings", "livestream_stitch_config", "JSON"),
+    ("system_settings", "livestream_save_recording", "BOOLEAN DEFAULT 1"),
+    ("livestream_recordings", "save_permanently", "BOOLEAN DEFAULT 1"),
     ("system_settings", "updated_at", "DATETIME"),
 
     # Table: training_exercises
@@ -393,6 +401,7 @@ def run_migrations(engine=None):
         os.makedirs(os.path.join(new_uploads, "avatars"), exist_ok=True)
         os.makedirs(os.path.join(new_uploads, "thumbnails"), exist_ok=True)
         os.makedirs(os.path.join(new_uploads, "diagrams"), exist_ok=True)
+        os.makedirs(os.path.join(new_uploads, "recordings"), exist_ok=True)
 
         if os.path.exists(old_uploads) and not os.path.islink(old_uploads):
             for root, dirs, files in os.walk(old_uploads):

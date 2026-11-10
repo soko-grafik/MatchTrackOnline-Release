@@ -448,6 +448,29 @@ export default function MatchDetailContent() {
     return () => clearInterval(interval);
   }, [id, heatmapStatus, heatmapJob?.status, authLoading]);
 
+  // Live-Polling falls Video-Chunk noch in HLS/H.264 konvertiert wird (damit Stream sofort nach ~5s anspringt)
+  useEffect(() => {
+    if (!id || authLoading || !matchData) return;
+    const rawChunks = matchData?.chunks || matchData?.match?.chunks || [];
+    const hasProcessingChunkWithoutHls = rawChunks.some(
+      (c: any) => c.conversion_status === 'processing' && !c.hls_playlist_path
+    );
+    if (!hasProcessingChunkWithoutHls) return;
+
+    const timer = setInterval(async () => {
+      try {
+        const fresh = await getMatchDetails(id as string);
+        if (fresh) {
+          setMatchData(fresh);
+        }
+      } catch (e) {
+        console.debug('[HLS Poll] Failed to refresh match details:', e);
+      }
+    }, 3500);
+
+    return () => clearInterval(timer);
+  }, [id, authLoading, matchData]);
+
   const handleOpenModal = () => {
     if (!canEdit && !canComment) return;
     setEditingEventId(null);
@@ -952,7 +975,7 @@ export default function MatchDetailContent() {
               <span className="truncate">{getRemainingTimeText(match.password_expires_at)}</span>
             </div>
           ) : (
-            <div className="hidden md:flex items-center gap-1.5 lg:gap-2 shrink-0">
+            <div className="flex items-center gap-1.5 lg:gap-2 shrink-0">
               <ConversionStatus />
             </div>
           )}

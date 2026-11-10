@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, JSON, Enum, Boolean, Table, Float
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, JSON, Enum, Boolean, Table, Float, BigInteger
 from sqlalchemy.dialects.mysql import LONGTEXT
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -263,6 +263,13 @@ class SystemSettings(Base):
     livestream_is_protected = Column(Boolean, default=False)
     livestream_password = Column(String(255), nullable=True)
     livestream_title = Column(String(255), default="MatchTrack Livestream")
+    livestream_mode = Column(String(30), default="multi_cam")  # "multi_cam" | "stitched"
+    livestream_is_published = Column(Boolean, default=False)
+    livestream_cam1_name = Column(String(100), default="Kamera 1 (Links)")
+    livestream_cam2_name = Column(String(100), default="Kamera 2 (Rechts)")
+    livestream_stitch_delay = Column(Integer, default=8)
+    livestream_stitch_config = Column(JSON, default=dict, nullable=True)
+    livestream_save_recording = Column(Boolean, default=True)
 
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -618,4 +625,40 @@ class SystemLog(Base):
     details = Column(JSON, nullable=True)
     is_irrelevant = Column(Boolean, default=False, nullable=False, index=True)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class LivestreamRecording(Base):
+    __tablename__ = "livestream_recordings"
+
+    id = Column(String(50), primary_key=True, index=True)
+    title = Column(String(255), nullable=False)
+    file_path = Column(String(500), nullable=False)
+    file_size_bytes = Column(BigInteger, default=0)
+    duration_seconds = Column(Float, default=0.0)
+    mode = Column(String(30), default="stitched")  # "stitched" | "cam1" | "cam2"
+    status = Column(String(30), default="RECORDING")  # RECORDING, COMPLETED, CONVERTED, DISCARDED
+    save_permanently = Column(Boolean, default=True)
+    converted_match_id = Column(String(50), ForeignKey("matches.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    converted_match = relationship("Match", foreign_keys=[converted_match_id])
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+
+class ApiKey(Base):
+    __tablename__ = "api_keys"
+
+    id = Column(String(50), primary_key=True, index=True)
+    name = Column(String(120), nullable=False)
+    key_prefix = Column(String(30), nullable=False)
+    key_hash = Column(String(64), unique=True, index=True, nullable=False)
+    user_id = Column(String(50), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+    expires_at = Column(DateTime, nullable=True)
+    last_used_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    user = relationship("User", backref="api_keys")
+
 

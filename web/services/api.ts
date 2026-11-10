@@ -1141,4 +1141,60 @@ export const createTestLogs = async () => {
   return safeJsonParse(response.data);
 };
 
+export const cancelMatchHlsConversion = async (matchId: string) => {
+  const response = await api.post(`/videos/matches/${matchId}/cancel-hls`);
+  invalidateCache('/matches');
+  return safeJsonParse(response.data);
+};
+
+export const cancelAllHlsConversions = async () => {
+  const response = await api.post('/videos/cancel-all-hls');
+  invalidateCache('/matches');
+  return safeJsonParse(response.data);
+};
+
+// ==========================================
+// ADMIN API-KEYS (MATCHTRACK-STITCHER)
+// ==========================================
+
+export interface ApiKeyItem {
+  id: string;
+  name: string;
+  key_prefix: string;
+  user_id: string;
+  username: string;
+  user_role: string;
+  is_active: boolean;
+  is_expired: boolean;
+  expires_at?: string | null;
+  last_used_at?: string | null;
+  created_at?: string | null;
+}
+
+export const getAdminApiKeys = async (): Promise<{ keys: ApiKeyItem[] }> => {
+  const response = await api.get('/admin/api-keys');
+  return safeJsonParse(response.data);
+};
+
+export const createAdminApiKey = async (data: {
+  name: string;
+  user_id?: string;
+  expires_in_days?: number | null;
+}): Promise<{ api_key: string; item: ApiKeyItem }> => {
+  const response = await api.post('/admin/api-keys', data);
+  return safeJsonParse(response.data);
+};
+
+export const toggleAdminApiKey = async (keyId: string): Promise<{ success: boolean; item: ApiKeyItem }> => {
+  const response = await api.patch(`/admin/api-keys/${keyId}/toggle`);
+  return safeJsonParse(response.data);
+};
+
+export const deleteAdminApiKey = async (keyId: string): Promise<{ success: boolean; message: string }> => {
+  const response = await api.delete(`/admin/api-keys/${keyId}`);
+  return safeJsonParse(response.data);
+};
+
+
+
 

@@ -115,7 +115,7 @@ export default function AdminUploadPage() {
 
   useEffect(() => {
     const roleUpper = user?.role?.toUpperCase();
-    if (!authLoading && (!user || (roleUpper !== 'ADMIN' && roleUpper !== 'TEAM_ADMIN' && roleUpper !== 'TRAINER'))) {
+    if (!authLoading && (!user || roleUpper !== 'ADMIN')) {
       router.push('/');
     } else if (user) {
       const fetchData = async () => {
@@ -957,7 +957,7 @@ export default function AdminUploadPage() {
                   {success && (
                     <div className="bg-emerald-500/10 border border-emerald-500/40 p-4 rounded-2xl flex items-center gap-3 text-emerald-400 animate-in fade-in slide-in-from-top-2 duration-500 shadow-xl shadow-emerald-950/20">
                       <CheckCircle2 className="w-5 h-5 shrink-0" />
-                      <p className="text-[11px] font-bold uppercase tracking-tight">Upload gestartet!</p>
+                      <p className="text-[11px] font-bold uppercase tracking-tight">Upload gestartet! Er läuft im Hintergrund weiter – du kannst diese Seite verlassen (Status oben in der Top-Bar).</p>
                     </div>
                   )}
 
@@ -1018,7 +1018,7 @@ export default function AdminUploadPage() {
                                   }`}
                                 />
                                 <p className="text-[9px] text-zinc-500 font-black uppercase tracking-tighter">
-                                  {upload.status}
+                                  {upload.status === 'uploading' ? `${upload.progress}% • Läuft im Hintergrund` : upload.status === 'completed' ? '100% • Fertig' : upload.error || 'Fehler'}
                                 </p>
                               </div>
                             </div>

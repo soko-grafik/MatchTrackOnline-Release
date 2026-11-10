@@ -113,6 +113,32 @@ else
     exit 1
 fi
 
+# 4b. Optionaler Live-Stitcher Service einrichten (falls MatchTrack Backend vorhanden)
+if [ -d "/var/www/matchtrack/backend" ]; then
+    echo "🧵 [3b/5] Richte MatchTrack Live-Stitcher Daemon ein..."
+    cat << 'STITCH_EOF' > /etc/systemd/system/matchtrack-stitcher.service
+[Unit]
+Description=MatchTrack Live Stitcher Daemon
+After=network.target mediamtx.service
+Wants=mediamtx.service
+
+[Service]
+Type=simple
+WorkingDirectory=/var/www/matchtrack/backend
+ExecStart=/usr/bin/python3 -u services/live_stitcher.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+STITCH_EOF
+
+    systemctl daemon-reload
+    systemctl enable matchtrack-stitcher
+    systemctl restart matchtrack-stitcher 2>/dev/null || true
+    echo "✅ MatchTrack Live-Stitcher Service registriert."
+fi
+
 # 5. Nginx Proxy für /live/ einrichten
 echo "🌐 [4/5] Prüfe Nginx Proxy-Konfiguration für /live/..."
 
@@ -170,20 +196,25 @@ fi
 PUBLIC_IP=$(curl -s --max-time 3 ifconfig.me 2>/dev/null || echo "matchtrack.de")
 
 echo "=============================================================================="
-echo "🎉 Livestream-Server ist jetzt aktiv und bereit!"
+echo "🎉 Livestream-Server mit Dual-Kamera & Live-Stitching ist aktiv!"
 echo "=============================================================================="
 echo ""
-echo "📡 Zugangsdaten für OBS Studio:"
-echo "   - Dienst:            Benutzerdefiniert..."
-echo "   - Server:            rtmp://${PUBLIC_IP}:1935/live"
-echo "   - Stream-Schlüssel:  osmo4"
+echo "📡 Kamera 1 (Links / Hauptkamera):"
+echo "   - RTMP-Server:       rtmp://${PUBLIC_IP}:1935/live"
+echo "   - Stream-Schlüssel:  cam1  (oder alias 'osmo4')"
+echo "   - DJI Mimo URL:      rtmp://${PUBLIC_IP}:1935/live/cam1"
 echo ""
-echo "📹 Zugangsdaten für DJI Mimo App (DJI Osmo Action 4):"
-echo "   - RTMP-URL:          rtmp://${PUBLIC_IP}:1935/live/osmo4"
+echo "📡 Kamera 2 (Rechts / 2. Perspektive):"
+echo "   - RTMP-Server:       rtmp://${PUBLIC_IP}:1935/live"
+echo "   - Stream-Schlüssel:  cam2"
+echo "   - DJI Mimo URL:      rtmp://${PUBLIC_IP}:1935/live/cam2"
 echo ""
-echo "📺 Web-Player Abruf-URL:"
-echo "   - https://matchtrack.de/live/osmo4/index.m3u8"
+echo "📺 Web-Player Abruf-URLs:"
+echo "   - Kamera 1:          https://matchtrack.de/live/cam1/index.m3u8"
+echo "   - Kamera 2:          https://matchtrack.de/live/cam2/index.m3u8"
+echo "   - Panorama Stitched: https://matchtrack.de/live/stitched/index.m3u8"
 echo ""
 echo "🔍 Status prüfen mit:"
 echo "   systemctl status mediamtx"
+echo "   systemctl status matchtrack-stitcher"
 echo "=============================================================================="

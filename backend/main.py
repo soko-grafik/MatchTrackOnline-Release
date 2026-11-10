@@ -167,6 +167,11 @@ async def push_reminder_background_loop():
 @app.on_event("startup")
 async def start_push_scheduler():
     asyncio.create_task(push_reminder_background_loop())
+    try:
+        from services.hls_service import scan_and_repair_all_incompatible_videos_async
+        scan_and_repair_all_incompatible_videos_async()
+    except Exception as e:
+        print(f"Warnung beim Starten des HLS-Auto-Reparatur-Scans: {e}")
 
 @app.get("/")
 async def root():

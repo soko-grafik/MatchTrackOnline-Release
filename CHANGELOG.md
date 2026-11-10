@@ -1,18 +1,18 @@
 # 📋 MatchTrack Online - Versions-Changelog
 
-## Release: 2026-10-28 13:33:33 (Dev Commit: `dee6a7a9`)
+## Release: 2026-11-10 12:30:27 (Dev Commit: `854714b0`)
 
 ### 🚀 Letzte Änderungen aus dem Entwicklungs-Repository:
-* fix(streaming): use regex flag -E for mediamtx sed replacements and activate api (dee6a7a9 - 2026-10-28)
-* fix(live): resolve /login redirect for external viewers and optimize HLS playback with MPEG-TS (ed7f4ec8 - 2026-10-28)
-* fix(backend): replace undefined require_role with require_trainer in admin livestream routes (6c275b37 - 2026-10-28)
-* feat(streaming): add role-based access for stream credentials, password protection, and dedicated public /live player page (196619e5 - 2026-10-28)
-* fix(streaming): extract official mediamtx.yml to guarantee 100% valid configuration (c20a8cd3 - 2026-10-28)
-* feat(streaming): switch setup_rtmp.sh to MediaMTX standalone engine to prevent apt conflicts on HestiaCP (23a54c1b - 2026-10-28)
-* feat(streaming): place setup_rtmp.sh in backend directory for direct server execution (f30ceaa6 - 2026-10-28)
-* feat(streaming): add RTMP & HLS setup script, docs, and enhance LiveStreamModal with OBS/DJI support (0f41661a - 2026-10-28)
-* feat(theme): implement full light mode support across all pages and add release safety guards (af560d79 - 2026-10-28)
-* feat(ui): implement Preline UI foundation primitives and modernize global modals (8ce26039 - 2026-10-28)
+* remove (854714b0 - 2026-11-10)
+* feat(auth): add Admin API-Key generator & management for MatchTrack-Stitcher (8ef1b5e6 - 2026-11-10)
+* feat(upload): add resumable chunked upload session API with SHA-256 & ffprobe verification for MatchTrack-Stitcher (126afb4c - 2026-11-10)
+* feat(hls): add cancel/clear-all for HLS conversion queue and auto-clean stale processing tasks (2eee435c - 2026-11-07)
+* fix(hls): use db_session instead of undefined db in generate_hls_playlist (ae17ab1d - 2026-11-07)
+* fix(hls): add missing Optional import in hls_service.py (0a7d69c1 - 2026-11-07)
+* feat(upload,hls): background upload with top-bar progress and progressive 5s H.264 HLS for HEVC videos (3ef1b2ac - 2026-11-07)
+* fix(video): normalize HEVC/10-bit uploads to 8-bit H.264 yuv420p and prevent HLS pipe deadlock (7ccb41d9 - 2026-11-07)
+* fix(security): restrict video upload and livestream settings strictly to admin role (2f3d7ca9 - 2026-10-30)
+* feat(live): add automatic audio cross-correlation auto-sync for dual-cam live stitching (4f4b2258 - 2026-10-30)
 
 ---
 *Automatisch generiert durch die MatchTrack Release Pipeline.*

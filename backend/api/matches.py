@@ -266,6 +266,13 @@ async def get_matches(
                 hl_info = None
                 is_detecting_highlights = False
 
+            converting_chunks = [c for c in chunks if c.conversion_status == "processing"]
+            is_converting_video = len(converting_chunks) > 0
+            video_conversion_progress = (
+                round(sum((c.conversion_progress or 0) for c in converting_chunks) / len(converting_chunks), 1)
+                if converting_chunks else 100.0
+            )
+
             # Wir konvertieren das SQLAlchemy Objekt in ein Dictionary, um is_subscribed hinzuzufügen
             match_dict = {
                 "id": match.id,
@@ -301,7 +308,9 @@ async def get_matches(
                 "is_stitching": is_stitching,
                 "is_generating_heatmap": is_generating_heatmap,
                 "highlight_job": hl_info,
-                "is_detecting_highlights": is_detecting_highlights
+                "is_detecting_highlights": is_detecting_highlights,
+                "is_converting_video": is_converting_video,
+                "video_conversion_progress": video_conversion_progress
             }
 
             result.append(match_dict)
@@ -398,6 +407,8 @@ async def get_match(match_id: str, request: Request, db: Session = Depends(get_d
                 "label": "📹 Standard",
                 "video_path": standard_chunk.video_path,
                 "hls_playlist_path": standard_chunk.hls_playlist_path,
+                "conversion_status": standard_chunk.conversion_status,
+                "conversion_progress": standard_chunk.conversion_progress,
                 "aspect_ratio": "16:9",
                 "is_default": True
             })
@@ -412,6 +423,8 @@ async def get_match(match_id: str, request: Request, db: Session = Depends(get_d
                 "label": "🏟️ Panorama",
                 "video_path": pano_video_path,
                 "hls_playlist_path": pano_hls_path,
+                "conversion_status": pano_chunk.conversion_status if pano_chunk else "completed",
+                "conversion_progress": pano_chunk.conversion_progress if pano_chunk else 100,
                 "aspect_ratio": "32:9",
                 "is_default": (not has_16x9)
             })
@@ -422,6 +435,8 @@ async def get_match(match_id: str, request: Request, db: Session = Depends(get_d
                 "label": "📹 Standard",
                 "video_path": chunks[0].video_path,
                 "hls_playlist_path": chunks[0].hls_playlist_path,
+                "conversion_status": chunks[0].conversion_status,
+                "conversion_progress": chunks[0].conversion_progress,
                 "aspect_ratio": "16:9",
                 "is_default": True
             })

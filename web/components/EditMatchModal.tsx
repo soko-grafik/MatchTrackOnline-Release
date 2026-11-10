@@ -42,7 +42,7 @@ export default function EditMatchModal({ isOpen, onClose, onSave, match }: EditM
   const { user, logout, token } = useAuth();
   const [recordingDate, setRecordingDate] = useState('');
   const roleUpper = user?.role?.toUpperCase();
-  const isAdmin = roleUpper === 'ADMIN' || roleUpper === 'TRAINER';
+  const isAdmin = roleUpper === 'ADMIN';
 
   const loadMatchStreams = async (matchId: string) => {
     setStreamsLoading(true);
